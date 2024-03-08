@@ -1,5 +1,9 @@
 #include <stdint.h>
 
+#ifndef BDD_SIZE
+#define BDD_SIZE 64
+#endif
+
 struct host{
  	char ip[16];
 	int16_t port;
@@ -13,11 +17,16 @@ struct data{
 	char filename[352];
 };
 
-int store(struct data);
-struct data* loadAll(void);	
-struct data* loadFiles(char* filename);	
-struct data loadHash(char hash[64]);	
-int remove(struct host); 
-int remove(char* filename);
-int remove(char hash[64]);
+static const struct data EMPTY = {
+	"", 0, 0, 0, "", "" 
+};
 
+int get_size();
+
+int store(struct data);
+void load_all(struct data*);	
+int load_files(struct data*, char* filename);	
+struct data load_hash(char hash[64]);	
+int remove_host(struct host); 
+int remove_file(char* filename);
+int remove_hash(char hash[64]);
