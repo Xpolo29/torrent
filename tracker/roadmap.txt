@@ -8,3 +8,11 @@
 -mono threaded
 
 -mock_peer.py needs to send custom request to tracker to test it
+
+-log files use .log extension
+
+-config.ini use format as following :
+
+[section1]
+key1 = value1
+key2 = value2

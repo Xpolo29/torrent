@@ -9,3 +9,5 @@ enum op_t {
 int check_md5(char* filename, char hash[64]);
 
 struct data* filter(char* filename, double filesize, enum op_t op);
+
+int load_config(char* filepath);
