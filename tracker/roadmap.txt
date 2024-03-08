@@ -1,0 +1,10 @@
+-parse des args:
+	-p --port : listen port
+	-c --config : path to config file, default to ./config.ini
+	-v --verbose [log = 3/warning = 2/error = 1(default)/none = 0]
+
+-database.h / .c -> api de stockage
+
+-mono threaded
+
+-mock_peer.py needs to send custom request to tracker to test it
