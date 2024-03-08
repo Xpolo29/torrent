@@ -1,9 +1,10 @@
+### TODO ###
 -parse des args:
 	-p --port : listen port
 	-c --config : path to config file, default to ./config.ini
 	-v --verbose [log = 3/warning = 2/error = 1(default)/none = 0]
 
--database.h / .c -> api de stockage
+
 
 -mono threaded
 
@@ -11,8 +12,12 @@
 
 -log files use .log extension
 
--config.ini use format as following :
 
+
+### DONE ###
+
+-database.h / .c -> api de stockage
+
+-config.ini use format as following :
 [section1]
 key1 = value1
-key2 = value2
