@@ -1,13 +1,11 @@
-enum request_t {
-	announce=0, look, getfile, update
-};
+#include "database.h"
 
-enum op_t {
-	eq, gt, lt
-};
+enum request_t { announce = 0, look, getfile, update };
 
-int check_md5(char* filename, char hash[64]);
+enum op_t { eq, gt, lt };
 
-struct data* filter(char* filename, double filesize, enum op_t op);
+int check_md5(char *filename, char hash[64]);
 
-int load_config(char* filepath);
+int filter(struct data *list, char *filename, double filesize, enum op_t op);
+
+int load_config(char *filepath);
