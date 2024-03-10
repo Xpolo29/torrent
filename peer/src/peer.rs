@@ -1,6 +1,10 @@
 use std::io;
 
 // Définir la structure FileProp
+struct Config {
+    port: u16,
+    files: Vec<FileProp>
+}
 struct FileProp {
     name: String,
     size: u64,
@@ -8,7 +12,22 @@ struct FileProp {
     hash: String,
 }
 
-fn get_proposed_files() -> Vec<FileProp> {
+
+fn announce_listen_port() -> u16 {
+        println!("Quel port veux-tu écouter? (appuie sur Entrée pour utiliser le port par défaut)");
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).expect("Failed to read line");
+
+        // Nul ce serait mieux si c'était de base dans la struct config mais je suis fatigué
+        if input.trim().is_empty() {
+            return 8080; // Use default port if input is empty
+        }
+
+        let port: u16 = input.trim().parse().expect("Please type a number!");
+        port
+
+}
+fn announce_files()() -> Vec<FileProp> {
     let mut files: Vec<FileProp> = Vec::new();
 
     println!("Quels fichiers veux-tu envoyer? (séparés par des virgules, ou tape 'q' pour quitter)");
@@ -40,6 +59,13 @@ fn get_proposed_files() -> Vec<FileProp> {
 }
 
 fn main() {
-   let files = get_proposed_files();
-   // Utilisez `files` ici si nécessaire
+   let mut config = Config {
+       port: 8080,
+       files: Vec::new(),
+   };
+   // nul si le port change pas et en plus ça marche pas
+   Config.port = announce_listen_port();
+   Config.files = announce_files();
+   // Idee faire des mocks du server en simulant les echanges TCP avec des réponses constantes
+
 }
