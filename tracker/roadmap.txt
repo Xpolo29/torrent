@@ -5,7 +5,6 @@
 	-v --verbose [log = 3/warning = 2/error = 1(default)/none = 0]
 
 
-
 -mono threaded
 
 -mock_peer.py needs to send custom request to tracker to test it
