@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int compare(struct data *in, struct data *out, double filesize, enum op_t op,
+int compare(struct data *in, struct data *out, long filesize, enum op_t op,
             int len) {
   int count = 0;
   for (int i = 0; i < len; i++) {
@@ -26,7 +26,7 @@ int compare(struct data *in, struct data *out, double filesize, enum op_t op,
   return count;
 }
 
-int filter(struct data *list, char *filename, double filesize, enum op_t op) {
+int filter(struct data *list, char *filename, long filesize, enum op_t op) {
   if (filesize < 0) {
     return load_files(list, filename);
   }
