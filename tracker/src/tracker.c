@@ -3,10 +3,12 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <time.h>
+#include <stdarg.h>
 
 //global var
 char* config_path = "config.ini";
-int log_level = -1;
+enum LOG_LEVEL log_level = ERROR;
 int16_t port = -1;
 
 
@@ -50,6 +52,7 @@ int filter(struct data *list, char *filename, long filesize, enum op_t op) {
   }
 }
 
+//used to parse args on cmd
 int parse_args(int argc, char** argv){
 	for(int i = 1; i < argc; ++i){
 		for(int j = 0; j < LEN_ARGS; ++j){
@@ -68,24 +71,26 @@ int parse_args(int argc, char** argv){
 						break;
 					case 2: // -h
 					case 3: // --help
-						printf("help\n");
+						printf("This is the help message\n");
 						break;
 					case 4: // -p
 					case 5: // --port
 						if(i + 1 < argc && isdigit(argv[i+1][0])){
 							port = atoi(argv[i + 1]);
+							logging(LOG, "Port updated to %d\n", port);
 							++i;
 						}else{
-							printf("No port specified, using default\n");
+							logging(WARNING, "Got -p but no port is specified, using default\n");
 						}
 						break;
 					case 6: // -c
 					case 7: // --config
 						if(i + 1 < argc){
 							config_path = argv[i + 1];
+							logging(LOG, "Config path updated to %s\n", config_path);
 							++i;
 						}else{
-							printf("No path specified, using default\n");
+							logging(WARNING, "Got -c but no config path is specified, using default\n");
 						}
 						break;
 					default:
@@ -94,7 +99,7 @@ int parse_args(int argc, char** argv){
 				break;
 
 			} else if (j+1 == LEN_ARGS){
-				printf("Unknown arg error\n");
+				logging(ERROR, "Unknown arg error\n");
 				return 1;
 			}
 		}
@@ -102,6 +107,7 @@ int parse_args(int argc, char** argv){
 	return 0;
 }
 
+//used by load config to apply parameters in file
 int apply_parameter(char* key, char* value){
 	const char key_arr[3][16] = {
 		"port", "verbose", " "	
@@ -110,14 +116,19 @@ int apply_parameter(char* key, char* value){
 	int i = 0;
 	while(key_arr[i][0] != ' '){
 		if(strcmp(key, key_arr[i]) == 0){
+
 			switch(i){
 				case 0: //port
-					if(port == -1)
-					port = atoi(value);
+					if(port == -1){
+						logging(LOG, "Loading parameter %s to %s\n", key, value);
+						port = atoi(value);
+					}
 					break;
 				case 1: //verbose
-					if(log_level == -1)
-					log_level = atoi(value);
+					if(log_level == -1){
+						logging(LOG, "Loading parameter %s to %s\n", key, value);
+						log_level = atoi(value);
+					}
 					break;
 				default:
 					break;
@@ -128,11 +139,13 @@ int apply_parameter(char* key, char* value){
 	return 0;
 }
 
+//load config.ini at config_path
 int load_config(char* path){
 	// Open the config file for reading
+	logging(LOG, "Loading config file at %s\n", config_path);
 	FILE *file = fopen(path, "r");
 	if (file == NULL) {
-		perror("Error opening file");
+		logging(ERROR, "Error opening config file at %s\n", config_path);
 		return 1;
 	}
 
@@ -152,8 +165,8 @@ int load_config(char* path){
 		// Check if this line represents a section
 		if (trimmed_line[0] == '[') {
 			// Extract section name
-			//sscanf(trimmed_line, "[%[^]]", section);
-			//printf("Section: %s\n", section);
+			sscanf(trimmed_line, "[%[^]]", section);
+			logging(LOG, "Entering section %s\n", section);
 		} else {
 			// Parse key-value pairs
 			sscanf(trimmed_line, "%[^=] = %[^\n]", key, value);
@@ -164,22 +177,100 @@ int load_config(char* path){
 
 	// Close the file
 	fclose(file);
+	logging(LOG, "Config file loaded\n");
 	return 0;
 }
 
+//return DD-MM-YYYY for log file name
+char* get_timestamp() {
+	time_t now = time(NULL);
+	static char time_str[20];
+	strftime(
+			time_str,
+		       	sizeof(time_str),
+		       	"%d-%m-%Y-%H:%M:%S",
+		       	localtime(&now)
+	);
+	return time_str;
+}
+
+//log things, use like printf but with enum LOG_LEVEL as first arg
+void logging(enum LOG_LEVEL level, const char* msg, ...){
+	if(level > log_level)return;
+
+	char full_msg[256] = {0};
+
+	switch(level){
+		case LOG:
+			strncat(full_msg, "LOG : ", 7);
+			break;
+		case WARNING:
+			strncat(full_msg, "WARNING : ", 10);
+			break;
+		case ERROR:
+			strncat(full_msg, "ERROR : ", 9);
+			break;
+		default:
+			break;
+
+	}	
+
+
+	//concat
+	va_list args;
+	va_start(args, msg);
+	vsprintf(full_msg + strlen(full_msg), msg, args);
+
+	//print msg
+	printf("%s", full_msg);
+
+	//log to file
+	char* folder = "log/";
+	char* name = get_timestamp();
+	char* end = ".log";
+
+	char filename[19] = {0};
+
+	strncat(filename, folder, 4);
+	strncat(filename + 4, name, 10);
+	strncat(filename + 14, end, 5);
+
+	FILE* log_file = fopen(filename, "a");
+
+	fprintf(log_file, "%s", full_msg);
+
+	fclose(log_file);
+}
+
+char* log_level_to_string(enum LOG_LEVEL level){
+	switch(level){
+		case NONE:
+			return "NONE";
+		case ERROR:
+			return "ERROR";
+		case WARNING:
+			return "WARNING";
+		case LOG:
+			return "LOG";
+
+	}
+}
+
 int main(int argc, char** argv){
+
 	//parsing args
 	if(parse_args(argc, argv))return 1;
 
 	//loading config
 	if(load_config(config_path))return 2;	
 
-	//printing current values
-	printf("Path to config is %s\n", config_path);
-	printf("Log level set to %d\n", log_level);
-	printf("Currently listening to port %d\n", port);
-
-
-
+	//start
+	logging(LOG, "--------------------------------------------------------\n");
+	logging(LOG, "Starting on %s at %s:%d\n",
+		       	get_timestamp(),
+			"127.0.0.1",
+			port
+	);
+	logging(LOG, "--------------------------------------------------------\n");
 };
 
