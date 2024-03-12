@@ -188,7 +188,7 @@ char* get_timestamp() {
 	strftime(
 			time_str,
 		       	sizeof(time_str),
-		       	"%d-%m-%Y-%H:%M:%S",
+		       	"%d-%m-%Y@%H:%M:%S",
 		       	localtime(&now)
 	);
 	return time_str;
@@ -272,5 +272,12 @@ int main(int argc, char** argv){
 			port
 	);
 	logging(LOG, "--------------------------------------------------------\n");
+
+
+	//end
+	logging(LOG, "--------------------------------------------------------\n");
+	logging(LOG, "Tracker stopped at %s\n", get_timestamp());
+	logging(LOG, "--------------------------------------------------------\n");
+	return 0;
 };
 
