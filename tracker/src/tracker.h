@@ -14,3 +14,11 @@ static const char ARGS[LEN_ARGS][16] = {
        	"-p", "--port",
        	"-c", "--config" 
 };
+
+enum LOG_LEVEL{
+	ERROR=0, WARNING, LOG, NONE
+};
+
+char* log_level_to_string(enum LOG_LEVEL);
+
+void logging(enum LOG_LEVEL, const char*, ...);
