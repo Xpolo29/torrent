@@ -2,7 +2,7 @@ use std::io;
 use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
-
+use std::fs;
 // Définir la structure FileProp
 struct Config {
     port: u16,
@@ -44,8 +44,17 @@ fn get_listen_port() -> u16 {
     }
     get_listen_port_rec()
 }
-
 fn get_proposed_files() -> Vec<FileProp> {
+    // PRECOND : les fichiers existent
+    fn fill_file_prop(file: &str) -> FileProp{
+                return FileProp {
+                    file_name: file.trim().to_string(),
+                    length: fs::metadata(file).unwrap().len(),    
+                    piece_size: 1024,                  // taille de bloc constante pour l'instant
+                    hash: "hash_constant".to_string(), // hash constant pour l'instant
+                };            
+
+    }
     let mut files: Vec<FileProp> = Vec::new();
 
     println!(
@@ -60,12 +69,7 @@ fn get_proposed_files() -> Vec<FileProp> {
         // Créer un FileProp avec des informations constantes
         match Path::new(file).exists() {
             true => {
-                let file_prop = FileProp {
-                    file_name: file.trim().to_string(),
-                    length: 1024,                      // taille constante pour l'instant
-                    piece_size: 1024,                  // taille de bloc constante pour l'instant
-                    hash: "hash_constant".to_string(), // hash constant pour l'instant
-                };
+                let file_prop = fill_file_prop(file);
                 files.push(file_prop);
             }
             false => {
@@ -77,10 +81,9 @@ fn get_proposed_files() -> Vec<FileProp> {
 
     if files.len() != 0 {
         println!("Tu veux télécharger les fichiers suivants:");
-        for (index, file) in files.iter().enumerate() {
+        for file in files.iter() {
             println!(
-                "fichier{}: {}, taille: {}, taille de bloc: {}, hash: {}",
-                index + 1,
+                "{} -- taille: {}, taille de bloc: {}, hash: {}",
                 file.file_name,
                 file.length,
                 file.piece_size,
@@ -96,8 +99,9 @@ fn get_proposed_files() -> Vec<FileProp> {
 
 // Send port and available files to tracker
 fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
-    // Connect to the tracker
-    let mut stream = TcpStream::connect("127.0.0.1:7878").unwrap();
+    // Connect to the tracker unwrap function takes the Ok variant of the Result and returns the value inside
+    // expect() si le résultat est Err, le programme crash avec le message passé en paramètre
+    let mut stream = TcpStream::connect("127.0.0.1:7878").expect("Pas réussis à se connecter au tracker");
     /*
     into_iter() : transform the vector into an iterator
     map() : apply a function to each element of the iterator
