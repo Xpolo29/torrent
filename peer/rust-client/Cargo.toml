@@ -16,6 +16,13 @@ name = "rust-client"
 path = "src/main.rs"
 
 [[bin]]
-name = "test"
-path = "src/test.rs"
+name = "com"
+path = "src/com.rs"
+
+[[bin]]
+name = "userinput"
+path = "src/userinput.rs"
+
+
+
 [dependencies]

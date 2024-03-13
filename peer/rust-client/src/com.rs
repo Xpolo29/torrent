@@ -1,14 +1,17 @@
 // src/com.rs
-
 use std::io::Write;
 use std::net::TcpStream;
 
 use crate::config::FileProp;
-// Send port and available files to tracker
-pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
+fn send_message(msg: String) {
     // Connect to the tracker unwrap function takes the Ok variant of the Result and returns the value inside
     // expect() si le résultat est Err, le programme crash avec le message passé en paramètre
-    let mut stream = TcpStream::connect("127.0.0.1:7878").expect("Pas réussis à se connecter au tracker");
+    let mut stream =
+        TcpStream::connect("127.0.0.1:7878").expect("Pas réussis à se connecter au tracker");
+    stream.write(msg.as_bytes()).unwrap();
+}
+// Send port and available files to tracker
+pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
     /*
     into_iter() : transform the vector into an iterator
     map() : apply a function to each element of the iterator
@@ -26,9 +29,20 @@ pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
         .collect();
 
     let msg = format!(
-        "< announce listen {} seed [{}]",
+        "< announce listen {} seed [{}]\r\n",
         port,
         files_string.join(" ")
     );
-    stream.write(msg.as_bytes()).unwrap();
+    send_message(msg);
 }
+// works if there is one criterion
+pub fn send_search_to_tracker(criterions: String) {
+    if criterions.is_empty() {
+        send_message("< look\r\n".to_string());
+    } else {
+        send_message(format!("< look [filename=\"{}\"]\r\n", criterions));
+    }
+}
+
+#[cfg(test)]
+mod tests {}

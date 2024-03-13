@@ -1,13 +1,11 @@
 // src/main.rs
-mod userinput;
 mod com;
 mod config;
+mod userinput;
 
-use userinput::{get_listen_port, get_proposed_files};
-use com::send_port_seed_to_tracker;
+use com::{send_port_seed_to_tracker, send_search_to_tracker};
 use config::Config;
-
-
+use userinput::{get_available_files, get_listen_port, get_proposed_files};
 
 fn main() {
     let mut config = Config {
@@ -15,8 +13,11 @@ fn main() {
         files: Vec::new(),
     };
     // nul si le port change pas et en plus ça marche pas
+    /*
+     */
     config.port = get_listen_port();
     config.files = get_proposed_files();
     send_port_seed_to_tracker(config.port, config.files);
-    // Idee faire des mocks du server en simulant les echanges TCP avec des réponses constantes
+    let desired_files = get_available_files();
+    send_search_to_tracker(desired_files);
 }

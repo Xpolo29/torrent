@@ -1,7 +1,7 @@
 // src/userinput.rs
+use std::fs;
 use std::io;
 use std::path::Path;
-use std::fs;
 
 // because config is a top level one should write use crate::config and not mod config
 use crate::config::FileProp;
@@ -37,14 +37,13 @@ pub fn get_listen_port() -> u16 {
 }
 pub fn get_proposed_files() -> Vec<FileProp> {
     // PRECOND : les fichiers existent
-    fn fill_file_prop(file: &str) -> FileProp{
-                return FileProp {
-                    file_name: file.trim().to_string(),
-                    length: fs::metadata(file).unwrap().len(),    
-                    piece_size: 1024,                  // taille de bloc constante pour l'instant
-                    hash: "hash_constant".to_string(), // hash constant pour l'instant
-                };            
-
+    fn fill_file_prop(file: &str) -> FileProp {
+        return FileProp {
+            file_name: file.trim().to_string(),
+            length: fs::metadata(file).unwrap().len(),
+            piece_size: 1024, // taille de bloc constante pour l'instant
+            hash: "hash_constant".to_string(), // hash constant pour l'instant
+        };
     }
     let mut files: Vec<FileProp> = Vec::new();
 
@@ -75,10 +74,7 @@ pub fn get_proposed_files() -> Vec<FileProp> {
         for file in files.iter() {
             println!(
                 "{} -- taille: {} bytes, taille de bloc: {}, hash: {}",
-                file.file_name,
-                file.length,
-                file.piece_size,
-                file.hash
+                file.file_name, file.length, file.piece_size, file.hash
             );
         }
     } else {
@@ -87,3 +83,16 @@ pub fn get_proposed_files() -> Vec<FileProp> {
 
     files
 }
+// return
+pub fn get_available_files() -> String {
+    let mut criterions = String::new();
+    println!("Quel fichier cherches-tu? Appuie sur Entrée pour voir tous les fichiers disponibles");
+    io::stdin()
+        .read_line(&mut criterions)
+        .expect("Pas réussi à lire la ligne");
+
+    return criterions.trim().to_string();
+}
+
+#[cfg(test)]
+mod tests {}
