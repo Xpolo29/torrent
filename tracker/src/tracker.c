@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdarg.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 //global var
 char* config_path = "config.ini";
@@ -226,6 +228,17 @@ void logging(enum LOG_LEVEL level, const char* msg, ...){
 
 	//log to file
 	char* folder = "log/";
+
+	//if dir not exist
+	if(!opendir(folder)){
+		//create it
+		if (mkdir(folder, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)){
+			perror("Could not create log folder or can't access it\n");
+			exit(1);
+		}
+		
+	}
+
 	char* name = get_timestamp();
 	char* end = ".log";
 
