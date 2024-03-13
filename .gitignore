@@ -1,7 +1,6 @@
 sujet.pdf
 .venv/
 peer/rust-client/Cargo.lock
-peer/rust-client/Cargo.toml
 peer/rust-client/server
 peer/rust-client/target/
 peer/rust-client/test
