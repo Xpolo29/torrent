@@ -42,5 +42,3 @@ Il recoit ```> data clef [3:%piece3 5:%piece5] ``` où piece3 est la donné au f
 
 7. Avoir une config
 
-
-notre pair doit etre multi-threadé
