@@ -1,7 +1,9 @@
 #include "database.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
-#define LEN_ARGS 8
+#define LEN_ARGS 10
+#define LEN_TASKS 32
+#define MAX_THREAD_POOL 64
 enum request_t { announce = 0, look, getfile, update };
 
 enum op_t { eq, gt, lt };
@@ -14,11 +16,12 @@ static const char ARGS[LEN_ARGS][16] = {
 	"-v", "--verbose",
        	"-h", "--help",
        	"-p", "--port",
-       	"-c", "--config" 
+       	"-c", "--config",
+	"-m", "--max-conn"
 };
 
 enum LOG_LEVEL{
-	ERROR=0, WARNING, LOG, NONE
+	ERROR=0, WARNING, LOG, DEBUG, NONE
 };
 
 char* log_level_to_string(enum LOG_LEVEL);
@@ -36,3 +39,11 @@ int send_msg(int socket);
 void sigint_handler(int); 
 
 int process(int);
+
+int create_thread_pool(int);
+
+void* thread_main(void*);
+
+int new_task(int);
+	
+int delete_thread_pool();

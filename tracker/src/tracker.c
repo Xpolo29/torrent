@@ -12,12 +12,17 @@
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <pthread.h>
 
 //global var
 char* config_path = "config.ini";
 enum LOG_LEVEL log_level = ERROR;
 int16_t port = -1;
 int running = 1;
+int thread_pool_size = -1;
+pthread_t* pool;
+int tasks[LEN_TASKS];
+pthread_mutex_t mutex_array[LEN_TASKS];
 
 int compare(struct data *in, struct data *out, long filesize, enum op_t op,
             int len) {
@@ -69,11 +74,11 @@ int parse_args(int argc, char** argv){
 					case 1: // --verbose
 						// check if there is a value
 						if(i + 1 < argc && isdigit(argv[i+1][0])){
-							log_level = atoi(argv[i + 1]) % 4;
+							log_level = atoi(argv[i + 1]) % (NONE + 1);
 							++i;
 						}else{
 							if(log_level == -1){log_level = 2;}
-							else{log_level =(log_level + 1) % 4;}
+							else{log_level =(log_level + 1) % (NONE + 1);}
 						}
 						break;
 					case 2: // -h
@@ -101,6 +106,20 @@ int parse_args(int argc, char** argv){
 							logging(WARNING, "Got -c but no config path is specified, using default\n");
 						}
 						break;
+					case 8: // -m
+					case 9: // --max-conn
+						if(i + 1 < argc){
+							thread_pool_size = atoi(argv[i + 1]);
+							if(thread_pool_size < 1 || thread_pool_size > MAX_THREAD_POOL){
+								logging(WARNING, "-m value is outside of bounds [1:%d], using default\n", MAX_THREAD_POOL);
+								thread_pool_size = -1;
+							} else 
+								logging(LOG, "Max simultaneous connection updated to %d\n", thread_pool_size);
+							++i;
+						}else{
+							logging(WARNING, "Got -m but no max connection is specified, using default\n");
+						}
+						break;
 					default:
 						break;
 				}
@@ -117,8 +136,8 @@ int parse_args(int argc, char** argv){
 
 //used by load config to apply parameters in file
 int apply_parameter(char* key, char* value){
-	const char key_arr[3][16] = {
-		"port", "verbose", " "	
+	const char key_arr[4][16] = {
+		"port", "verbose", "max-conn"," "	
 	};
 
 	int i = 0;
@@ -128,16 +147,23 @@ int apply_parameter(char* key, char* value){
 			switch(i){
 				case 0: //port
 					if(port == -1){
-						logging(LOG, "Loading parameter %s to %s\n", key, value);
+						logging(DEBUG, "Loading parameter %s to %s\n", key, value);
 						port = atoi(value);
 					}
 					break;
 				case 1: //verbose
 					if(log_level == -1){
-						logging(LOG, "Loading parameter %s to %s\n", key, value);
+						logging(DEBUG, "Loading parameter %s to %s\n", key, value);
 						log_level = atoi(value);
 					}
 					break;
+				case 2: //max-conn
+					if( thread_pool_size == -1){
+						logging(DEBUG, "Loading parameter %s to %s\n", key, value);
+						thread_pool_size = atoi(value);
+					}
+					break;
+
 				default:
 					break;
 			}
@@ -174,7 +200,7 @@ int load_config(char* path){
 		if (trimmed_line[0] == '[') {
 			// Extract section name
 			sscanf(trimmed_line, "[%[^]]", section);
-			logging(LOG, "Entering section %s\n", section);
+			logging(DEBUG, "Entering section %s\n", section);
 		} else {
 			// Parse key-value pairs
 			sscanf(trimmed_line, "%[^=] = %[^\n]", key, value);
@@ -185,7 +211,7 @@ int load_config(char* path){
 
 	// Close the file
 	fclose(file);
-	logging(LOG, "Config file loaded\n");
+	logging(DEBUG, "Config file loaded\n");
 	return 0;
 }
 
@@ -209,6 +235,9 @@ void logging(enum LOG_LEVEL level, const char* msg, ...){
 	char full_msg[256] = {0};
 
 	switch(level){
+		case DEBUG:
+			strncat(full_msg, "DEBUG : ", 9);
+			break;
 		case LOG:
 			strncat(full_msg, "LOG : ", 7);
 			break;
@@ -236,7 +265,8 @@ void logging(enum LOG_LEVEL level, const char* msg, ...){
 	char* folder = "log/";
 
 	//if dir not exist
-	if(!opendir(folder)){
+	DIR* exists = opendir(folder);
+	if(!exists){
 		//create it
 		if (mkdir(folder, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)){
 			perror("Could not create log folder or can't access it\n");
@@ -244,6 +274,8 @@ void logging(enum LOG_LEVEL level, const char* msg, ...){
 		}
 		
 	}
+
+	closedir(exists);
 
 	char* name = get_timestamp();
 	char* end = ".log";
@@ -255,6 +287,11 @@ void logging(enum LOG_LEVEL level, const char* msg, ...){
 	strncat(filename + 14, end, 5);
 
 	FILE* log_file = fopen(filename, "a");
+
+	if(log_file == NULL){
+		printf("WARNING : Cannot open %s\n", filename);
+		return;
+	}
 
 	fprintf(log_file, "%s", full_msg);
 
@@ -271,6 +308,8 @@ char* log_level_to_string(enum LOG_LEVEL level){
 			return "WARNING";
 		case LOG:
 			return "LOG";
+		case DEBUG:
+			return "DEBUG";
 
 	}
 }
@@ -306,7 +345,7 @@ int create_master_sock(int port){
 		return -1;
 	}
 
-	int listened = listen(sock, 10);
+	int listened = listen(sock, LEN_TASKS);
 
 	if(listened < 0){
 		logging(ERROR, "Could not listen socket\n");	
@@ -320,11 +359,9 @@ int create_master_sock(int port){
 
 int process(int connection){
 	char buff[16*1024] = {0};
-	logging(LOG, "Thread started\n");
-
 	int read = recv(connection, buff, 1024*16, 0);
 	if(read < 0){
-		logging(ERROR, "Could not read from socket\n");
+		logging(ERROR, "Could not read from socket %d\n", connection);
 		return 3;
 	}
 
@@ -338,7 +375,67 @@ int process(int connection){
 
 void sigint_handler(int signum) {
 	logging(LOG, "Ctrl+c received, exiting\n");
-	running = 0;
+	running--;
+	if(running < -1){
+		logging(WARNING, "Double ctrl+c received, forcing exit\n");
+		exit(6);
+	}
+}
+
+void* thread_main(void* arg){
+	logging(DEBUG, "Thread %lu started\n", pthread_self());
+	int i = 0;
+	while(running){
+		pthread_mutex_lock(&mutex_array[i]);
+		if(tasks[i]){
+			int temp = tasks[i];
+			tasks[i] = 0;
+			pthread_mutex_unlock(&mutex_array[i]);
+			process(temp);
+		}
+
+		pthread_mutex_unlock(&mutex_array[i]);
+		i = (i + 1) % LEN_TASKS;
+		usleep(100000);
+	}	
+	logging(DEBUG, "Thread %lu stopped\n", pthread_self());
+	return 0;
+}
+
+int create_thread_pool(int size){
+	logging(LOG, "Creating thread pool of size %d\n", thread_pool_size);
+	pool = malloc(sizeof(pthread_t) * thread_pool_size);
+	for(int i = 0; i < thread_pool_size; ++i){
+		pthread_create(&pool[i], NULL, thread_main, NULL);
+	}	
+	return 0;
+}
+
+int delete_thread_pool(){
+	logging(LOG, "Deleting thread pool of size %d\n", thread_pool_size);
+	for(int i = 0; i < thread_pool_size; ++i){
+		pthread_join(pool[i], NULL);
+	}
+	if(!pool)return 1;
+	free(pool);
+	return 0;
+}
+
+
+int new_task(int conn){
+	logging(LOG, "Adding new task to handle conn=%d\n", conn);
+	for(int i = 0; i < LEN_TASKS; ++i){
+		pthread_mutex_lock(&mutex_array[i]);
+		if(!tasks[i]){
+			tasks[i] = conn;
+			pthread_mutex_unlock(&mutex_array[i]);
+			return 0;
+		}
+		pthread_mutex_unlock(&mutex_array[i]);
+	}	
+
+	logging(WARNING, "Task list is full\n");
+	return 1;
 }
 
 int main(int argc, char** argv){
@@ -353,6 +450,21 @@ int main(int argc, char** argv){
 	//loading config
 	if(load_config(config_path))return 2;	
 
+	//create thread pool
+	if(create_thread_pool(thread_pool_size))return 5;
+
+	//create listening socket
+	int main_sock = create_master_sock(port);
+	if(main_sock < 0)return 3;
+
+	//connection var
+	struct sockaddr_in server_addr;
+	struct sockaddr* addr = (struct sockaddr*)(&server_addr);
+	memset(&server_addr, 0, sizeof(server_addr));
+	socklen_t size = sizeof(server_addr);
+	int connection;
+
+	usleep(100000);
 	//start
 	logging(LOG, "--------------------------------------------------------\n");
 	logging(LOG, "Starting on %s at %s:%d\n",
@@ -362,18 +474,8 @@ int main(int argc, char** argv){
 	);
 	logging(LOG, "--------------------------------------------------------\n");
 
-	int main_sock = create_master_sock(port);
-	if(main_sock < 0)return 3;
-		
-	//connection var
-	struct sockaddr_in server_addr;
-	struct sockaddr* addr = (struct sockaddr*)(&server_addr);
-	memset(&server_addr, 0, sizeof(server_addr));
-	socklen_t size = sizeof(server_addr);
-	int connection;
-
 	//main boucle
-	while(running){
+	while(running > 0){
 
 		//peer data
 		memset(&server_addr, 0, sizeof(server_addr));
@@ -381,14 +483,18 @@ int main(int argc, char** argv){
 		//waiting for connection
 		connection = accept(main_sock, addr, &size);
 
-		if(connection){
-			//start thread to process client request
-			process(connection);
+		if(connection > 0){
+			//create task to process client request
+			new_task(connection);
 		}
 		usleep(100000);
 	}
 
+	//clean exit
 	close(main_sock);
+	if(delete_thread_pool()){
+		logging(WARNING, "Could not properly delete thread pool");
+	}
 
 	//end
 	logging(LOG, "--------------------------------------------------------\n");
