@@ -59,6 +59,7 @@ char *parse_request(char *request, int peer_id) {
   int nb_matches = 0;
   // logging(DEBUG, "Compiling regex\n");
   for (int i = 0; i < 5; i++) {
+    // Si aucun regex ne reconnait la requête : Erreur de syntaxe
     if (i == 4)
       return "Error";
     result = regcomp(&regex, all_reg[i], REG_EXTENDED);
