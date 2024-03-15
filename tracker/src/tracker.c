@@ -7,12 +7,17 @@
 #include <stdarg.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <signal.h>
+#include <fcntl.h>
 
 //global var
 char* config_path = "config.ini";
 enum LOG_LEVEL log_level = ERROR;
 int16_t port = -1;
-
+int running = 1;
 
 int compare(struct data *in, struct data *out, long filesize, enum op_t op,
             int len) {
@@ -269,7 +274,77 @@ char* log_level_to_string(enum LOG_LEVEL level){
 	}
 }
 
+int create_master_sock(int port){
+	int sock;
+	/*
+	 * AF_INET = IPV4
+	 * SOCK_STREAM = IO_STREAM
+	 * IPPROTO_TCP = TCP 
+	 */
+
+	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);	
+	if(sock < 0){
+		logging(ERROR, "Could not open socket\n");	
+		return -1;
+	}
+
+	struct sockaddr_in server_addr;
+
+	memset(&server_addr, 0, sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = INADDR_ANY;
+	server_addr.sin_port = htons(port); 
+
+	struct sockaddr* addr = (struct sockaddr*)(&server_addr);
+	socklen_t size = sizeof(server_addr);
+
+	int binded = bind(sock, addr, size);
+
+	if(binded < 0){
+		logging(ERROR, "Could not bind socket\n");	
+		return -1;
+	}
+
+	int listened = listen(sock, 10);
+
+	if(listened < 0){
+		logging(ERROR, "Could not listen socket\n");	
+		return -1;
+	}
+
+	fcntl(sock, F_SETFL, O_NONBLOCK);
+
+	return sock;
+}
+
+int process(int connection){
+	char buff[16*1024] = {0};
+	logging(LOG, "Thread started\n");
+
+	int read = recv(connection, buff, 1024*16, 0);
+	if(read < 0){
+		logging(ERROR, "Could not read from socket\n");
+		return 3;
+	}
+
+	logging(LOG, "< %s\n", buff);
+
+	//TODO parse then process then answer
+
+	close(connection);
+	return 0;
+}
+
+void sigint_handler(int signum) {
+	logging(LOG, "Ctrl+c received, exiting\n");
+	running = 0;
+}
+
 int main(int argc, char** argv){
+
+	if (signal(SIGINT, sigint_handler) == SIG_ERR) {
+		logging(WARNING, "Cannot catch ctrl+c, exit will be dirty\n");
+	}
 
 	//parsing args
 	if(parse_args(argc, argv))return 1;
@@ -286,7 +361,33 @@ int main(int argc, char** argv){
 	);
 	logging(LOG, "--------------------------------------------------------\n");
 
-	
+	int main_sock = create_master_sock(port);
+	if(main_sock < 0)return 3;
+		
+	//connection var
+	struct sockaddr_in server_addr;
+	struct sockaddr* addr = (struct sockaddr*)(&server_addr);
+	memset(&server_addr, 0, sizeof(server_addr));
+	socklen_t size = sizeof(server_addr);
+	int connection;
+
+	//main boucle
+	while(running){
+
+		//peer data
+		memset(&server_addr, 0, sizeof(server_addr));
+
+		//waiting for connection
+		connection = accept(main_sock, addr, &size);
+
+		if(connection){
+			//start thread to process client request
+			process(connection);
+		}
+		usleep(100000);
+	}
+
+	close(main_sock);
 
 	//end
 	logging(LOG, "--------------------------------------------------------\n");

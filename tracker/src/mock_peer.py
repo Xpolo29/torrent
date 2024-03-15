@@ -45,7 +45,7 @@ def get_peers(file_key):
 # Example usage
 if __name__ == "__main__":
     # Announce files to tracker
-    port = 2222
+    port = 12345
     files = [
         {"filename": "file_a.dat", "filesize": 2097152, "piecesize": 1024, "key": calculate_hash()},
         {"filename": "file_b.dat", "filesize": 3145728, "piecesize": 1536, "key": calculate_hash()}
