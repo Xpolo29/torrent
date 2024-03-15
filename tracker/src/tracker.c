@@ -232,7 +232,7 @@ char* get_timestamp() {
 void logging(enum LOG_LEVEL level, const char* msg, ...){
 	if(level > log_level)return;
 
-	char full_msg[256] = {0};
+	char full_msg[1024*16] = {0};
 
 	switch(level){
 		case DEBUG:
@@ -328,6 +328,11 @@ int create_master_sock(int port){
 		return -1;
 	}
 
+	int optval = 1;
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+		logging(WARNING, "Could not set SO_REUSEADDR flag\n");
+	}
+
 	struct sockaddr_in server_addr;
 
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -368,6 +373,8 @@ int process(int connection){
 	logging(LOG, "< %s\n", buff);
 
 	//TODO parse then process then answer
+	//mimic worload
+	sleep(1);
 
 	close(connection);
 	return 0;
@@ -386,17 +393,20 @@ void* thread_main(void* arg){
 	logging(DEBUG, "Thread %lu started\n", pthread_self());
 	int i = 0;
 	while(running){
-		pthread_mutex_lock(&mutex_array[i]);
-		if(tasks[i]){
-			int temp = tasks[i];
-			tasks[i] = 0;
+		int used = pthread_mutex_trylock(&mutex_array[i]);
+		if(!used){
+			if(tasks[i]){
+				int temp = tasks[i];
+				tasks[i] = 0;
+				pthread_mutex_unlock(&mutex_array[i]);
+				logging(DEBUG, "Thread %lu processing task %d\n", pthread_self(), temp);
+				process(temp);
+			}
 			pthread_mutex_unlock(&mutex_array[i]);
-			process(temp);
 		}
 
-		pthread_mutex_unlock(&mutex_array[i]);
 		i = (i + 1) % LEN_TASKS;
-		usleep(100000);
+		usleep(1000);
 	}	
 	logging(DEBUG, "Thread %lu stopped\n", pthread_self());
 	return 0;
@@ -423,7 +433,8 @@ int delete_thread_pool(){
 
 
 int new_task(int conn){
-	logging(LOG, "Adding new task to handle conn=%d\n", conn);
+	logging(DEBUG, "Adding new task to handle conn=%d\n", conn);
+
 	for(int i = 0; i < LEN_TASKS; ++i){
 		pthread_mutex_lock(&mutex_array[i]);
 		if(!tasks[i]){
@@ -487,7 +498,7 @@ int main(int argc, char** argv){
 			//create task to process client request
 			new_task(connection);
 		}
-		usleep(100000);
+		usleep(1000);
 	}
 
 	//clean exit

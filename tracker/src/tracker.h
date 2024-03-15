@@ -2,8 +2,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #define LEN_ARGS 10
-#define LEN_TASKS 32
-#define MAX_THREAD_POOL 64
+#define LEN_TASKS 128
+#define MAX_THREAD_POOL LEN_TASKS
 enum request_t { announce = 0, look, getfile, update };
 
 enum op_t { eq, gt, lt };
