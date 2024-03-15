@@ -22,3 +22,5 @@ enum LOG_LEVEL{
 char* log_level_to_string(enum LOG_LEVEL);
 
 void logging(enum LOG_LEVEL, const char*, ...);
+
+char* parse_request(char* request, int peer_ip);
