@@ -13,8 +13,7 @@ fn main() {
         files: Vec::new(),
     };
     // nul si le port change pas et en plus ça marche pas
-    /*
-     */
+
     config.port = get_listen_port();
     config.files = get_proposed_files();
     send_port_seed_to_tracker(config.port, config.files);

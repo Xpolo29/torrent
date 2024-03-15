@@ -1,13 +1,15 @@
 // src/com.rs
+use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
+use crate::config::FileProp;
 enum Message {
     OK,
     LIST,
     ERROR,
     NONE,
 }
-use crate::config::FileProp;
+
 // Wait for the answer of the tracker
 fn goes_well(message: Message, buffer: String) {
     match message {
@@ -20,9 +22,14 @@ fn goes_well(message: Message, buffer: String) {
         Message::ERROR => {
             println!("An error occurred: {}", buffer);
         }
+        Message::NONE => {
+            // Handle NONE case
+        }
     }
 }
-fn send_message(msg: String, Message: Message) {
+
+// FIXME : tracker adress should be taken from the configuration file
+fn send_message(msg: String, _message: Message) {
     // Connect to the tracker unwrap function takes the Ok variant of the Result and returns the value inside
     // expect() si le résultat est Err, le programme crash avec le message passé en paramètre
     let mut stream =
@@ -33,6 +40,7 @@ fn send_message(msg: String, Message: Message) {
     stream.read_to_string(&mut buffer).unwrap();
     goes_well(Message::OK, buffer);
 }
+
 // Send port and available files to tracker
 pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
     /*
@@ -52,18 +60,19 @@ pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
         .collect();
 
     let msg = format!(
-        "< announce listen {} seed [{}]\r\n",
+        "announce listen {} seed [{}]\r\n",
         port,
         files_string.join(" ")
     );
-    send_message(msg);
+    send_message(msg, Message::NONE);
 }
+
 // works if there is one criterion
 pub fn send_search_to_tracker(criterions: String) {
     if criterions.is_empty() {
-        send_message("< look\r\n".to_string(), Message::LOOK);
+        send_message("look\r\n".to_string(), Message::NONE);
     } else {
-        send_message(format!("< look [filename=\"{}\"]\r\n", criterions));
+        send_message(format!("look [filename=\"{}\"]\r\n", criterions), Message::NONE);
     }
 }
 
