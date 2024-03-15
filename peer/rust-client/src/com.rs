@@ -32,8 +32,7 @@ fn goes_well(message: Message, buffer: String) {
 fn send_message(msg: String, _message: Message) {
     // Connect to the tracker unwrap function takes the Ok variant of the Result and returns the value inside
     // expect() si le résultat est Err, le programme crash avec le message passé en paramètre
-    let mut stream =
-        TcpStream::connect("127.0.0.1:7878").expect("Pas réussis à se connecter au tracker");
+    let mut stream = TcpStream::connect("127.0.0.1:7878").expect("Pas réussis à se connecter au tracker");
     stream.write(msg.as_bytes()).unwrap();
     // Listen for the answer
     let mut buffer = String::new();
@@ -75,6 +74,3 @@ pub fn send_search_to_tracker(criterions: String) {
         send_message(format!("look [filename=\"{}\"]\r\n", criterions), Message::NONE);
     }
 }
-
-#[cfg(test)]
-mod tests {}
