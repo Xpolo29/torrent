@@ -79,6 +79,7 @@ int parse_args(int argc, char** argv){
 					case 2: // -h
 					case 3: // --help
 						printf("This is the help message\n");
+						exit(1);
 						break;
 					case 4: // -p
 					case 5: // --port
