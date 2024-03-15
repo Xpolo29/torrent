@@ -8,5 +8,12 @@ pub struct FileProp {
 
 pub struct Config {
     pub port: u16,
+    pub ip: String,
     pub files: Vec<FileProp>,
 }
+
+pub enum Message {
+    OK,
+    LIST,
+}
+

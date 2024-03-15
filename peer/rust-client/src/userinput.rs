@@ -11,7 +11,7 @@ pub fn get_listen_port() -> u16 {
         // TODO : let port be a parameter to avoid creation of a new string
         let mut port = String::new();
         // Takes the port number from the user that the peer will use to receive and forward files
-        println!("Quel port veux-tu écouter? (appuie sur Entrée pour utiliser un port random)");
+        println!("Port associé à ce peer? Appuie sur Entrée pour utiliser le port par défaut: 8080");
         // Create a new string to store the port number
         // Call the stdin handle to call the read_line method then call the expect method to crash if the System call fails
         io::stdin()
@@ -48,7 +48,7 @@ pub fn get_proposed_files() -> Vec<FileProp> {
     let mut files: Vec<FileProp> = Vec::new();
 
     println!(
-        "Quels fichiers veux-tu envoyer? (séparés par des espaces blancs) tape Entree si tu ne veux rien partager sale leecher de merde."
+        "Quels fichiers veux-tu envoyer? (séparés par des espaces blancs) tape Entree si tu ne veux rien partager"
     );
     let mut input = String::new();
     io::stdin()
