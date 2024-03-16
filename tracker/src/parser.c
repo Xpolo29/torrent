@@ -1,4 +1,5 @@
 // #include "parser.h"
+#include "database.h"
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,18 +14,6 @@ enum request_t {
   update,
 };
 
-struct host {
-  char ip[16];
-  int16_t port;
-};
-
-struct data {
-  struct host host;
-  long size;
-  int chunk_size;
-  char hash[64];
-  char filename[352];
-};
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
     return announce;
@@ -40,7 +29,7 @@ enum request_t char_to_req(char *request) {
   }
 }
 
-char *parse_request(char *request, int peer_id) {
+char *parse_request(char *buf, char *request, int peer_id) {
   char *reg_update = "^(update) seed \\[(([[:alnum:]]* ?)*)\\] leech "
                      "\\[(([[:alnum:]]+ ?)*)\\]$";
   char *reg_look = "^(look) (\\[(filename='([[:graph:]]+)')? "
@@ -118,7 +107,7 @@ char *parse_request(char *request, int peer_id) {
     char hash[size];
     memcpy(hash, request + start, size);
     hash[size] = 0;
-    // return process_getfile(hash);
+    // return process_getfile(buf,hash);
     printf("hash : %s\n", hash);
     exit(0);
     break;
@@ -140,7 +129,7 @@ char *parse_request(char *request, int peer_id) {
     filesize_c[size] = 0;
     int filesize = atoi(filesize_c);
 
-    // return process_look(filename, op, filesize);
+    // return process_look(buf,filename, op, filesize);
     printf("look filename: %s filesize%c%d\n", filename, op, filesize);
     exit(0);
     break;
@@ -176,7 +165,7 @@ char *parse_request(char *request, int peer_id) {
       token = strtok(NULL, " ");
       leech_size++;
     }
-    // return process_update(seeds, seed_size, leeches, leech_size);
+    // return process_update(buf,seeds, seed_size, leeches, leech_size);
     printf("Seeds : ");
     for (int i = 0; i < seed_size; i++) {
       printf("%s ", seeds[i]);
@@ -245,7 +234,7 @@ char *parse_request(char *request, int peer_id) {
       token = strtok(NULL, " ");
       leech_size++;
     }
-    // return process_announce(seeds, seed_size, leeches, leech_size);
+    // return process_announce(buf,seeds, seed_size, leeches, leech_size);
     printf("Seeds : ");
     for (int i = 0; i < seed_size; i++) {
       printf("filename : %s size : %ld chunk_size : %d hash : %s\n ",
@@ -264,14 +253,33 @@ char *parse_request(char *request, int peer_id) {
   }
 }
 
+int process_getfile(char *buf, char *hash) {
+  struct data d = load_hash(hash);
+  if (d.size == 0) {
+    buf = "Wrong hash";
+    return -1;
+  }
+  buf = "peers ";
+  strncat(buf, hash, HASH_SIZE);
+  strncat(buf, " [", 2);
+  char host[22];
+  // TODO : Pour plusieurs peers, changer load_hash
+  sprintf(host, "%s:%d", d.host.ip, d.host.port);
+  strncat(buf, "]", 1);
+  return 1;
+}
+
 int main() {
-  // printf("result : %s \n", parse_request("getfile 1234", 1));
-  // parse_request("look [filename='file_a.dat' filesize>'1048576']", 1);
-  // parse_request("update seed [arbdfg azeeaz azeaea] leech [aedefe dfgefv]",
-  // 1);
-  parse_request("announce listen 4444 seed [filename1.dat 12 12 azerds "
+  char buf[1024];
+  // printf(buf, "result : %s \n", parse_request("getfile 1234", 1));
+  // parse_request(buf, "look [filename='file_a.dat' filesize>'1048576']", 1);
+  // parse_request(buf, "update seed [arbdfg azeeaz azeaea] leech [aedefe
+  // dfgefv]", 1);
+  parse_request(buf,
+                "announce listen 4444 seed [filename1.dat 12 12 azerds "
                 "filename2.dat 13 13 "
                 "azerty] leech [aqwzsx edcrfv]",
                 1);
+  printf("%s\n", buf);
   return 0;
 }
