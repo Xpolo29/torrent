@@ -16,6 +16,15 @@ char* get_timestamp() {
 
 //print help message (-v / --verbose)
 void print_help(){
+	const char* help_message = "Usage: tracker [OPTION...] [OPTION VALUE] \n\n\
+	OPTION # OPTION VALUE # DECRIPTION \n\n\
+	--verbose or -v # [0:4] (ERROR=0, WARNING (default), LOG, DEBUG, NONE # Sets verbose level \n\
+	--help or -h # # Show this message \n\
+	--config or -c # <path to config> # Sets path to config.ini \n\
+	--max-conn or -m # [1:MAX_TASKS] # Set the number of simultaneous task processing \n\
+	--port or -p # [1:65535] # Sets the tracker's listening port \n";
+
+
 	printf("%s", help_message);
 }
 
@@ -34,26 +43,28 @@ char* log_level_to_string(enum LOG_LEVEL level){
 			return "DEBUG";
 
 	}
+	return "UNSET";
 }
 
 //log things, use like printf but with enum LOG_LEVEL as first arg
 void logging(enum LOG_LEVEL level, const char* msg, ...){
 	if(level > log_level)return;
+	if(log_level == NONE)return;
 
 	char full_msg[1024*16] = {0};
 
 	switch(level){
 		case DEBUG:
-			strncat(full_msg, "DEBUG : ", 9);
+			strcat(full_msg, "DEBUG : ");
 			break;
 		case LOG:
-			strncat(full_msg, "LOG : ", 7);
+			strcat(full_msg, "LOG : ");
 			break;
 		case WARNING:
-			strncat(full_msg, "WARNING : ", 10);
+			strcat(full_msg, "WARNING : ");
 			break;
 		case ERROR:
-			strncat(full_msg, "ERROR : ", 9);
+			strcat(full_msg, "ERROR : ");
 			break;
 		default:
 			break;

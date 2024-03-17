@@ -5,6 +5,7 @@
 
 //Main thread fonction, permanently looking for task to process
 void* thread_main(void* arg){
+	(void)arg; // to disable warning
 	logging(DEBUG, "Thread %lu started\n", pthread_self());
 	int i = 0;
 	while(running){
@@ -47,9 +48,9 @@ int new_task(int conn){
 
 //create thread pool that will be processing tasks
 int create_thread_pool(int size){
-	logging(LOG, "Creating thread pool of size %d\n", thread_pool_size);
-	pool = malloc(sizeof(pthread_t) * thread_pool_size);
-	for(int i = 0; i < thread_pool_size; ++i){
+	logging(LOG, "Creating thread pool of size %d\n", size);
+	pool = malloc(sizeof(pthread_t) * size);
+	for(int i = 0; i < size; ++i){
 		pthread_create(&pool[i], NULL, thread_main, NULL);
 	}	
 	return 0;

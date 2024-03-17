@@ -7,19 +7,19 @@
 #define BDD_SIZE 64
 
 struct host {
-  char ip[16];
-  int16_t port;
+	char ip[16];
+	int16_t port;
 };
 
 struct data {
-  struct host host;
-  long size;
-  int chunk_size;
-  char hash[64];
-  char filename[352];
+	struct host host;
+	long size;
+	int chunk_size;
+	char hash[64];
+	char filename[352];
 };
 
-static const struct data EMPTY = {"", 0, 0, 0, "", ""};
+static const struct data EMPTY = {{"", 0}, 0, 0, "", ""};
 
 int get_size();
 
@@ -31,4 +31,5 @@ int remove_host(struct host);
 int remove_file(char *filename);
 int remove_hash(char hash[64]);
 
+	
 #endif

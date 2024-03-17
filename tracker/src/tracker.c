@@ -4,6 +4,7 @@
 
 //Catch ctrl+c for clean exit
 void sigint_handler(int signum) {
+	if(signum !=  SIGINT)return;
 	logging(LOG, "Ctrl+c received, exiting\n");
 	running--;
 	if(running < -1){

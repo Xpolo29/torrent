@@ -20,7 +20,7 @@ int apply_parameter(char* key, char* value){
 					}
 					break;
 				case 1: //verbose
-					if(log_level == -1){
+					if(log_level == UNSET){
 						logging(DEBUG, "Loading parameter %s to %s\n", key, value);
 						log_level = atoi(value);
 					}
@@ -98,7 +98,7 @@ int parse_args(int argc, char** argv){
 							log_level = atoi(argv[i + 1]) % (NONE + 1);
 							++i;
 						}else{
-							if(log_level == -1){log_level = 2;}
+							if(log_level == UNSET){log_level = 2;}
 							else{log_level =(log_level + 1) % (NONE + 1);}
 						}
 						break;
