@@ -45,13 +45,8 @@ impl Display for Answer {
         match self {
             Answer::Ok => write!(f, "ok"),
             Answer::List(props) => {
-                write!(f, "list")?;
                 for prop in props {
-                    write!(
-                        f,
-                        " {} {} {} {}",
-                        prop.file_name, prop.length, prop.piece_size, prop.hash
-                    )?;
+                    write!(f, "{}", prop.file_name)?;
                 }
                 Ok(())
             }

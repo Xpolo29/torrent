@@ -13,8 +13,12 @@ fn send_message(msg: String, expected_answer: &dyn ExpectedAnswer) {
     let mut buffer = String::new();
     reader.read_line(&mut buffer).unwrap();
     match goes_well(buffer, expected_answer) {
-        Ok(response) => println!("Réponse: {}", response),
-        Err(e) => println!("Erreur: {}", e),
+        Ok(response) => {
+            println!("Réponse: {}", response);
+        }
+        Err(e) => {
+            println!("Erreur: {}", e);
+        }
     }
 }
 // Send port and available files to tracker
@@ -55,5 +59,9 @@ pub fn send_search_to_tracker(criterions: String) {
     }
 }
 
+pub fn send_wanted_files_to_tracker(files: Vec<String>) {
+    let msg = format!("getfile [{}]\r\n", files.join(" "));
+    send_message(msg, &ExpectList);
+}
 #[cfg(test)]
 mod tests {}
