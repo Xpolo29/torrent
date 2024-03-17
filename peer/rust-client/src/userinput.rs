@@ -102,5 +102,13 @@ pub fn get_available_files() -> String {
     return criterions.trim().to_string();
 }
 
+pub fn get_file() -> String {
+    println!("Quel fichier veux-tu télécharger?");
+    let mut file = String::new();
+    io::stdin()
+        .read_line(&mut file)
+        .expect("Failed to read line");
+    return file.trim().to_string();
+}
 #[cfg(test)]
 mod tests {}

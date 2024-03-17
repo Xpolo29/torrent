@@ -1,7 +1,7 @@
 // src/com.rs
 use crate::config::{ExpectList, ExpectOk, ExpectedAnswer, FileProp}; // Import trait from config
 use crate::parse::goes_well;
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 
 fn send_message(msg: String, expected_answer: &dyn ExpectedAnswer) {
@@ -9,8 +9,9 @@ fn send_message(msg: String, expected_answer: &dyn ExpectedAnswer) {
     let port = "7878";
     let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).unwrap();
     stream.write(msg.as_bytes()).unwrap();
+    let mut reader = BufReader::new(stream);
     let mut buffer = String::new();
-    stream.read_to_string(&mut buffer).unwrap();
+    reader.read_line(&mut buffer).unwrap();
     match goes_well(buffer, expected_answer) {
         Ok(response) => println!("Réponse: {}", response),
         Err(e) => println!("Erreur: {}", e),

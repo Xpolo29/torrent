@@ -40,7 +40,6 @@ impl ExpectedAnswer for ExpectList {
         Ok(Answer::List(props))
     }
 }
-
 impl Display for Answer {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         match self {
