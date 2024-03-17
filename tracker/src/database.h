@@ -1,8 +1,10 @@
-#include <stdint.h>
+#ifndef DATABASE
+#define DATABASE
 
-#ifndef BDD_SIZE
+#include <stdint.h>
+#include <string.h>
+
 #define BDD_SIZE 64
-#endif
 
 struct host {
   char ip[16];
@@ -28,3 +30,5 @@ struct data load_hash(char hash[64]);
 int remove_host(struct host);
 int remove_file(char *filename);
 int remove_hash(char hash[64]);
+
+#endif

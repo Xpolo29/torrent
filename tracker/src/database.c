@@ -1,5 +1,4 @@
 #include "database.h"
-#include <string.h>
 
 //bdd
 struct data bdd[BDD_SIZE];

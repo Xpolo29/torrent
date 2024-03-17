@@ -1,18 +1,5 @@
-// #include "parser.h"
+#include "parser.h"
 #include "database.h"
-#include <regex.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#define MATCH_SIZE 10
-#define MAX_SEED 32
-#define HASH_SIZE 64
-enum request_t {
-  announce = 0,
-  look,
-  getfile,
-  update,
-};
 
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
@@ -269,6 +256,7 @@ int process_getfile(char *buf, char *hash) {
   return 1;
 }
 
+/*
 int main() {
   char buf[1024];
   // printf(buf, "result : %s \n", parse_request("getfile 1234", 1));
@@ -283,3 +271,4 @@ int main() {
   printf("%s\n", buf);
   return 0;
 }
+*/
