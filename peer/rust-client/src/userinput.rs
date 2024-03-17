@@ -1,23 +1,25 @@
 // src/userinput.rs
+use crate::config::FileProp;
+use md5::{Digest, Md5};
 use std::fs;
 use std::io;
-use std::path::Path;
-use md5;
-use crate::config::FileProp; // because config is at top level
-// One port per peer/thread
-pub fn get_hash(file: &str) -> String {
-    let mut file = fs::File::open(file).unwrap();
-    let mut hasher = md5::Context::new(); // Create new hasher
-    io::copy(&mut file, &mut hasher).unwrap();
-    let result = hasher.compute(); // Use compute instead of finalize
-    format!("{:x}", result) // format the result in hexadecimal
+use std::path::Path; // because config is at top level
+                     // One port per peer/thread
+pub fn get_hash(file: &str) -> io::Result<String> {
+    let mut file = fs::File::open(file)?; // Add ? to handle the Result
+    let mut hasher = Md5::new(); // Create new hasher
+    io::copy(&mut file, &mut hasher)?; // Add ? to handle the Result
+    let result = hasher.finalize(); // Use compute instead of finalize
+    Ok(format!("{:x}", result)) // format the result in hexadecimal
 }
 pub fn get_listen_port() -> u16 {
     fn get_listen_port_rec() -> u16 {
         // TODO : let port be a parameter to avoid creation of a new string
         let mut port = String::new();
         // Takes the port number from the user that the peer will use to receive and forward files
-        println!("Port associé à ce peer? Appuie sur Entrée pour utiliser le port par défaut: 8080");
+        println!(
+            "Port associé à ce peer? Appuie sur Entrée pour utiliser le port par défaut: 8080"
+        );
         // Create a new string to store the port number
         // Call the stdin handle to call the read_line method then call the expect method to crash if the System call fails
         io::stdin()
@@ -48,7 +50,7 @@ pub fn get_proposed_files() -> Vec<FileProp> {
             file_name: file.trim().to_string(),
             length: fs::metadata(file).unwrap().len(),
             piece_size: 1024, // taille de bloc constante pour l'instant
-            hash: get_hash(file),
+            hash: get_hash(file).unwrap(),
         };
     }
     let mut files: Vec<FileProp> = Vec::new();
@@ -92,7 +94,7 @@ pub fn get_proposed_files() -> Vec<FileProp> {
 // return
 pub fn get_available_files() -> String {
     let mut criterions = String::new();
-    println!("Quel fichier cherches-tu? Appuie sur Entrée pour voir tous les fichiers disponibles");
+    println!("Nom du fichier (Appuie sur Entrée pour voir tous les fichiers disponibles) :  ");
     io::stdin()
         .read_line(&mut criterions)
         .expect("Pas réussi à lire la ligne");

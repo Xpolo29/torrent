@@ -1,38 +1,21 @@
 // src/com.rs
+use crate::config::{ExpectList, ExpectOk, ExpectedAnswer, FileProp}; // Import trait from config
+use crate::parse::goes_well;
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use crate::config::{FileProp, Message}; // Import enum from config
-use crate::parse::parse_answer;
 
-
-// Wait for the answer of the tracker
-fn goes_well(buffer: String, message: Message) {
-    match message {
-        Message::OK => {
-            parse_answer(buffer, Message::OK);
-        }
-        Message::LIST => {
-            parse_answer(buffer, Message::LIST);
-        }
-    } 
-}
-
-fn send_message(msg: String, answer_type: Message) {
-    // Connect to the tracker unwrap function takes the Ok variant of the Result and returns the value inside
-    // expect() si le résultat est Err, le programme crash avec le message passé en paramètre
-    let ip ="127.0.1";
+fn send_message(msg: String, expected_answer: &dyn ExpectedAnswer) {
+    let ip = "127.0.1";
     let port = "7878";
-    // Connect to the tracker
     let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).unwrap();
-    // Send the message
     stream.write(msg.as_bytes()).unwrap();
-    // Listen for the answer
     let mut buffer = String::new();
     stream.read_to_string(&mut buffer).unwrap();
-    // Handle awaited answer
-    goes_well(buffer, answer_type);
+    match goes_well(buffer, expected_answer) {
+        Ok(response) => println!("Réponse: {}", response),
+        Err(e) => println!("Erreur: {}", e),
+    }
 }
-
 // Send port and available files to tracker
 pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
     /*
@@ -56,18 +39,20 @@ pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
         port,
         files_string.join(" ")
     );
-    send_message(msg, Message::LIST);
+    send_message(msg, &ExpectOk);
 }
 
 // works if there is one criterion
 pub fn send_search_to_tracker(criterions: String) {
     if criterions.is_empty() {
-        send_message("look\r\n".to_string(), Message::OK);
+        send_message("look\r\n".to_string(), &ExpectList);
     } else {
-        send_message(format!("look [filename=\"{}\"]\r\n", criterions), Message::OK);
+        send_message(
+            format!("look [filename=\"{}\"]\r\n", criterions),
+            &ExpectList,
+        );
     }
 }
 
 #[cfg(test)]
 mod tests {}
-
