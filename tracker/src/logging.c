@@ -14,6 +14,11 @@ char* get_timestamp() {
 	return time_str;
 }
 
+//print help message (-v / --verbose)
+void print_help(){
+	printf("%s", help_message);
+}
+
 //return name of enum as string based on enum number
 char* log_level_to_string(enum LOG_LEVEL level){
 	switch(level){
