@@ -2,10 +2,16 @@
 use std::fs;
 use std::io;
 use std::path::Path;
-
-// because config is a top level one should write use crate::config and not mod config
-use crate::config::FileProp;
+use md5;
+use crate::config::FileProp; // because config is at top level
 // One port per peer/thread
+pub fn get_hash(file: &str) -> String {
+    let mut file = fs::File::open(file).unwrap();
+    let mut hasher = md5::Context::new(); // Create new hasher
+    io::copy(&mut file, &mut hasher).unwrap();
+    let result = hasher.compute(); // Use compute instead of finalize
+    format!("{:x}", result) // format the result in hexadecimal
+}
 pub fn get_listen_port() -> u16 {
     fn get_listen_port_rec() -> u16 {
         // TODO : let port be a parameter to avoid creation of a new string
@@ -42,7 +48,7 @@ pub fn get_proposed_files() -> Vec<FileProp> {
             file_name: file.trim().to_string(),
             length: fs::metadata(file).unwrap().len(),
             piece_size: 1024, // taille de bloc constante pour l'instant
-            hash: "hash_constant".to_string(), // hash constant pour l'instant
+            hash: get_hash(file),
         };
     }
     let mut files: Vec<FileProp> = Vec::new();

@@ -14,7 +14,7 @@ fn goes_well(buffer: String, message: Message) {
         Message::LIST => {
             parse_answer(buffer, Message::LIST);
         }
-    }
+    } 
 }
 
 fn send_message(msg: String, answer_type: Message) {
@@ -56,7 +56,7 @@ pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
         port,
         files_string.join(" ")
     );
-    send_message(msg, Message::OK);
+    send_message(msg, Message::LIST);
 }
 
 // works if there is one criterion
