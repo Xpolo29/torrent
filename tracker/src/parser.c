@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "database.h"
 
+//TODO : documentation
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
     return announce;
@@ -16,6 +17,7 @@ enum request_t char_to_req(char *request) {
   }
 }
 
+//TODO : documentation
 char *parse_request(char *buf, char *request, int peer_id) {
   char *reg_update = "^(update) seed \\[(([[:alnum:]]* ?)*)\\] leech "
                      "\\[(([[:alnum:]]+ ?)*)\\]$";
@@ -240,6 +242,7 @@ char *parse_request(char *buf, char *request, int peer_id) {
   }
 }
 
+//TODO : documentation
 int process_getfile(char *buf, char *hash) {
   struct data d = load_hash(hash);
   if (d.size == 0) {
@@ -256,6 +259,7 @@ int process_getfile(char *buf, char *hash) {
   return 1;
 }
 
+//TODO : No other main than main.c in src/, to test use /test
 /*
 int main() {
   char buf[1024];

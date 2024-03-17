@@ -1,5 +1,16 @@
 #include "tracker.h"
 #include "logging.h"
+#include "parameters.h"
+
+//Catch ctrl+c for clean exit
+void sigint_handler(int signum) {
+	logging(LOG, "Ctrl+c received, exiting\n");
+	running--;
+	if(running < -1){
+		logging(WARNING, "Double ctrl+c received, forcing exit\n");
+		exit(6);
+	}
+}
 
 //TODO Need to move this to right .c and .h
 int compare(struct data *in, struct data *out, long filesize, enum op_t op,
@@ -44,6 +55,7 @@ int filter(struct data *list, char *filename, long filesize, enum op_t op) {
   }
 }
 
+//Handle request comprehension and answers for peer <connection>
 int process(int connection){
 	char buff[16*1024] = {0};
 	int read = recv(connection, buff, 1024*16, 0);

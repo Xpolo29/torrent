@@ -4,15 +4,7 @@
 #include "tracker.h"
 #include "network.h"
 
-void sigint_handler(int signum) {
-	logging(LOG, "Ctrl+c received, exiting\n");
-	running--;
-	if(running < -1){
-		logging(WARNING, "Double ctrl+c received, forcing exit\n");
-		exit(6);
-	}
-}
-
+//main fonction, only appear here
 int main(int argc, char** argv){
 
 	if (signal(SIGINT, sigint_handler) == SIG_ERR) {

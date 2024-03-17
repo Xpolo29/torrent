@@ -16,4 +16,6 @@ int filter(struct data*, char*, long, enum op_t);
 
 int process(int);
 
+void sigint_handler(int);
+
 #endif

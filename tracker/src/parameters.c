@@ -1,6 +1,6 @@
 #include "parameters.h"
 
-//global var
+//global var base value. Default values are loaded from config
 char* config_path = "config.ini";
 enum LOG_LEVEL log_level = ERROR;
 int16_t port = -1;

@@ -3,6 +3,7 @@
 #include "parameters.h"
 #include "tracker.h"
 
+//Main thread fonction, permanently looking for task to process
 void* thread_main(void* arg){
 	logging(DEBUG, "Thread %lu started\n", pthread_self());
 	int i = 0;
@@ -26,6 +27,7 @@ void* thread_main(void* arg){
 	return 0;
 }
 
+//add new task to be processed
 int new_task(int conn){
 	logging(DEBUG, "Adding new task to handle conn=%d\n", conn);
 
@@ -43,6 +45,7 @@ int new_task(int conn){
 	return 1;
 }
 
+//create thread pool that will be processing tasks
 int create_thread_pool(int size){
 	logging(LOG, "Creating thread pool of size %d\n", thread_pool_size);
 	pool = malloc(sizeof(pthread_t) * thread_pool_size);
@@ -52,6 +55,7 @@ int create_thread_pool(int size){
 	return 0;
 }
 
+//delete thread pool, cleanup before exit
 int delete_thread_pool(){
 	logging(LOG, "Deleting thread pool of size %d\n", thread_pool_size);
 	for(int i = 0; i < thread_pool_size; ++i){

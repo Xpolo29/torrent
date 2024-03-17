@@ -2,6 +2,7 @@
 #include "logging.h"
 #include "threads.h"
 
+//create listening socked on port <port>, this one is never closing
 int create_master_sock(int port){
 	int sock;
 	/*
