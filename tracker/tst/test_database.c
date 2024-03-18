@@ -30,7 +30,7 @@ void test_database(){
 	test(cond, m);
 
 
-	cond = store(d1) && remove_hash("HASH") && get_size() == 0;
+	cond = store(d1) && remove_hash(HASH) && get_size() == 0;
 	m = "Removing by hash";
 	test(cond, m);
 
