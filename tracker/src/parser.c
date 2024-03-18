@@ -1,7 +1,8 @@
 #include "parser.h"
 #include "database.h"
+#include "logging.h"
 
-//TODO : documentation
+// TODO : documentation
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
     return announce;
@@ -12,13 +13,33 @@ enum request_t char_to_req(char *request) {
   } else if (strcmp(request, "update") == 0) {
     return update;
   } else {
-    // logging(ERROR, "Failed to convert char to enum request_t\n");
+    logging(ERROR, "char_to_req : Failed to convert char to enum request_t\n");
     return -1; // Return an error value
   }
 }
 
-//TODO : documentation
-char *parse_request(char *buf, char *request, int peer_id) {
+// TODO : documentation
+int process_getfile(char *buf, char *hash) {
+  struct data d[BDD_SIZE];
+  load_hash(d, hash);
+  strcat(buf, "peers ");
+  strcat(buf, hash);
+  strcat(buf, " [");
+  char host[23];
+  // TODO : Pour plusieurs peers, changer load_hash
+  for (int i = 0; d[i].size != 0; i++) {
+    if (i > 0)
+      strcat(buf, " ");
+    // printf("d[%d].ip = %s", i, d[i].host.ip);
+    sprintf(host, "%s:%d", d[i].host.ip, d[i].host.port);
+    strcat(buf, host);
+  }
+  strcat(buf, "]");
+  return 1;
+}
+
+// TODO : documentation
+char *parse_request(char *buf, char *request, struct host h) {
   char *reg_update = "^(update) seed \\[(([[:alnum:]]* ?)*)\\] leech "
                      "\\[(([[:alnum:]]+ ?)*)\\]$";
   char *reg_look = "^(look) (\\[(filename='([[:graph:]]+)')? "
@@ -35,19 +56,20 @@ char *parse_request(char *buf, char *request, int peer_id) {
   int index[MATCH_SIZE][2] = {};
   int result;
   int nb_matches = 0;
-  // logging(DEBUG, "Compiling regex\n");
+  logging(DEBUG, " Parser : Compiling regex\n");
   for (int i = 0; i < 5; i++) {
     // Si aucun regex ne reconnait la requête : Erreur de syntaxe
     if (i == 4)
       return "Error";
     result = regcomp(&regex, all_reg[i], REG_EXTENDED);
     if (result) {
-      // logging(ERROR, ("Couldn't Compile Regex\n"));
-      printf("Can't Compile\n");
+      logging(ERROR, ("Parser : Error while compiling Regex\n"));
+      // printf("Can't Compile\n");
       regfree(&regex);
       exit(1);
     }
-    printf("Just compiled regex\n");
+    // printf("Just compiled regex\n");
+    logging(DEBUG, "Parser : Regex compiled successfully");
     result = regexec(&regex, request, MATCH_SIZE, matches, 0);
     regfree(&regex);
     if (!result) {
@@ -64,30 +86,31 @@ char *parse_request(char *buf, char *request, int peer_id) {
         }
       }
     } else if (result != REG_NOMATCH) {
-      // logging(ERROR, "ERROR while matching regex\n");
-      printf("Could not match %d\n", i);
+      logging(ERROR, "Parser : no matching regex\n");
+      // printf("Could not match %d\n", i);
       exit(1);
     }
   }
-  for (int i = 0; i < nb_matches; i++) {
-    int start = index[i][0];
-    int size = index[i][1] - index[i][0];
-    printf("start : %d, size %d\n", start, size);
-    char message[size];
-    memcpy(message, request + start, size);
-    printf("Group %d : %s\n", i, message);
-  }
+  // DEBUG purpose
+  //  for (int i = 0; i < nb_matches; i++) {
+  //    int start = index[i][0];
+  //    int size = index[i][1] - index[i][0];
+  //    printf("start : %d, size %d\n", start, size);
+  //    char message[size];
+  //    memcpy(message, request + start, size);
+  //    printf("Group %d : %s\n", i, message);
+  //  }
 
   int start = index[0][0];
   int size = index[0][1] - index[0][0];
-  printf("start : %d, size %d\n", start, size);
+  // printf("start : %d, size %d\n", start, size);
 
   char req[size];
   memcpy(req, request + start, size);
   req[size] = 0;
-  printf("req : %s\n", req);
+  // printf("req : %s\n", req);
   enum request_t reqt = char_to_req(req);
-  printf("reqt : %d\n", reqt);
+  // printf("reqt : %d\n", reqt);
 
   switch (reqt) {
   case getfile: {
@@ -96,8 +119,9 @@ char *parse_request(char *buf, char *request, int peer_id) {
     char hash[size];
     memcpy(hash, request + start, size);
     hash[size] = 0;
-    // return process_getfile(buf,hash);
-    printf("hash : %s\n", hash);
+    // printf("hash : %s\n", hash);
+    int result = process_getfile(buf, hash);
+    return 0;
     exit(0);
     break;
   }
@@ -242,24 +266,7 @@ char *parse_request(char *buf, char *request, int peer_id) {
   }
 }
 
-//TODO : documentation
-int process_getfile(char *buf, char *hash) {
-  struct data d = load_hash(hash);
-  if (d.size == 0) {
-    buf = "Wrong hash";
-    return -1;
-  }
-  buf = "peers ";
-  strncat(buf, hash, HASH_SIZE);
-  strncat(buf, " [", 2);
-  char host[22];
-  // TODO : Pour plusieurs peers, changer load_hash
-  sprintf(host, "%s:%d", d.host.ip, d.host.port);
-  strncat(buf, "]", 1);
-  return 1;
-}
-
-//TODO : No other main than main.c in src/, to test use /test
+// TODO : No other main than main.c in src/, to test use /test
 /*
 int main() {
   char buf[1024];
