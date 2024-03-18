@@ -1,5 +1,5 @@
 // src/userinput.rs
-use crate::config::FileProp;
+use crate::network_config::FileProp;
 use md5::{Digest, Md5};
 use std::fs;
 use std::io::{self, Write};
@@ -18,7 +18,7 @@ pub fn get_listen_port() -> u16 {
         let mut port = String::new();
         // Takes the port number from the user that the peer will use to receive and forward files
         print!(
-            "Enter the port number you want to use to receive and forward files (default: 8080) : "
+            "Enter the port number you want to use to receive and forward files from other peers (hit enter to choose a random port): "
         );
         io::stdout().flush().unwrap();
         // Create a new string to store the port number
@@ -29,17 +29,17 @@ pub fn get_listen_port() -> u16 {
         // trim to remove whites spaces and generic parse that expect a type with ::
         match port.trim().parse::<u16>() {
             Ok(port) => {
-                print!("Port choisi: {port}");
+                print!("Choosen port: {port}");
                 io::stdout().flush().unwrap();
 
                 return port;
             }
             Err(_) => {
                 if port.trim().is_empty() {
-                    print!("Port vide, utilisation du port par défaut: 8080");
+                    print!("Random port: {}", "8080");
                     return 8080;
                 }
-                print!("Port invalide, veuillez réessayer.");
+                print!("Not a valid port number. Please enter a valid port number.");
                 io::stdout().flush().unwrap();
                 return get_listen_port_rec();
             }
@@ -59,7 +59,7 @@ pub fn get_proposed_files() -> Vec<FileProp> {
     }
     let mut files: Vec<FileProp> = Vec::new();
 
-    print!("Enter the files you want to share, separated by white spaces (press Enter if you don't want to share anything) :");
+    print!("\nEnter the files you want to share, separated by white spaces (press Enter if you don't want to share anything) : ");
     io::stdout().flush().unwrap();
 
     let mut input = String::new();
@@ -84,7 +84,7 @@ pub fn get_proposed_files() -> Vec<FileProp> {
     }
 
     if files.len() != 0 {
-        print!("Here are the files you are sharing : ");
+        println!("Here are the files you are sharing : ");
         io::stdout().flush().unwrap();
 
         for file in files.iter() {

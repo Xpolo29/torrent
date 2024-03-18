@@ -27,4 +27,5 @@ path = "src/userinput.rs"
 
 
 [dependencies]
+config = "0.14.0"
 md-5 = "0.10.6"
