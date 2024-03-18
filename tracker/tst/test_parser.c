@@ -16,7 +16,7 @@ void test_parser() {
   cond = !strcmp(buf, "peers hash [moi.ip:2332 moi2.ip:2333]");
   m = "Getfile request";
   test(cond, m);
-  printf(buf, "result : %s \n", buf);
+  // printf(buf, "result : %s \n", buf);
   // parse_request(buf, "look [filename='file_a.dat' filesize>'1048576']", 1);
   // parse_request(buf, "update seed [arbdfg azeeaz azeaea] leech [aedefe
   // dfgefv]", 1);

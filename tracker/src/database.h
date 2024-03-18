@@ -6,6 +6,8 @@
 
 #define BDD_SIZE 64
 
+enum op_t { eq, gt, lt };
+
 struct host {
   char ip[16];
   int16_t port;
@@ -24,6 +26,8 @@ extern struct data bdd[BDD_SIZE];
 static const struct data EMPTY = {{"", 0}, 0, 0, "", ""};
 
 int get_size();
+
+int filter(struct data *, char *, long, enum op_t);
 
 int store(struct data);
 void load_all(struct data *);
