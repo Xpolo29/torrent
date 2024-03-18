@@ -6,8 +6,11 @@
 #include <fcntl.h>
 #include <string.h>
 
+//create master listening socket to port <port>.
+//returns socket number on success, < 0 otherwise
 int create_master_sock(int);
 
+//idk
 int send_msg(int);
 
 #endif

@@ -8,6 +8,7 @@
 
 #define LEN_ARGS 10
 
+//list of possible args
 static const char ARGS[LEN_ARGS][16] = {
 	"-v", "--verbose",
        	"-h", "--help",
@@ -16,10 +17,13 @@ static const char ARGS[LEN_ARGS][16] = {
 	"-m", "--max-conn"
 };
 
+//load config.ini at config_path
 int load_config(char*);
 
+//used by load config to apply parameters in file
 int apply_parameter(char*, char*);
 
+//used to parse args on cmd
 int parse_args(int, char**);
 
 #endif
