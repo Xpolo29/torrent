@@ -21,7 +21,9 @@ run: $(TARGET)
 
 test: $(TST_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
-	./$@
+
+check: test
+	./test
 
 clean:
 	rm -f $(TARGET) test src/*.o tst/*.o log/*.log
