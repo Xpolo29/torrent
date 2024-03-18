@@ -103,7 +103,7 @@ void logging(enum LOG_LEVEL level, const char* msg, ...){
 
 	strncat(filename, folder, 4);
 	strncat(filename + 4, name, 10);
-	strncat(filename + 14, end, 5);
+	strcat(filename + 14, end);
 
 	FILE* log_file = fopen(filename, "a");
 
