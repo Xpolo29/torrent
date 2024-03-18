@@ -19,7 +19,7 @@ void test_parser() {
   strcpy(buf, "");
   // printf(buf, "result : %s \n", buf);
   parse_request(buf, "look [filename='file2.file']", me);
-  printf("result : %s \n", buf);
+  //printf("result : %s \n", buf);
 
   // parse_request(buf, "update seed [arbdfg azeeaz azeaea] leech [aedefe
   // dfgefv]", 1);
