@@ -14,6 +14,6 @@ int new_task(int);
 
 int create_thread_pool(int);
 
-int delete_thread_pool();
+int delete_thread_pool(int);
 
 #endif

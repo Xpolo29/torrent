@@ -59,7 +59,7 @@ int main(int argc, char** argv){
 
 	//clean exit
 	close(main_sock);
-	if(delete_thread_pool()){
+	if(delete_thread_pool(thread_pool_size)){
 		logging(WARNING, "Could not properly delete thread pool");
 	}
 

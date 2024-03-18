@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra #-Werror
+CFLAGS = -Wall -Wextra -g#-Werror
 TARGET = tracker
 
 SRCS = $(wildcard src/*.c)
