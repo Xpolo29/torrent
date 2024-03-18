@@ -1,7 +1,7 @@
 #include "test.h"
 
 int cur_test = 1;
-const int max_test = 14;
+const int max_test = 17;
 
 void ok(char *s) {
   printf(G "PASSED (%d/%d): %s\n" W, cur_test, max_test, s);

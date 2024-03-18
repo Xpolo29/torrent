@@ -19,6 +19,18 @@ enum request_t char_to_req(char *request) {
   }
 }
 
+enum op_t char_to_op(char *request) {
+  if (strcmp(request, "=") == 0) {
+    return eq;
+  } else if (strcmp(request, ">") == 0) {
+    return gt;
+  } else if (strcmp(request, "<") == 0) {
+    return lt;
+  } else {
+    logging(WARNING, "char_to_op : Failed to convert char to enum request_t\n");
+    return -1; // Return an error value
+  }
+}
 // TODO : documentation
 void process_getfile(char *buf, char *hash) {
   struct data d[BDD_SIZE];
@@ -45,7 +57,7 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
   // printf("len : %d\n", len);
   strcat(buf, "list [");
   char info[1024];
-  for (int i = 0; i < len - 1; i++) {
+  for (int i = 0; i < len; i++) {
     if (i > 0)
       strcat(buf, " ");
     sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size,
@@ -95,7 +107,7 @@ int parse_request(char *buf, char *request, struct host h) {
       for (int j = 1; j < MATCH_SIZE; j++) {
         int start = matches[j].rm_so;
         int end = matches[j].rm_eo;
-        if (start == -1 && end == -1) {
+        if (start == -1 && end == -10) {
           break;
         } else {
           index[j - 1][0] = start;
@@ -144,6 +156,9 @@ int parse_request(char *buf, char *request, struct host h) {
     break;
   }
   case look: {
+
+    int filename_match;
+    int filesize_match;
     start = index[3][0];
     size = index[3][1] - index[3][0];
     char filename[size];
@@ -151,18 +166,19 @@ int parse_request(char *buf, char *request, struct host h) {
     filename[size] = 0;
 
     start = index[5][0];
-    char op = request[start];
+    char op[1];
+    op[0] = request[start];
 
     start = index[6][0];
     size = index[6][1] - index[6][0];
-    char filesize_c[size];
-    memcpy(filesize_c, request + start, size);
-    filesize_c[size - 1] = 0;
+    char filesize_c[size + 1];
+    strncpy(filesize_c, request + start, size);
+    filesize_c[size] = 0;
     int filesize = atoi(filesize_c);
     // printf("filesize : %d\n", filesize);
     // printf("filename : %s\n", filename);
 
-    process_look(buf, filename, op, filesize);
+    process_look(buf, filename, char_to_op(op), filesize);
     // printf("look filename: %s filesize%c%d\n", filename, op, filesize);
     break;
   }

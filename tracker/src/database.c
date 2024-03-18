@@ -31,7 +31,7 @@ int compare(struct data *in, struct data *out, long filesize, enum op_t op,
 
 int filter(struct data *list, char *filename, long filesize, enum op_t op) {
   if (filesize == 0) {
-    return load_files(list, filename);
+    return load_files(list, filename) - 1;
   }
   if (strlen(filename) == 0) {
     struct data all[BDD_SIZE];
