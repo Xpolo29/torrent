@@ -40,12 +40,12 @@ void process_getfile(char *buf, char *hash) {
 
 void process_look(char *buf, char *filename, enum op_t op, long filesize) {
   struct data d[BDD_SIZE];
-  printf("look : %s, %d, %ld\n", filename, op, filesize);
+  // printf("look : %s, %d, %ld\n", filename, op, filesize);
   int len = filter(d, filename, filesize, op);
-  printf("len : %d\n", len);
+  // printf("len : %d\n", len);
   strcat(buf, "list [");
   char info[1024];
-  for (int i = 0; i < len; i++) {
+  for (int i = 0; i < len - 1; i++) {
     if (i > 0)
       strcat(buf, " ");
     sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size,
@@ -111,14 +111,14 @@ int parse_request(char *buf, char *request, struct host h) {
     }
   }
   // DEBUG purpose
-  for (int i = 0; i < nb_matches; i++) {
-    int start = index[i][0];
-    int size = index[i][1] - index[i][0];
-    printf("start : %d, size %d\n", start, size);
-    char message[size];
-    memcpy(message, request + start, size);
-    printf("Group %d : %s\n", i, message);
-  }
+  // for (int i = 0; i < nb_matches; i++) {
+  //   int start = index[i][0];
+  //   int size = index[i][1] - index[i][0];
+  //   printf("start : %d, size %d\n", start, size);
+  //   char message[size];
+  //   memcpy(message, request + start, size);
+  //   printf("Group %d : %s\n", i, message);
+  // }
 
   int start = index[0][0];
   int size = index[0][1] - index[0][0];
@@ -147,7 +147,7 @@ int parse_request(char *buf, char *request, struct host h) {
     start = index[3][0];
     size = index[3][1] - index[3][0];
     char filename[size];
-    memcpy(filename, request + start, size);
+    strncpy(filename, request + start, size);
     filename[size] = 0;
 
     start = index[5][0];
@@ -157,9 +157,10 @@ int parse_request(char *buf, char *request, struct host h) {
     size = index[6][1] - index[6][0];
     char filesize_c[size];
     memcpy(filesize_c, request + start, size);
-    filesize_c[size] = 0;
+    filesize_c[size - 1] = 0;
     int filesize = atoi(filesize_c);
-    printf("filesize : %d", filesize);
+    // printf("filesize : %d\n", filesize);
+    // printf("filename : %s\n", filename);
 
     process_look(buf, filename, op, filesize);
     // printf("look filename: %s filesize%c%d\n", filename, op, filesize);
