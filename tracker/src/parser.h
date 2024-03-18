@@ -14,6 +14,6 @@ enum request_t { announce = 0, look, getfile, update };
 
 enum request_t char_to_req(char *request);
 
-char *parse_request(char *buf, char *request, struct host h);
+int parse_request(char *buf, char *request, struct host h);
 
 #endif

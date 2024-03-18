@@ -29,9 +29,8 @@ int compare(struct data *in, struct data *out, long filesize, enum op_t op,
   return count;
 }
 
-// TODO Need to move this to right .c and .h
 int filter(struct data *list, char *filename, long filesize, enum op_t op) {
-  if (filesize < 0) {
+  if (filesize == 0) {
     return load_files(list, filename);
   }
   if (strlen(filename) == 0) {
