@@ -45,12 +45,12 @@ int filter(struct data *list, char *filename, long filesize, enum op_t op) {
     return load_files(list, filename);
   }
   if (strlen(filename) == 0) {
-    struct data *all;
+    struct data all[BDD_SIZE];
     int len = get_size();
     load_all(all);
     return compare(all, list, filesize, op, len);
   } else {
-    struct data *all;
+    struct data all[BDD_SIZE];
     int len = load_files(all, filename);
     return compare(all, list, filesize, op, len);
   }
@@ -67,7 +67,8 @@ int process(int connection){
 
 	logging(LOG, "< %s\n", buff);
 
-	//TODO parse then process then answer
+	//TODO parse then process the answer
+	
 	//mimic worload
 	sleep(1);
 

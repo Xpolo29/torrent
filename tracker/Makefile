@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra #-Werror
 TARGET = tracker
 
 SRCS = $(wildcard src/*.c)
-TST_SRCS = $(filter-out src/tracker.c, $(wildcard src/*.c)) $(wildcard tst/*.c)
+TST_SRCS = $(filter-out src/main.c, $(wildcard src/*.c)) $(wildcard tst/*.c)
 
 OBJS = $(SRCS:.c=.o)
 TST_OBJS = $(TST_SRCS:.c=.o)
@@ -15,6 +15,7 @@ $(TARGET): $(OBJS)
 
 test: $(TST_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
+	./$@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

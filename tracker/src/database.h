@@ -19,6 +19,8 @@ struct data {
 	char filename[352];
 };
 
+extern struct data bdd[BDD_SIZE];
+
 static const struct data EMPTY = {{"", 0}, 0, 0, "", ""};
 
 int get_size();
@@ -31,5 +33,6 @@ int remove_host(struct host);
 int remove_file(char *filename);
 int remove_hash(char hash[64]);
 
+int equals(struct data, struct data);
 	
 #endif
