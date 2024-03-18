@@ -9,15 +9,18 @@ void test_parser() {
   struct host me = {"moi.ip", 2332};
   struct host me2 = {"moi2.ip", 2333};
   struct data d1 = {me, 100, 2, "hash", "file.file"};
-  struct data d2 = {me2, 100, 2, "hash", "file.file"};
+  struct data d2 = {me2, 100, 2, "hash", "file2.file"};
   store(d1);
   store(d2);
   parse_request(buf, "getfile hash", me);
   cond = !strcmp(buf, "peers hash [moi.ip:2332 moi2.ip:2333]");
   m = "Getfile request";
   test(cond, m);
+  strcpy(buf, "");
   // printf(buf, "result : %s \n", buf);
-  // parse_request(buf, "look [filename='file_a.dat' filesize>'1048576']", 1);
+  parse_request(buf, "look [filename='file2.file']", me);
+  printf("result : %s \n", buf);
+
   // parse_request(buf, "update seed [arbdfg azeeaz azeaea] leech [aedefe
   // dfgefv]", 1);
   // parse_request(buf,

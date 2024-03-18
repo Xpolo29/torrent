@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "database.h"
 #include "logging.h"
+#include <string.h>
 
 // TODO : documentation
 enum request_t char_to_req(char *request) {
@@ -19,7 +20,7 @@ enum request_t char_to_req(char *request) {
 }
 
 // TODO : documentation
-int process_getfile(char *buf, char *hash) {
+void process_getfile(char *buf, char *hash) {
   struct data d[BDD_SIZE];
   load_hash(d, hash);
   strcat(buf, "peers ");
@@ -35,11 +36,27 @@ int process_getfile(char *buf, char *hash) {
     strcat(buf, host);
   }
   strcat(buf, "]");
-  return 1;
+}
+
+void process_look(char *buf, char *filename, enum op_t op, long filesize) {
+  struct data d[BDD_SIZE];
+  // printf("look : %s, %d, %ld\n", filename, op, filesize);
+  int len = filter(d, filename, filesize, op);
+  // printf("len : %d\n", len);
+  strcat(buf, "list [");
+  char info[1024];
+  for (int i = 0; i < len - 1; i++) {
+    if (i > 0)
+      strcat(buf, " ");
+    sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size,
+            d[i].hash);
+    strcat(buf, info);
+  }
+  strcat(buf, "]");
 }
 
 // TODO : documentation
-char *parse_request(char *buf, char *request, struct host h) {
+int parse_request(char *buf, char *request, struct host h) {
   char *reg_update = "^(update) seed \\[(([[:alnum:]]* ?)*)\\] leech "
                      "\\[(([[:alnum:]]+ ?)*)\\]$";
   char *reg_look = "^(look) (\\[(filename='([[:graph:]]+)')? "
@@ -59,8 +76,10 @@ char *parse_request(char *buf, char *request, struct host h) {
   logging(DEBUG, " Parser : Compiling regex\n");
   for (int i = 0; i < 5; i++) {
     // Si aucun regex ne reconnait la requête : Erreur de syntaxe
-    if (i == 4)
-      return "Error";
+    if (i == 4) {
+      logging(WARNING, "Parser : No pattern matching");
+      return 1;
+    }
     result = regcomp(&regex, all_reg[i], REG_EXTENDED);
     if (result) {
       logging(ERROR, ("Parser : Error while compiling Regex\n"));
@@ -86,20 +105,20 @@ char *parse_request(char *buf, char *request, struct host h) {
         }
       }
     } else if (result != REG_NOMATCH) {
-      logging(ERROR, "Parser : no matching regex\n");
+      logging(ERROR, "Parser : Regex matching\n");
       // printf("Could not match %d\n", i);
       exit(1);
     }
   }
   // DEBUG purpose
-  //  for (int i = 0; i < nb_matches; i++) {
-  //    int start = index[i][0];
-  //    int size = index[i][1] - index[i][0];
-  //    printf("start : %d, size %d\n", start, size);
-  //    char message[size];
-  //    memcpy(message, request + start, size);
-  //    printf("Group %d : %s\n", i, message);
-  //  }
+  // for (int i = 0; i < nb_matches; i++) {
+  //   int start = index[i][0];
+  //   int size = index[i][1] - index[i][0];
+  //   printf("start : %d, size %d\n", start, size);
+  //   char message[size];
+  //   memcpy(message, request + start, size);
+  //   printf("Group %d : %s\n", i, message);
+  // }
 
   int start = index[0][0];
   int size = index[0][1] - index[0][0];
@@ -114,22 +133,21 @@ char *parse_request(char *buf, char *request, struct host h) {
 
   switch (reqt) {
   case getfile: {
+    logging(DEBUG, "Parser : Processing getfile request\n");
     start = index[1][0];
     size = index[1][1] - index[1][0];
     char hash[size];
     memcpy(hash, request + start, size);
     hash[size] = 0;
     // printf("hash : %s\n", hash);
-    int result = process_getfile(buf, hash);
-    return 0;
-    exit(0);
+    process_getfile(buf, hash);
     break;
   }
   case look: {
     start = index[3][0];
     size = index[3][1] - index[3][0];
     char filename[size];
-    memcpy(filename, request + start, size);
+    strncpy(filename, request + start, size);
     filename[size] = 0;
 
     start = index[5][0];
@@ -139,12 +157,13 @@ char *parse_request(char *buf, char *request, struct host h) {
     size = index[6][1] - index[6][0];
     char filesize_c[size];
     memcpy(filesize_c, request + start, size);
-    filesize_c[size] = 0;
+    filesize_c[size - 1] = 0;
     int filesize = atoi(filesize_c);
+    // printf("filesize : %d\n", filesize);
+    // printf("filename : %s\n", filename);
 
-    // return process_look(buf,filename, op, filesize);
-    printf("look filename: %s filesize%c%d\n", filename, op, filesize);
-    exit(0);
+    process_look(buf, filename, op, filesize);
+    // printf("look filename: %s filesize%c%d\n", filename, op, filesize);
     break;
   }
   case update: {
@@ -263,6 +282,7 @@ char *parse_request(char *buf, char *request, struct host h) {
     exit(0);
     break;
   }
+    return 0;
   }
 }
 
