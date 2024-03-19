@@ -3,7 +3,6 @@
 #include "logging.h"
 #include <string.h>
 
-// TODO : documentation
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
     return announce;
@@ -31,7 +30,7 @@ enum op_t char_to_op(char *request) {
     return -1; // Return an error value
   }
 }
-// TODO : documentation
+
 void process_getfile(char *buf, char *hash) {
   struct data d[BDD_SIZE];
   load_hash(d, hash);
@@ -67,7 +66,6 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
   strcat(buf, "]");
 }
 
-// TODO : documentation
 int parse_request(char *buf, char *request, struct host h) {
   char *reg_update = "^(update) seed \\[(([[:alnum:]]* ?)*)\\] leech "
                      "\\[(([[:alnum:]]+ ?)*)\\]$";
@@ -85,11 +83,11 @@ int parse_request(char *buf, char *request, struct host h) {
   int index[MATCH_SIZE][2] = {};
   int result;
   int nb_matches = 0;
-  logging(DEBUG, " Parser : Compiling regex\n");
+  logging(DEBUG, "Parser : Compiling regex\n");
   for (int i = 0; i < 5; i++) {
     // Si aucun regex ne reconnait la requête : Erreur de syntaxe
     if (i == 4) {
-      logging(WARNING, "Parser : No pattern matching");
+      logging(WARNING, "Parser : No pattern matching\n");
       return 1;
     }
     result = regcomp(&regex, all_reg[i], REG_EXTENDED);
@@ -100,7 +98,7 @@ int parse_request(char *buf, char *request, struct host h) {
       exit(1);
     }
     // printf("Just compiled regex\n");
-    logging(DEBUG, "Parser : Regex compiled successfully");
+    logging(DEBUG, "Parser : Regex compiled successfully\n");
     result = regexec(&regex, request, MATCH_SIZE, matches, 0);
     regfree(&regex);
     if (!result) {

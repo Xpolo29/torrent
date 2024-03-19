@@ -2,6 +2,7 @@
 #define TRACKER
 
 #include "database.h"
+#include "parser.h"
 
 #include <netinet/in.h>
 #include <signal.h>
@@ -9,6 +10,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 //topmost fonction that is called on each connection,
 //handle request parsing, logic processing and answering the peer

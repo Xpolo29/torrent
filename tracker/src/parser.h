@@ -13,10 +13,10 @@
 //type of tcp incoming message
 enum request_t { announce = 0, look, getfile, update };
 
-//idk
+//convert string to enum request_t
 enum request_t char_to_req(char *request);
 
-//idk
+//i
 int parse_request(char *buf, char *request, struct host h);
 
 #endif

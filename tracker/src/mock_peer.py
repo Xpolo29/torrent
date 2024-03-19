@@ -52,21 +52,21 @@ def send_id(x):
 
 # Example usage
 if __name__ == "__main__":
-    L = []
-    for i in range(100):
-        thread = threading.Thread(target=send_id, args=(str(i),))
-        thread.start()
-        L.append(thread)
-
-    L[-1].join()
-    exit()
+    #
+    #L = []
+    #for i in range(100):
+    #    thread = threading.Thread(target=send_id, args=(str(i),))
+    #    thread.start()
+    #    L.append(thread)
+    #
+    # L[-1].join()
+    #exit()
 
     # Announce files to tracker
     port = 12345
 
     files = [
-        {"filename": "file_a.dat", "filesize": 2097152, "piecesize": 1024, "key": calculate_hash()},
-        {"filename": "file_b.dat", "filesize": 3145728, "piecesize": 1536, "key": calculate_hash()}
+        "file_a.dat", 2097152, 1024, calculate_hash(),
     ]
     announce_response = announce_files(port, files)
     print("Announce response:", announce_response)
