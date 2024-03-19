@@ -13,7 +13,8 @@ enum request_t char_to_req(char *request) {
   } else if (strcmp(request, "update") == 0) {
     return update;
   } else {
-    logging(ERROR, "char_to_req : Failed to convert char to enum request_t\n");
+    logging(WARNING,
+            "char_to_req : Failed to convert char to enum request_t\n");
     return -1; // Return an error value
   }
 }
@@ -25,6 +26,8 @@ enum op_t char_to_op(char *request) {
     return gt;
   } else if (strcmp(request, "<") == 0) {
     return lt;
+  } else if (strcmp(request, "") == 0) {
+    return nu;
   } else {
     logging(WARNING, "char_to_op : Failed to convert char to enum request_t\n");
     return -1; // Return an error value
@@ -64,6 +67,33 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
     strcat(buf, info);
   }
   strcat(buf, "]\n");
+}
+
+void process_update(char *buf, struct data *seeds, int seed_size,
+                    struct data *leeches, int leech_size, struct host h) {
+  struct data dbb_host[BDD_SIZE];
+  struct data new_host[BDD_SIZE];
+  int new_len = 0;
+  int len = load_host(dbb_host, h);
+  for (int i = 0; i < len; i++) {
+    for (int j = 0; j < seed_size; j++) {
+      if (strcmp(dbb_host[i].hash, seeds[j].hash) == 0) {
+        new_host[new_len++] = dbb_host[i];
+      }
+    }
+  }
+  remove_host(h);
+  for (int i = 0; i < new_len; i++)
+    store(new_host[i]);
+  strcpy(buf, "ok\n");
+}
+
+void process_announce(char *buf, struct data *seeds, int seed_size,
+                      struct data *leeches, int leech_size) {
+  for (int i = 0; i < seed_size; i++) {
+    store(seeds[i]);
+  }
+  strcpy(buf, "ok\n");
 }
 
 int parse_request(char *buf, char *request, struct host h) {
@@ -182,7 +212,6 @@ int parse_request(char *buf, char *request, struct host h) {
     break;
   }
   case update: {
-    printf("update\n");
     start = index[1][0];
     size = index[1][1] - index[1][0];
     char seed[size];
@@ -212,18 +241,27 @@ int parse_request(char *buf, char *request, struct host h) {
       token = strtok(NULL, " ");
       leech_size++;
     }
-    // return process_update(buf,seeds, seed_size, leeches, leech_size);
-    printf("Seeds : ");
+    struct data seeds_d[seed_size];
+    struct data leech_d[leech_size];
+
     for (int i = 0; i < seed_size; i++) {
-      printf("%s ", seeds[i]);
+      strcpy(seeds_d[i].hash, seeds[i]);
     }
-    printf("\n");
-    printf("Leeches : ");
     for (int i = 0; i < leech_size; i++) {
-      printf("%s ", leeches[i]);
+      strcpy(leech_d[i].hash, leeches[i]);
     }
-    printf("\n");
-    exit(0);
+    process_update(buf, seeds_d, seed_size, leech_d, leech_size, h);
+    // printf("Seeds : ");
+    // for (int i = 0; i < seed_size; i++) {
+    //   printf("%s ", seeds[i]);
+    // }
+    // printf("\n");
+    // printf("Leeches : ");
+    // for (int i = 0; i < leech_size; i++) {
+    //   printf("%s ", leeches[i]);
+    // }
+    // printf("\n");
+    // exit(0);
     break;
   }
   case announce: {
@@ -263,8 +301,10 @@ int parse_request(char *buf, char *request, struct host h) {
       }
       modulo = (modulo + 1) % 4;
       token = strtok(NULL, " ");
-      if (modulo == 0)
+      if (modulo == 0) {
+        seeds[seed_size].host = h;
         seed_size++;
+      }
     }
 
     start = index[4][0];
@@ -281,20 +321,24 @@ int parse_request(char *buf, char *request, struct host h) {
       token = strtok(NULL, " ");
       leech_size++;
     }
-    // return process_announce(buf,seeds, seed_size, leeches, leech_size);
-    printf("Seeds : ");
-    for (int i = 0; i < seed_size; i++) {
-      printf("filename : %s size : %ld chunk_size : %d hash : %s\n ",
-             seeds[i].filename, seeds[i].size, seeds[i].chunk_size,
-             seeds[i].hash);
-    }
-    printf("\n");
-    printf("Leeches : ");
+    struct data leech_d[MAX_SEED];
     for (int i = 0; i < leech_size; i++) {
-      printf("%s ", leeches[i]);
+      strcpy(leech_d[i].hash, leeches[i]);
     }
-    printf("\n");
-    exit(0);
+    process_announce(buf, seeds, seed_size, leech_d, leech_size);
+    // printf("Seeds : ");
+    // for (int i = 0; i < seed_size; i++) {
+    //   printf("filename : %s size : %ld chunk_size : %d hash : %s\n ",
+    //          seeds[i].filename, seeds[i].size, seeds[i].chunk_size,
+    //          seeds[i].hash);
+    // }
+    // printf("\n");
+    // printf("Leeches : ");
+    // for (int i = 0; i < leech_size; i++) {
+    //   printf("%s ", leeches[i]);
+    // }
+    // printf("\n");
+    // exit(0);
     break;
   }
     return 0;

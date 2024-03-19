@@ -48,7 +48,6 @@ int process(int connection) {
 
   // parsing request
   char out[16 * 1024];
-  printf("mess : %s\n", buff);
   parse_request(out, buff, h);
 
   // answer peer

@@ -64,18 +64,18 @@ if __name__ == "__main__":
 
     # Announce files to tracker
     port = 12345
-
-    files = f"[file_a.dat 2097152 1024 {calculate_hash()}]"
+    hash = calculate_hash()
+    files = f"[file_a.dat 2097152 1024 {hash}]"
     announce_response = announce_files(port, files)
     print("Announce response:", announce_response)
 
     # Look for files on tracker
-    criteria = "[filename='file_a.dat' filesize='1048576']"
+    criteria = "[filename='file_a.dat']"
     look_response = look_for_files(criteria)
     print("Look response:", look_response)
 
     # Get peers for a file from tracker
     file_key = calculate_hash()
-    peers_response = get_peers(file_key)
+    peers_response = get_peers(hash)
     print("Peers response:", peers_response)
 
