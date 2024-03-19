@@ -37,22 +37,25 @@ int filter(struct data *, char *, long, enum op_t);
 //store <struct data> in bdd
 int store(struct data);
 
-//copy bdd into <struct data*>
+//copy bdd into <struct data*>, return len
 void load_all(struct data *);
 
-//copy bdd elements matching filename into <struct data*>
+//copy bdd elements matching filename into <struct data*>, return len
 int load_files(struct data *, char *filename);
 
-//copy bdd elements matching hash into <struct data*>
+//copy bdd elements matching hash into <struct data*>, return len
 int load_hash(struct data *d, char hash[64]);
 
-//remove all elements of bdd matching <host>
+//copy bdd elements matching host into <struct data*>, return len
+int load_host(struct data *d, struct host h);
+
+//remove all elements of bdd matching <host>, 0 on success
 int remove_host(struct host);
 
-//remove all elements of bdd matching <filename>
+//remove all elements of bdd matching <filename>, 0 on success
 int remove_file(char* filename);
 
-//remove all elements of bdd matching <hash>
+//remove all elements of bdd matching <hash>, return 0 on success
 int remove_hash(char hash[64]);
 
 //check for struct data equality, returns 1 if equals 

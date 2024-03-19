@@ -104,9 +104,20 @@ int load_hash(struct data *d, char hash[64]) {
     }
   }
   d[c] = EMPTY;
-  return 1;
+  return c;
 }
 
+int load_host(struct data *d, struct host h){
+	int c = 0;
+	for (int i = 0; i < BDD_SIZE; ++i) {
+		struct host temp = bdd[i].host;
+		if(!strcmp(temp.ip, h.ip) && temp.port == h.port){
+			d[c++] = bdd[i];
+		}
+	}
+	d[c] = EMPTY;
+	return c;
+}
 // remove e in bdd based on host, return true on success
 int remove_host(struct host host) {
   int res = 0;
