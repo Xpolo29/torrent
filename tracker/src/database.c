@@ -77,15 +77,21 @@ void print_db(){
 	}
 }
 
-int equals(struct data d1, struct data d2) {
-  int ip_eq = !strcmp(d1.host.ip, d2.host.ip);
-  int port_eq = d1.host.port = d2.host.port;
-  int size_eq = d1.size == d2.size;
-  int chunk_size_eq = d1.chunk_size == d2.chunk_size;
-  int hash_eq = !strcmp(d1.hash, d2.hash);
-  int filename_eq = !strcmp(d1.filename, d2.filename);
+int host_equals(struct host h1, struct host h2){
+	int ip_eq = !strcmp(h1.ip, h2.ip);
+	int port_eq = h1.port = h2.port;
+	return ip_eq && port_eq;
+}
 
-  return ip_eq && port_eq && size_eq && chunk_size_eq && hash_eq && filename_eq;
+int data_equals(struct data d1, struct data d2) {
+
+	int host_eq = host_equals(d1.host, d2.host);
+	int size_eq = d1.size == d2.size;
+	int chunk_size_eq = d1.chunk_size == d2.chunk_size;
+	int hash_eq = !strcmp(d1.hash, d2.hash);
+	int filename_eq = !strcmp(d1.filename, d2.filename);
+
+	return host_eq && size_eq && chunk_size_eq && hash_eq && filename_eq;
 }
 // load bdd into arr
 void load_all(struct data *arr) {
