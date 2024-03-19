@@ -2,6 +2,7 @@
 #include "database.h"
 #include "logging.h"
 #include <string.h>
+#include "database.h"
 
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
@@ -61,14 +62,16 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
 	strcat(buf, "list [");
 	char info[1024];
 	for (int i = 0; i < len; i++) {
+		//printf("f:%s s:%ld cs:%d h:%s\n", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
+		if(d[i].size == 0)continue; //pass empty
 		if (i > 0)strcat(buf, " ");
 
-		//printf("%s %ld %d %s\n", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
-
+		//printf("HERE\n");
 		sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
 		strcat(buf, info);
 	}
 	strcat(buf, "]\n");
+
 }
 
 void process_update(char *buf, struct data *seeds, int seed_size,
@@ -192,6 +195,7 @@ int parse_request(char *buf, char *request, struct host h) {
     break;
   }
   case look: {
+    logging(DEBUG, "Parser : Look request\n");
 
     int filename_match;
     int filesize_match;
@@ -219,10 +223,11 @@ int parse_request(char *buf, char *request, struct host h) {
     // printf("filename : %s\n", filename);
 
     process_look(buf, filename, char_to_op(op), filesize);
-    // printf("look filename: %s filesize%c%d\n", filename, op, filesize);
+    //printf("look filename: %s filesize%s%d\n", filename, op, filesize);
     break;
   }
   case update: {
+    logging(DEBUG, "Parser : Update request\n");
     start = index[1][0];
     size = index[1][1] - index[1][0];
     char seed[size];
@@ -276,6 +281,8 @@ int parse_request(char *buf, char *request, struct host h) {
     break;
   }
   case announce: {
+
+    logging(DEBUG, "Parser : announce request\n");
 
     start = index[2][0];
     size = index[2][1] - index[2][0];

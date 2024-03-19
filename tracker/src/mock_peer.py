@@ -5,7 +5,7 @@ import random
 
 # Tracker address and port
 TRACKER_ADDRESS = "localhost"
-TRACKER_PORT = 12345
+TRACKER_PORT = 7878
 
 
 # Function to calculate MD5 hash

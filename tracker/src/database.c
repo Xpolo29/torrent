@@ -29,19 +29,25 @@ int compare(struct data *in, struct data *out, long filesize, enum op_t op, int 
 }
 
 int filter(struct data *list, char *filename, long filesize, enum op_t op) {
-  if (filesize == 0) {
-    return load_files(list, filename) - 1;
-  }
-  if (strlen(filename) == 0) {
-    struct data all[BDD_SIZE];
-    int len = get_size();
-    load_all(all);
-    return compare(all, list, filesize, op, len);
-  } else {
-    struct data all[BDD_SIZE];
-    int len = load_files(all, filename);
-    return compare(all, list, filesize, op, len);
-  }
+	if (filesize == 0) {
+		if(strlen(filename) == 0){
+			load_all(list);
+			return get_size();
+		}
+		else{
+			return load_files(list, filename) - 1;
+		}
+	}
+	if (strlen(filename) == 0) {
+		struct data all[BDD_SIZE];
+		int len = get_size();
+		load_all(all);
+		return compare(all, list, filesize, op, len);
+	} else {
+		struct data all[BDD_SIZE];
+		int len = load_files(all, filename);
+		return compare(all, list, filesize, op, len);
+	}
 }
 
 // return how many element are stored in bdd
@@ -99,14 +105,14 @@ void load_all(struct data *arr) {
 
 // return len of arr of element matching filename
 int load_files(struct data *arr, char *filename) {
-  int index = 0;
-  for (int i = 0; i < BDD_SIZE; ++i) {
-    if (strcmp(bdd[i].filename, filename) == 0) {
-      arr[index] = bdd[i];
-      ++index;
-    }
-  }
-  return index + 1;
+	int index = 0;
+	for (int i = 0; i < BDD_SIZE; ++i) {
+		if (strcmp(bdd[i].filename, filename) == 0) {
+			arr[index] = bdd[i];
+			++index;
+		}
+	}
+	return index + 1;
 }
 
 // return element matching hash

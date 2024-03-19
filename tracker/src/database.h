@@ -64,4 +64,7 @@ int host_equals(struct host, struct host);
 // check for struct data equality, returns 1 if equals
 int data_equals(struct data, struct data);
 
+//print db
+void print_db();
+
 #endif
