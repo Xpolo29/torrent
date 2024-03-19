@@ -1,0 +1,44 @@
+use std::io::{self, Read, BufRead, BufReader, Write};
+use std::path::Path;
+use log
+pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
+    let mut reader = BufReader::new(reader);
+    let mut input = String::new();
+    let mut valid_files = Vec::new();
+
+    print!("Enter the file names you wish to upload (separated by spaces): ");
+    io::stdout().flush().unwrap();
+    reader.read_line(&mut input).unwrap();
+
+    let file_names = input.trim().split_whitespace();
+
+    for file_name in file_names {
+        if Path::new(file_name).exists() {
+            println!("File {} exists", file_name);
+            valid_files.push(file_name.to_string());
+        } else {
+            println!("File {} does not exist. Skipping.", file_name);
+        }
+    }
+
+    valid_files
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_file_name_existing_file() {
+        let input = b"Cargo.toml";
+        let file_name = get_file_name(&input[..]).unwrap();
+        assert_eq!(file_name, "Cargo.toml");
+    }
+
+    #[test]
+    fn test_get_file_name_non_existing_file() {
+        let input = b"non_existing_file.txt";
+        let result = get_file_name(&input[..]);
+        assert!(result.is_err());
+    }
+}

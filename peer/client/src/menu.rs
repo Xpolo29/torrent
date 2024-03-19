@@ -1,4 +1,8 @@
 use std::io;
+use crate::userinput::get_file_names;
+use crate::com::seed;
+use crate::data::MetaFile;
+
 pub fn display_menu() {
     loop {
 
@@ -18,6 +22,7 @@ pub fn display_menu() {
         };
         
         match input {
+            // Escape should get back to menu from search, upload and download
             1 => search_section(),
             2 => upload_section(),
             3 => download_section(),
@@ -26,12 +31,19 @@ pub fn display_menu() {
         
     }
     }
-    fn search_section() 
-    {
+fn search_section() {
         println!("You're in Search")
-    }
+}
 fn upload_section() {
-    println!("You're in upload")
+    println!("You're in upload");
+    let seeded_files = get_file_names(io::stdin());
+    let seeded_files: Vec<MetaFile> = seeded_files.
+    into_iter().
+    map(|file| MetaFile::new(file.to_string())).
+    collect();
+    let seeded_files = seed(seeded_files, "8080".to_string(), "".to_string());
+    println!("{}", seeded_files);
+
 }
 fn download_section() {
     println!("You're in download")
