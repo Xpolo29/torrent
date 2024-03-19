@@ -9,7 +9,7 @@ fn send_message(msg: String, expected_answer: &dyn ExpectedAnswer) {
     let ip = tracker_config.ip;
     let port = tracker_config.port;
     println!("Connecting to {}:{}", ip, port);
-    let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).unwrap();
+    let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).expect("Could not connect to tracker");
     stream.write(msg.as_bytes()).unwrap();
     let mut reader = BufReader::new(stream);
     let mut buffer = String::new();
