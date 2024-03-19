@@ -47,28 +47,32 @@ pub fn get_listen_port() -> u16 {
     }
     get_listen_port_rec()
 }
-pub fn get_proposed_files() -> Vec<FileProp> {
-    // PRECOND : les fichiers existent
+pub fn get_proposed_files(input: Option<String>) -> Vec<FileProp> {
     fn fill_file_prop(file: &str) -> FileProp {
         return FileProp {
             file_name: file.trim().to_string(),
             length: fs::metadata(file).unwrap().len(),
-            piece_size: 1024, // taille de bloc constante pour l'instant
+            piece_size: 1024,
             hash: get_hash(file).unwrap(),
         };
     }
     let mut files: Vec<FileProp> = Vec::new();
 
-    print!("\nEnter the files you want to share, separated by white spaces (press Enter if you don't want to share anything) : ");
-    io::stdout().flush().unwrap();
+    let input = match input {
+        Some(i) => i,
+        None => {
+            print!("\nEnter the files you want to share, separated by white spaces (press Enter if you don't want to share anything) : ");
+            io::stdout().flush().unwrap();
 
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read line");
+            let mut i = String::new();
+            io::stdin()
+                .read_line(&mut i)
+                .expect("Failed to read line");
+            i
+        }
+    };
 
     for file in input.trim().split_whitespace() {
-        // Créer un FileProp avec des informations constantes
         match Path::new(file).exists() {
             true => {
                 let file_prop = fill_file_prop(file);
@@ -77,7 +81,6 @@ pub fn get_proposed_files() -> Vec<FileProp> {
             false => {
                 print!("Le fichier {} n'existe pas", file);
                 io::stdout().flush().unwrap();
-
                 continue;
             }
         }

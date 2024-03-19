@@ -13,12 +13,12 @@ fn main() {
     // nul si le port change pas et en plus ça marche pas
     if interactive {
         peer_config.port = get_listen_port();
-        peer_config.files = get_proposed_files();
+        peer_config.files = get_proposed_files(None);
     } else {
         // let args: Vec<String> = std::env::args().collect();
     }
     send_port_seed_to_tracker(peer_config.port, peer_config.files);
-    get_available_files();
+    get_proposed_files(Some("test_taille".to_string()));
     send_search_to_tracker(get_available_files());
     get_file();
     /*
