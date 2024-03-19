@@ -53,20 +53,22 @@ void process_getfile(char *buf, char *hash) {
 }
 
 void process_look(char *buf, char *filename, enum op_t op, long filesize) {
-  struct data d[BDD_SIZE];
-  // printf("look : %s, %d, %ld\n", filename, op, filesize);
-  int len = filter(d, filename, filesize, op);
-  // printf("len : %d\n", len);
-  strcat(buf, "list [");
-  char info[1024];
-  for (int i = 0; i < len; i++) {
-    if (i > 0)
-      strcat(buf, " ");
-    sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size,
-            d[i].hash);
-    strcat(buf, info);
-  }
-  strcat(buf, "]\n");
+	struct data d[BDD_SIZE];
+	//printf("look : %s, %d, %ld\n", filename, op, filesize);
+	int len = filter(d, filename, filesize, op);
+	//printf("len : %d\n", len);
+
+	strcat(buf, "list [");
+	char info[1024];
+	for (int i = 0; i < len; i++) {
+		if (i > 0)strcat(buf, " ");
+
+		//printf("%s %ld %d %s\n", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
+
+		sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
+		strcat(buf, info);
+	}
+	strcat(buf, "]\n");
 }
 
 void process_update(char *buf, struct data *seeds, int seed_size,
@@ -265,6 +267,7 @@ int parse_request(char *buf, char *request, struct host h) {
     break;
   }
   case announce: {
+
     start = index[2][0];
     size = index[2][1] - index[2][0];
     char seed[size];
@@ -343,6 +346,7 @@ int parse_request(char *buf, char *request, struct host h) {
   }
     return 0;
   }
+  return 0;
 }
 
 // TODO : No other main than main.c in src/, to test use /test

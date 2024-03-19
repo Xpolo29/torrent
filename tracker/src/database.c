@@ -4,29 +4,27 @@
 // bdd
 struct data bdd[BDD_SIZE];
 
-// TODO Need to move this to right .c and .h
-int compare(struct data *in, struct data *out, long filesize, enum op_t op,
-            int len) {
-  int count = 0;
-  for (int i = 0; i < len; i++) {
-    switch (op) {
-    case eq:
-      if (in[i].size == filesize)
-        out[count++] = in[i];
-      break;
-    case gt:
-      if (in[i].size > filesize)
-        out[count++] = in[i];
-      break;
-    case lt:
-      if (in[i].size < filesize)
-        out[count++] = in[i];
-      break;
-    default:
-      break;
-    }
-  }
-  return count;
+int compare(struct data *in, struct data *out, long filesize, enum op_t op, int len) {
+	int count = 0;
+	for (int i = 0; i < len; i++) {
+	switch (op) {
+		case eq:
+			if (in[i].size == filesize)
+			out[count++] = in[i];
+			break;
+		case gt:
+			if (in[i].size > filesize)
+			out[count++] = in[i];
+			break;
+		case lt:
+			if (in[i].size < filesize)
+			out[count++] = in[i];
+			break;
+		default:
+			break;
+	}
+	}
+	return count - 1;
 }
 
 int filter(struct data *list, char *filename, long filesize, enum op_t op) {

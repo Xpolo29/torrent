@@ -48,6 +48,7 @@ int process(int connection) {
 
   // parsing request
   char out[16 * 1024];
+  memset(out, 0, 16*1024);
   parse_request(out, buff, h);
 
   // answer peer

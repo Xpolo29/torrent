@@ -2,7 +2,6 @@ import socket
 import hashlib
 import json
 import random
-import threading
 
 # Tracker address and port
 TRACKER_ADDRESS = "localhost"
@@ -43,30 +42,21 @@ def get_peers(file_key):
     return send_message(message)
 
 
-def send_id(x):
-    i = 1
-    while(i <= 4):
-        send_message(x + "(" + str(i) + ")")
-        i += 1
+def update_tracker(update):
+    message = f"{update}\n"
+    return send_message(message)
 
 
 # Example usage
 if __name__ == "__main__":
-    #
-    #L = []
-    #for i in range(100):
-    #    thread = threading.Thread(target=send_id, args=(str(i),))
-    #    thread.start()
-    #    L.append(thread)
-    #
-    # L[-1].join()
-    #exit()
-
     # Announce files to tracker
-    port = 12345
-    hash = calculate_hash()
-    files = f"[file_a.dat 2097152 1024 {hash}]"
-    announce_response = announce_files(port, files)
+    hash1 = calculate_hash()
+    hash2 = calculate_hash()
+    while hash2 == hash1:
+        hash2 = calculate_hash()
+
+    files = f"[file_a.dat 1024 16 {hash1} file_a.dat 4096 32 {hash2}]"
+    announce_response = announce_files(TRACKER_PORT, files)
     print("Announce response:", announce_response)
 
     # Look for files on tracker
@@ -74,8 +64,24 @@ if __name__ == "__main__":
     look_response = look_for_files(criteria)
     print("Look response:", look_response)
 
-    # Get peers for a file from tracker
-    file_key = calculate_hash()
-    peers_response = get_peers(hash)
+    criteria = "[filename='file_a.dat' filesize<'2048']"
+    look_response = look_for_files(criteria)
+    print("Look response:", look_response)
+
+    # Getfile
+    peers_response = get_peers(hash1)
     print("Peers response:", peers_response)
 
+    # Update
+    update = f"update seed [{hash2}] leech []"
+    update_response = update_tracker(update)
+    print("Update reponse:", update_response)
+
+    # Retry look knowing its gone now
+    criteria = "[filename='file_a.dat' filesize<'2048']"
+    look_response = look_for_files(criteria)
+    print("Look response:", look_response)
+
+    # Getfile 2, file is gone
+    peers_response = get_peers(hash1)
+    print("Peers response:", peers_response)

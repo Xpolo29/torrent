@@ -17,7 +17,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 run: $(TARGET)
-	./$(TARGET) -v 3
+	./$(TARGET) -v 2 -m 1
 
 test: $(TST_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
