@@ -7,6 +7,7 @@ struct data bdd[BDD_SIZE];
 int compare(struct data *in, struct data *out, long filesize, enum op_t op, int len) {
 	int count = 0;
 	for (int i = 0; i < len; i++) {
+	if(in[i].size == 0)continue; //skip empty
 	switch (op) {
 		case eq:
 			if (in[i].size == filesize)
@@ -24,7 +25,7 @@ int compare(struct data *in, struct data *out, long filesize, enum op_t op, int 
 			break;
 	}
 	}
-	return count - 1;
+	return count;
 }
 
 int filter(struct data *list, char *filename, long filesize, enum op_t op) {

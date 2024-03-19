@@ -64,7 +64,7 @@ if __name__ == "__main__":
     look_response = look_for_files(criteria)
     print("Look response:", look_response)
 
-    criteria = "[filename='file_a.dat' filesize<'2048']"
+    criteria = "[filename='file_a.dat' filesize='1024']"
     look_response = look_for_files(criteria)
     print("Look response:", look_response)
 

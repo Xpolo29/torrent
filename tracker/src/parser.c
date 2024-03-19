@@ -73,6 +73,9 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
 
 void process_update(char *buf, struct data *seeds, int seed_size,
                     struct data *leeches, int leech_size, struct host h) {
+	//to get rid of warning
+	(void)leeches;
+	(void)leech_size;
   struct data dbb_host[BDD_SIZE];
   struct data new_host[BDD_SIZE];
   int new_len = 0;
@@ -90,12 +93,14 @@ void process_update(char *buf, struct data *seeds, int seed_size,
   strcpy(buf, "ok\n");
 }
 
-void process_announce(char *buf, struct data *seeds, int seed_size,
-                      struct data *leeches, int leech_size) {
-  for (int i = 0; i < seed_size; i++) {
-    store(seeds[i]);
-  }
-  strcpy(buf, "ok\n");
+void process_announce(char *buf, struct data *seeds, int seed_size, struct data *leeches, int leech_size) {
+	//to get rid of warning
+	(void)leeches;
+	(void)leech_size;
+	for (int i = 0; i < seed_size; i++) {
+		store(seeds[i]);
+	}
+	strcpy(buf, "ok\n");
 }
 
 int parse_request(char *buf, char *request, struct host h) {
@@ -190,6 +195,10 @@ int parse_request(char *buf, char *request, struct host h) {
 
     int filename_match;
     int filesize_match;
+    //to get rid of warning
+    (void)filename_match;
+    (void)filesize_match;
+
     start = index[3][0];
     size = index[3][1] - index[3][0];
     char filename[size];
