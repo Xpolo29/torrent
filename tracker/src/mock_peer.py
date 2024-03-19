@@ -72,7 +72,7 @@ if __name__ == "__main__":
     print("Announce response:", announce_response)
 
     # Look for files on tracker
-    criteria = {"filename": "file_a.dat", "filesize": 1048576}
+    criteria = ["file_a.dat", 1048576]
     look_response = look_for_files(criteria)
     print("Look response:", look_response)
 

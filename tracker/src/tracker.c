@@ -42,11 +42,17 @@ int process(int connection) {
 	struct host h = {"", port};
 	strncpy(h.ip, ip_address, 16);
 	
-	// TODO parse then process the answer
-	// mimic worload
-	sleep(1);
+	/*
+	 mimic worload
+	 sleep(1);
+	*/
+
+	//parsing request
 	char out[16*1024];
 	parse_request(out, buff, h);
+
+	//answer peer
+	send_msg(connection, out);
 
 	close(connection);
 	return 0;

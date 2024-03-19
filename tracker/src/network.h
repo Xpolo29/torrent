@@ -10,7 +10,7 @@
 //returns socket number on success, < 0 otherwise
 int create_master_sock(int);
 
-//idk
-int send_msg(int);
+//send <msg> to <socket> return 0 on success, 1 otherwise
+int send_msg(int socket, char* msg);
 
 #endif

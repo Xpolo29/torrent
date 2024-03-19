@@ -3,6 +3,7 @@
 
 #include "database.h"
 #include "parser.h"
+#include "network.h"
 
 #include <netinet/in.h>
 #include <signal.h>
