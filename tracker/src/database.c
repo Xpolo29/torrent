@@ -57,13 +57,24 @@ int get_size() {
 
 // store e in bdd, return true on success
 int store(struct data e) {
-  for (int i = 0; i < BDD_SIZE; ++i) {
-    if (bdd[i].size == 0) {
-      bdd[i] = e;
-      return 1;
-    }
-  }
-  return 0;
+	for (int i = 0; i < BDD_SIZE; ++i) {
+		if (bdd[i].size == 0) {
+			bdd[i] = e;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+void print_data(struct data d){
+	printf("ip : %s, port : %d, size : %ld, chunk_size : %d, hash : %s, filename : %s\n", d.host.ip, d.host.port, d.size, d.chunk_size, d.hash, d.filename);
+}
+
+void print_db(){
+	for(int i = 0; i < BDD_SIZE; ++i){
+	    if (bdd[i].size != 0)
+		    print_data(bdd[i]);
+	}
 }
 
 int equals(struct data d1, struct data d2) {
@@ -104,9 +115,20 @@ int load_hash(struct data *d, char hash[64]) {
     }
   }
   d[c] = EMPTY;
-  return 1;
+  return c;
 }
 
+int load_host(struct data *d, struct host h){
+	int c = 0;
+	for (int i = 0; i < BDD_SIZE; ++i) {
+		struct host temp = bdd[i].host;
+		if(!strcmp(temp.ip, h.ip) && temp.port == h.port){
+			d[c++] = bdd[i];
+		}
+	}
+	d[c] = EMPTY;
+	return c;
+}
 // remove e in bdd based on host, return true on success
 int remove_host(struct host host) {
   int res = 0;
