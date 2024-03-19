@@ -57,13 +57,24 @@ int get_size() {
 
 // store e in bdd, return true on success
 int store(struct data e) {
-  for (int i = 0; i < BDD_SIZE; ++i) {
-    if (bdd[i].size == 0) {
-      bdd[i] = e;
-      return 1;
-    }
-  }
-  return 0;
+	for (int i = 0; i < BDD_SIZE; ++i) {
+		if (bdd[i].size == 0) {
+			bdd[i] = e;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+void print_data(struct data d){
+	printf("ip : %s, port : %d, size : %ld, chunk_size : %d, hash : %s, filename : %s\n", d.host.ip, d.host.port, d.size, d.chunk_size, d.hash, d.filename);
+}
+
+void print_db(){
+	for(int i = 0; i < BDD_SIZE; ++i){
+	    if (bdd[i].size != 0)
+		    print_data(bdd[i]);
+	}
 }
 
 int equals(struct data d1, struct data d2) {

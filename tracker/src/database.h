@@ -61,4 +61,7 @@ int remove_hash(char hash[64]);
 //check for struct data equality, returns 1 if equals 
 int equals(struct data, struct data);
 
+//print bdd
+void print_db();
+
 #endif
