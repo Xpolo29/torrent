@@ -58,8 +58,11 @@ int remove_file(char* filename);
 //remove all elements of bdd matching <hash>, return 0 on success
 int remove_hash(char hash[64]);
 
+//check for struct host equality, returns 1 if equals 
+int host_equals(struct host, struct host);
+
 //check for struct data equality, returns 1 if equals 
-int equals(struct data, struct data);
+int data_equals(struct data, struct data);
 
 //print bdd
 void print_db();
