@@ -33,7 +33,7 @@ def announce_files(port, files):
 
 # Function to look for files on tracker
 def look_for_files(criteria):
-    message = f"look {json.dumps(criteria)}\r\n"
+    message = f"look {json.dumps(criteria)[1:-1]}\r\n"
     return send_message(message)
 
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     print("Announce response:", announce_response)
 
     # Look for files on tracker
-    criteria = ["file_a.dat", 1048576]
+    criteria = "[filename='file_a.dat' filesize='1048576']"
     look_response = look_for_files(criteria)
     print("Look response:", look_response)
 
