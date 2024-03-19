@@ -27,7 +27,7 @@ def send_message(message):
 
 # Function to announce presence and files to tracker
 def announce_files(port, files):
-    message = f"announce listen {port} seed {json.dumps(files)} leech []\r\n"
+    message = f"announce listen {port} seed {json.dumps(files)[1:-1]} leech []\r\n"
     return send_message(message)
 
 
@@ -65,9 +65,7 @@ if __name__ == "__main__":
     # Announce files to tracker
     port = 12345
 
-    files = [
-        "file_a.dat", 2097152, 1024, calculate_hash(),
-    ]
+    files = "file_a.dat 2097152, 1024 calculate_hash()"
     announce_response = announce_files(port, files)
     print("Announce response:", announce_response)
 
