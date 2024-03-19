@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # Announce files to tracker
     port = 12345
 
-    files = "file_a.dat 2097152, 1024 calculate_hash()"
+    files = f"[file_a.dat 2097152 1024 {calculate_hash()}]"
     announce_response = announce_files(port, files)
     print("Announce response:", announce_response)
 

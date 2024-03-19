@@ -46,7 +46,7 @@ void process_getfile(char *buf, char *hash) {
     sprintf(host, "%s:%d", d[i].host.ip, d[i].host.port);
     strcat(buf, host);
   }
-  strcat(buf, "]");
+  strcat(buf, "]\n");
 }
 
 void process_look(char *buf, char *filename, enum op_t op, long filesize) {
@@ -63,18 +63,19 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
             d[i].hash);
     strcat(buf, info);
   }
-  strcat(buf, "]");
+  strcat(buf, "]\n");
 }
 
 int parse_request(char *buf, char *request, struct host h) {
   char *reg_update = "^(update) seed \\[(([[:alnum:]]* ?)*)\\] leech "
-                     "\\[(([[:alnum:]]+ ?)*)\\]$";
+                     "\\[(([[:alnum:]]+ ?)*)\\]((\r)?(\n)?)?$";
   char *reg_look = "^(look) (\\[(filename='([[:graph:]]+)')? "
-                   "?(filesize([<=>])'([[:digit:]]+)')?\\])$";
-  char *reg_get_file = "^(getfile) ([[:alnum:]]+)$";
+                   "?(filesize([<=>])'([[:digit:]]+)')?\\])((\r)?(\n)?)?$";
+  char *reg_get_file = "^(getfile) ([[:alnum:]]+)((\r)?(\n)?)?$";
   char *reg_announce =
-      "^(announce) listen ([[:digit:]]{4}) seed \\[(([[:graph:]]+ [[:digit:]]+ "
-      "[[:digit:]]+ [[:alnum:]]+ ?)*)\\] leech \\[(([[:alnum:]]+ ?)*)\\]$";
+      "^(announce) listen ([[:digit:]]+) seed \\[(([[:graph:]]+ [[:digit:]]+ "
+      "[[:digit:]]+ [[:alnum:]]+ ?)*)\\] leech \\[(([[:alnum:]]+ "
+      "?)*)\\]((\r)?(\n)?)?$";
 
   char *all_reg[4] = {reg_update, reg_look, reg_get_file, reg_announce};
 
