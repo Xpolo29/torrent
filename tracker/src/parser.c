@@ -20,16 +20,19 @@ enum request_t char_to_req(char *request) {
 }
 
 enum op_t char_to_op(char *request) {
-  if (strcmp(request, "=") == 0) {
+  if (request[0] == '=') {
     return eq;
-  } else if (strcmp(request, ">") == 0) {
+  } else if (request[0] == '>') {
     return gt;
-  } else if (strcmp(request, "<") == 0) {
+  } else if (request[0] == '<') {
     return lt;
-  } else if (strcmp(request, "") == 0) {
+  } else if (request[0] == 0) {
     return nu;
   } else {
-    logging(WARNING, "char_to_op : Failed to convert char to enum request_t\n");
+    logging(WARNING,
+            "char_to_op : Failed to convert char to enum request_t with "
+            "request : %s\n",
+            request);
     return -1; // Return an error value
   }
 }
@@ -231,7 +234,10 @@ int parse_request(char *buf, char *request, struct host h) {
 
     start = index[5][0];
     char op[1];
-    op[0] = request[start];
+    if (index[5][1] == 0) {
+      op[0] = 0;
+    } else
+      op[0] = request[start];
 
     start = index[6][0];
     size = index[6][1] - index[6][0];
