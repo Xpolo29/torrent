@@ -1,8 +1,8 @@
 use std::io;
 use crate::userinput::get_file_names;
-use crate::com::{seed, send};
+use crate::com::{seed, send, receive, ExpectedAnswer, Answer, ExpectOk };
 use crate::data::{MetaFile,TrackerConfig};
-
+use log::{trace, info};
 pub fn display_menu(tracker_config: TrackerConfig) {
     loop {
 
@@ -36,13 +36,16 @@ fn search_section() {
 }
 fn upload_section(tracker_port:u16, tracker_adress:&str) {
     println!("You're in upload");
-    let seeded_files = get_file_names(io::stdin());
-    let seeded_files: Vec<MetaFile> = seeded_files.
+    let seeded_files = get_file_names(io::stdin()); // take the files the user wish to seed
+    let seeded_files: Vec<MetaFile> = seeded_files. 
     into_iter().
     map(|file| MetaFile::new(file.to_string())).
-    collect();
-    let seeded_files = seed(seeded_files, "8080".to_string(), "".to_string());
-    send(seeded_files,tracker_port,tracker_adress.to_string());
+    collect(); // Create vector of Metafiles out of the files name
+    let seeded_files = seed(seeded_files, "8080".to_string(), "".to_string()); // create the message
+    trace!("Prepared message: {}", seeded_files);
+    send(seeded_files,tracker_port,tracker_adress.to_string()); // send the message
+    let response = receive(&ExpectOk,tracker_port,tracker_adress.to_string()); // receive the answer as a string
+    info!("Received: {}", response);
 }
 fn download_section() {
     println!("You're in download")

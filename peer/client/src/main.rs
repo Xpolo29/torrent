@@ -8,4 +8,5 @@ fn main() {
     env_logger::init();
     let tracker_config = TrackerConfig::new();
     display_menu(tracker_config);
+    
 }
