@@ -2,7 +2,6 @@
 #include "database.h"
 #include "logging.h"
 #include <string.h>
-#include "database.h"
 
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
@@ -21,16 +20,19 @@ enum request_t char_to_req(char *request) {
 }
 
 enum op_t char_to_op(char *request) {
-  if (strcmp(request, "=") == 0) {
+  if (request[0] == '=') {
     return eq;
-  } else if (strcmp(request, ">") == 0) {
+  } else if (request[0] == '>') {
     return gt;
-  } else if (strcmp(request, "<") == 0) {
+  } else if (request[0] == '<') {
     return lt;
-  } else if (strcmp(request, "") == 0) {
+  } else if (request[0] == 0) {
     return nu;
   } else {
-    logging(WARNING, "char_to_op : Failed to convert char to enum request_t\n");
+    logging(WARNING,
+            "char_to_op : Failed to convert char to enum request_t with "
+            "request : %s\n",
+            request);
     return -1; // Return an error value
   }
 }
@@ -54,31 +56,34 @@ void process_getfile(char *buf, char *hash) {
 }
 
 void process_look(char *buf, char *filename, enum op_t op, long filesize) {
-	struct data d[BDD_SIZE];
-	//printf("look : %s, %d, %ld\n", filename, op, filesize);
-	int len = filter(d, filename, filesize, op);
-	//printf("len : %d\n", len);
+  struct data d[BDD_SIZE];
+  // printf("look : %s, %d, %ld\n", filename, op, filesize);
+  int len = filter(d, filename, filesize, op);
+  // printf("len : %d\n", len);
 
-	strcat(buf, "list [");
-	char info[1024];
-	for (int i = 0; i < len; i++) {
-		//printf("f:%s s:%ld cs:%d h:%s\n", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
-		if(d[i].size == 0)continue; //pass empty
-		if (i > 0)strcat(buf, " ");
+  strcat(buf, "list [");
+  char info[1024];
+  for (int i = 0; i < len; i++) {
+    // printf("f:%s s:%ld cs:%d h:%s\n", d[i].filename, d[i].size,
+    // d[i].chunk_size, d[i].hash);
+    if (d[i].size == 0)
+      continue; // pass empty
+    if (i > 0)
+      strcat(buf, " ");
 
-		//printf("HERE\n");
-		sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
-		strcat(buf, info);
-	}
-	strcat(buf, "]\n");
-
+    // printf("HERE\n");
+    sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size,
+            d[i].hash);
+    strcat(buf, info);
+  }
+  strcat(buf, "]\n");
 }
 
 void process_update(char *buf, struct data *seeds, int seed_size,
                     struct data *leeches, int leech_size, struct host h) {
-	//to get rid of warning
-	(void)leeches;
-	(void)leech_size;
+  // to get rid of warning
+  // (void)leeches;
+  // (void)leech_size;
   struct data dbb_host[BDD_SIZE];
   struct data new_host[BDD_SIZE];
   int new_len = 0;
@@ -89,6 +94,11 @@ void process_update(char *buf, struct data *seeds, int seed_size,
         new_host[new_len++] = dbb_host[i];
       }
     }
+    for (int j = 0; j < leech_size; j++) {
+      if (strcmp(dbb_host[i].hash, leeches[j].hash) == 0) {
+        new_host[new_len++] = dbb_host[i];
+      }
+    }
   }
   remove_host(h);
   for (int i = 0; i < new_len; i++)
@@ -96,14 +106,27 @@ void process_update(char *buf, struct data *seeds, int seed_size,
   strcpy(buf, "ok\n");
 }
 
-void process_announce(char *buf, struct data *seeds, int seed_size, struct data *leeches, int leech_size) {
-	//to get rid of warning
-	(void)leeches;
-	(void)leech_size;
-	for (int i = 0; i < seed_size; i++) {
-		store(seeds[i]);
-	}
-	strcpy(buf, "ok\n");
+void process_announce(char *buf, struct data *seeds, int seed_size,
+                      struct data *leeches, int leech_size) {
+  // to get rid of warning
+  // (void)leeches;
+  // (void)leech_size;
+  struct data all[BDD_SIZE];
+  load_all(all);
+  for (int i = 0; i < seed_size; i++) {
+    store(seeds[i]);
+  }
+  for (int j = 0; j < get_size(); j++) {
+    for (int i = 0; i < leech_size; i++) {
+      if (strcmp(all[j].hash, leeches[i].hash) == 0) {
+        leeches[i].size = all[j].size;
+        strcpy(leeches[i].filename, all[j].filename);
+        leeches[i].chunk_size = all[j].chunk_size;
+        store(leeches[i]);
+      }
+    }
+  }
+  strcpy(buf, "ok\n");
 }
 
 int parse_request(char *buf, char *request, struct host h) {
@@ -199,7 +222,7 @@ int parse_request(char *buf, char *request, struct host h) {
 
     int filename_match;
     int filesize_match;
-    //to get rid of warning
+    // to get rid of warning
     (void)filename_match;
     (void)filesize_match;
 
@@ -211,7 +234,10 @@ int parse_request(char *buf, char *request, struct host h) {
 
     start = index[5][0];
     char op[1];
-    op[0] = request[start];
+    if (index[5][1] == 0) {
+      op[0] = 0;
+    } else
+      op[0] = request[start];
 
     start = index[6][0];
     size = index[6][1] - index[6][0];
@@ -223,7 +249,7 @@ int parse_request(char *buf, char *request, struct host h) {
     // printf("filename : %s\n", filename);
 
     process_look(buf, filename, char_to_op(op), filesize);
-    //printf("look filename: %s filesize%s%d\n", filename, op, filesize);
+    // printf("look filename: %s filesize%s%d\n", filename, op, filesize);
     break;
   }
   case update: {
@@ -343,6 +369,7 @@ int parse_request(char *buf, char *request, struct host h) {
     struct data leech_d[MAX_SEED];
     for (int i = 0; i < leech_size; i++) {
       strcpy(leech_d[i].hash, leeches[i]);
+      leech_d[i].host = h;
     }
     process_announce(buf, seeds, seed_size, leech_d, leech_size);
     // printf("Seeds : ");
