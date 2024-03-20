@@ -1,6 +1,6 @@
 use std::io::{self, Read, BufRead, BufReader, Write};
 use std::path::Path;
-use log
+use log::{info, warn};
 pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
     let mut reader = BufReader::new(reader);
     let mut input = String::new();
@@ -14,10 +14,10 @@ pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
 
     for file_name in file_names {
         if Path::new(file_name).exists() {
-            println!("File {} exists", file_name);
+            info!("File {} exists", file_name);
             valid_files.push(file_name.to_string());
         } else {
-            println!("File {} does not exist. Skipping.", file_name);
+            warn!("File {} does not exist. Skipping.", file_name);
         }
     }
 

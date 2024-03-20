@@ -10,7 +10,7 @@ pub struct FileProp {
 
 pub struct PeerConfig {
     pub tracker_address: String,
-    pub tracker_port: i64,
+    pub tracker_port: u16,
     pub shared_files: Vec<String>,
 }
 
@@ -22,7 +22,7 @@ pub fn handle_config() -> Result<PeerConfig, ConfigError> {
         .build()?;
 
     let tracker_address: String = settings.get_string("tracker-address")?;
-    let tracker_port: i64 = settings.get_int("tracker-port")?;
+    let tracker_port: u16 = settings.get_int("tracker-port")?;
 
     Ok(PeerConfig {
         tracker_address,

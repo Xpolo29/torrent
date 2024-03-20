@@ -1,6 +1,7 @@
 use crate::data::{TrackerConfig,PeerConfig,MetaFile,};
+use log::{info, warn};
 /// Takes a list of seeded and leeched files with medata data and returns the right message to be sent
-pub fn seed(seeded: Vec<MetaFile>, port: String, leeched: String) -> String{
+pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String{
 /*
     into_iter() : transform the vector into an iterator
     map() : apply a function to each element of the iterator
@@ -19,11 +20,24 @@ pub fn seed(seeded: Vec<MetaFile>, port: String, leeched: String) -> String{
 
     let msg = format!(
         "announce listen {} seed [{}] leech [{}]\r\n",
-        port,
+        peer_port,
         seeded_string.join(" "),
         leeched
     ); 
-    msg}
+    msg
+}
+
+pub fn send(message: String, port: u16, adress: String) {
+info!("Sending to {}:{} < {}", adress, port, message);
+}
+
+
+
+
+
+
+
+
 
 #[cfg(test)]
 mod tests {

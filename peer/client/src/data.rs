@@ -19,12 +19,16 @@ impl MetaFile {
 }
 pub struct PeerConfig {
     pub address: String,
-    pub port: i64,
+    pub port: u16,
     pub seeded_file: Vec<MetaFile>,
 }
-
 pub struct TrackerConfig {
     pub address: String,
-    pub port: i64,
+    pub port: u16,}
+impl TrackerConfig {
+    pub fn new() -> Self {
+        TrackerConfig {
+            address: "127.0.0.1".to_string(),
+            port: 12345,}
 }
-
+}

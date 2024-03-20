@@ -3,6 +3,9 @@ mod userinput;
 mod com;
 mod data;
 use menu::display_menu;
+use data::{TrackerConfig};
 fn main() {
-    display_menu();
+    env_logger::init();
+    let tracker_config = TrackerConfig::new();
+    display_menu(tracker_config);
 }
