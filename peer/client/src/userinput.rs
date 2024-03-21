@@ -1,6 +1,6 @@
-use std::io::{self, Read, BufRead, BufReader, Write};
-use std::path::Path;
 use log::{info, warn};
+use std::io::{self, BufRead, BufReader, Read, Write};
+use std::path::Path;
 pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
     let mut reader = BufReader::new(reader);
     let mut input = String::new();
@@ -31,14 +31,14 @@ mod tests {
     #[test]
     fn test_get_file_name_existing_file() {
         let input = b"Cargo.toml";
-        let file_name = get_file_name(&input[..]).unwrap();
-        assert_eq!(file_name, "Cargo.toml");
+        let result = get_file_names(&input[..]);
+        assert_eq!(result, vec!["Cargo.toml".to_string()]);
     }
 
     #[test]
     fn test_get_file_name_non_existing_file() {
         let input = b"non_existing_file.txt";
-        let result = get_file_name(&input[..]);
-        assert!(result.is_err());
+        let result = get_file_names(&input[..]);
+        assert_eq!(result, Vec::<String>::new());
     }
 }

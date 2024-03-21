@@ -42,8 +42,9 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
     let seeded_files = seed(seeded_files, "8080".to_string(), "".to_string()); // create the message
     trace!("Prepared message: {}", seeded_files);
     send(seeded_files, tracker_port, tracker_adress.to_string()); // send the message
+    trace!("Message sent waiting for answer");
     let mut response = receive(&ExpectOk, tracker_port, tracker_adress.to_string()); // receive the answer as a string
-
+    trace!("Received: {}", response);
     match ExpectOk.check_answer(&response) {
         Ok(valeur) => {
             info!("{}", valeur);

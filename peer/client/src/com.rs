@@ -1,5 +1,5 @@
 use crate::data::{MetaFile, PeerConfig, TrackerConfig};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 /// Takes a list of seeded and leeched files with medata data and returns the right message to be sent
@@ -49,6 +49,7 @@ pub fn receive(expected_answer: &dyn ExpectedAnswer, port: u16, adress: String) 
         Ok(mut stream) => {
             let mut buffer = String::new();
             let mut reader = BufReader::new(&stream);
+            debug!("About to read from {}:{}", adress, port);
             match reader.read_line(&mut buffer) {
                 Ok(_) => {
                     info!("Received from {}:{} > {}", adress, port, buffer);
@@ -104,23 +105,26 @@ pub struct ExpectOk;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use std::net::{TcpListener, TcpStream};
+    use std::thread;
 
     #[test]
-    fn test_seed() {
-        // Arrange
-        let seeded = vec![
-            MetaFile {
-                file_name: String::from("file1.txt"),
-                length: 100,
-                piece_size: 10,
-                hash: String::from("hash1"),
-            },
-            MetaFile {
-                file_name: String::from("file2.txt"),
-                length: 200,
-                piece_size: 20,
-                hash: String::from("hash2"),
-            },
-        ];
+    fn test_receive() {
+        // Start a mock server in a new thread
+        let handle = thread::spawn(|| {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let (mut stream, _) = listener.accept().unwrap();
+            write!(stream, "ok\n").unwrap();
+            port
+        });
+
+        // Get the port that the mock server is listening on
+        let port = handle.join().unwrap();
+
+        // Test the receive function
+        let answer = receive(&ExpectOk, port, "127.0.0.1".to_string());
+        assert_eq!(answer, "ok\n");
     }
 }
