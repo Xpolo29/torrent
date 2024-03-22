@@ -10,7 +10,7 @@ fn handle_client(mut stream: TcpStream) {
     loop {
         match stream.read(&mut buffer) {
             Ok(0) => {
-                // Connection was closed by the client
+                println!("Connection closed by peer");
                 break;
             }
             Ok(_) => {

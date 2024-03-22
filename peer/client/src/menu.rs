@@ -49,9 +49,10 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
             return;
         }
     };
+    let mut stream_clone = stream.try_clone().expect("Failed to clone stream");
     send(&mut stream, seeded_files); // send the message
     trace!("Message sent waiting for answer");
-    let response = receive(&ExpectOk, stream); // receive the answer
+    let response = receive(&ExpectOk, &mut stream_clone); // receive the answer
     trace!("Received: {}", response);
     match ExpectOk.check_answer(&response) {
         Ok(valeur) => {
@@ -61,6 +62,7 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
             info!("{}", valeur);
         }
     }
+    ExpectOk.shutdown(&mut stream_clone);
 }
 fn download_section() {
     println!("You're in download")
