@@ -18,10 +18,7 @@ void sigint_handler(int signum) {
 
 void mysleep(int charge){
 	if(charge){
-		int temp = current_sleeping_time / 2;
-		if(temp >= MIN_SLEEPING_TIME)
-			current_sleeping_time = temp;
-
+		current_sleeping_time = MIN_SLEEPING_TIME;
 	} else {
 		int temp = current_sleeping_time * 2;
 		if(temp <= MAX_SLEEPING_TIME)
@@ -37,7 +34,7 @@ int process(int connection) {
 	int read = recv(connection, buff, 1024 * 16, 0);
 
 	if (read < 0) {
-		mysleep(0);
+		mysleep(1);
 		new_task(connection);
 		return 0;
 	}

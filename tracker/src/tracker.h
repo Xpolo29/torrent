@@ -1,7 +1,7 @@
 #ifndef TRACKER
 #define TRACKER
 
-#define MAX_SLEEPING_TIME 256000
+#define MAX_SLEEPING_TIME 1280000
 #define MIN_SLEEPING_TIME 1024
 
 #include "database.h"
