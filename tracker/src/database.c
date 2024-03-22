@@ -98,6 +98,16 @@ int data_equals(struct data d1, struct data d2) {
 
 	return host_eq && size_eq && chunk_size_eq && hash_eq && filename_eq;
 }
+
+int db_exists(struct data h){
+	struct data clone[BDD_SIZE];
+	load_all(clone);
+	for(int i = 0; i < BDD_SIZE; ++i){
+		if(data_equals(clone[i], h))
+				return 1;
+	}
+	return 0;
+}
 // load bdd into arr
 void load_all(struct data *arr) {
   memcpy(arr, bdd, sizeof(struct data) * BDD_SIZE);
