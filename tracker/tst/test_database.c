@@ -17,7 +17,7 @@ void test_database(){
 	};
 	strcpy(d1.hash,HASH);
 
-	cond  = store(d1) && get_size() == 1;
+	cond  = store(d1) && get_size() == 1 && db_exists(d1);
 	m = "Storing in DB";
 	test(cond, m);
 	
