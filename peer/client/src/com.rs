@@ -47,19 +47,19 @@ pub fn send(stream: &mut TcpStream, message:String) {
     info!("Sending to tracker: {}", message);
 }
 /// Receives a message from a given adress and port
-pub fn receive(expected_answer: &dyn ExpectedAnswer, mut stream:TcpStream) -> String {
+pub fn receive(expected_answer: &dyn ExpectedAnswer, stream: &mut TcpStream) -> String {
     let mut buffer = [0; 1024];
-    let mut reader = BufReader::new(&stream);
-    debug!("About to read from {}:{}", stream.peer_addr().unwrap().ip(), stream.peer_addr().unwrap().port());
+    let port = stream.peer_addr().unwrap().port();
+    let ip = stream.peer_addr().unwrap().ip();
+    let mut reader = BufReader::new(stream);
+    debug!("About to read from {}:{}", ip, port);
     match reader.read(&mut buffer) {
         Ok(_) => {
-            info!("Received from tracker: {}", String::from_utf8_lossy(&buffer));
-            //expected_answer.shutdown(&mut stream);
+            info!("Received from {}:{} {}",ip,port, String::from_utf8_lossy(&buffer));
             buffer.iter().map(|&c| char::from_u32(c as u32).unwrap()).collect::<String>()
         }
         Err(e) => {
-            error!("Could not receive from tracker: {}", e);
-            //expected_answer.shutdown(&mut stream);
+            error!("Could not receive from tracker{}:{} {}",ip,port, e);
             String::from("")
         }
     }
