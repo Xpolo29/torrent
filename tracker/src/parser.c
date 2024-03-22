@@ -84,13 +84,15 @@ void process_update(char *buf, struct data *seeds, int seed_size,
   // to get rid of warning
   // (void)leeches;
   // (void)leech_size;
+  // printf("seed_size : %d, leech_side : %d\n", seed_size, leech_size);
   struct data dbb_host[BDD_SIZE];
   struct data new_host[BDD_SIZE];
   int new_len = 0;
-  int len = load_host(dbb_host, h);
+  int len = get_size();
+  load_all(dbb_host);
   for (int i = 0; i < len; i++) {
     for (int j = 0; j < seed_size; j++) {
-      if (strcmp(dbb_host[i].hash, seeds[j].hash) == 0) {
+      if ((strcmp(dbb_host[i].hash, seeds[j].hash) == 0)) {
         new_host[new_len++] = dbb_host[i];
       }
     }
@@ -101,8 +103,11 @@ void process_update(char *buf, struct data *seeds, int seed_size,
     }
   }
   remove_host(h);
-  for (int i = 0; i < new_len; i++)
-    store(new_host[i]);
+  for (int i = 0; i < new_len; i++) {
+    new_host[i].host = h;
+    if (!db_exists(new_host[i]))
+      store(new_host[i]);
+  }
   strcpy(buf, "ok\n");
 }
 
@@ -111,6 +116,7 @@ void process_announce(char *buf, struct data *seeds, int seed_size,
   // to get rid of warning
   // (void)leeches;
   // (void)leech_size;
+  // printf("seed_size : %d", seed_size);
   struct data all[BDD_SIZE];
   load_all(all);
   for (int i = 0; i < seed_size; i++) {
@@ -130,15 +136,15 @@ void process_announce(char *buf, struct data *seeds, int seed_size,
 }
 
 int parse_request(char *buf, char *request, struct host h) {
-  char *reg_update = "^(update) seed \\[(([[:alnum:]]* ?)*)\\] leech "
-                     "\\[(([[:alnum:]]+ ?)*)\\]((\r)?(\n)?)?$";
+  char *reg_update = "^(update) (seed \\[(([[:alnum:]]* ?)*)\\])? ?(leech "
+                     "\\[(([[:alnum:]]+ ?)*)\\])?((\r)?(\n)?)?$";
   char *reg_look = "^(look) (\\[(filename='([[:graph:]]+)')? "
                    "?(filesize([<=>])'([[:digit:]]+)')?\\])((\r)?(\n)?)?$";
   char *reg_get_file = "^(getfile) ([[:alnum:]]+)((\r)?(\n)?)?$";
   char *reg_announce =
-      "^(announce) listen ([[:digit:]]+) seed \\[(([[:graph:]]+ [[:digit:]]+ "
-      "[[:digit:]]+ [[:alnum:]]+ ?)*)\\] leech \\[(([[:alnum:]]+ "
-      "?)*)\\]((\r)?(\n)?)?$";
+      "^(announce) listen ([[:digit:]]+) ?(seed \\[(([[:graph:]]+ [[:digit:]]+ "
+      "[[:digit:]]+ [[:alnum:]]+ ?)*)\\])? ?(leech \\[(([[:alnum:]]+ "
+      "?)*)\\])?((\r)?(\n)?)?$";
 
   char *all_reg[4] = {reg_update, reg_look, reg_get_file, reg_announce};
 
@@ -254,8 +260,8 @@ int parse_request(char *buf, char *request, struct host h) {
   }
   case update: {
     logging(DEBUG, "Parser : Update request\n");
-    start = index[1][0];
-    size = index[1][1] - index[1][0];
+    start = index[2][0];
+    size = index[2][1] - index[2][0];
     char seed[size];
     memcpy(seed, request + start, size);
     seed[size] = 0;
@@ -269,8 +275,8 @@ int parse_request(char *buf, char *request, struct host h) {
       seed_size++;
     }
 
-    start = index[3][0];
-    size = index[3][1] - index[3][0];
+    start = index[5][0];
+    size = index[5][1] - index[5][0];
     char leech[size];
     memcpy(leech, request + start, size);
     leech[size] = 0;
@@ -310,14 +316,15 @@ int parse_request(char *buf, char *request, struct host h) {
 
     logging(DEBUG, "Parser : announce request\n");
 
-    start = index[2][0];
-    size = index[2][1] - index[2][0];
+    start = index[3][0];
+    size = index[3][1] - index[3][0];
     char seed[size];
     memcpy(seed, request + start, size);
     seed[size] = 0;
     char *token = strtok(seed, " ");
     struct data seeds[MAX_SEED];
     int seed_size = 0;
+
     int modulo = 0;
     while (token != NULL) {
       switch (modulo) {
@@ -352,19 +359,21 @@ int parse_request(char *buf, char *request, struct host h) {
       }
     }
 
-    start = index[4][0];
-    size = index[4][1] - index[3][0];
+    start = index[6][0];
+    size = index[6][1] - index[6][0];
     char leech[size];
-    memcpy(leech, request + start, size);
-    leech[size] = 0;
-    token = strtok(leech, " ");
-    char leeches[MAX_SEED][HASH_SIZE + 1];
     int leech_size = 0;
-    while (token != NULL) {
-      memcpy(leeches[leech_size], token, HASH_SIZE + 1);
-      leeches[leech_size][HASH_SIZE] = 0;
-      token = strtok(NULL, " ");
-      leech_size++;
+    char leeches[MAX_SEED][HASH_SIZE + 1];
+    if (size != 0) {
+      memcpy(leech, request + start, size);
+      leech[size] = 0;
+      token = strtok(leech, " ");
+      while (token != NULL) {
+        memcpy(leeches[leech_size], token, HASH_SIZE + 1);
+        leeches[leech_size][HASH_SIZE] = 0;
+        token = strtok(NULL, " ");
+        leech_size++;
+      }
     }
     struct data leech_d[MAX_SEED];
     for (int i = 0; i < leech_size; i++) {
