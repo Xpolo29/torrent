@@ -70,4 +70,7 @@ void print_db();
 //Check if <data> is already in db, reutrn true if is in
 int db_exists(struct data);
 
+//remove doublon from arr of len <len>, returns new size
+int remove_doublon_hash(struct data* arr, int len);
+
 #endif

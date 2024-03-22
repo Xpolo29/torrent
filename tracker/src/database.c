@@ -150,6 +150,38 @@ int load_host(struct data *d, struct host h){
 	d[c] = EMPTY;
 	return c;
 }
+
+int remove_doublon_hash(struct data* arr, int len){
+	struct data copy[BDD_SIZE] ;
+	memcpy(copy, arr, len* sizeof(struct data));
+	memset(arr, 0, BDD_SIZE * sizeof(struct data));
+
+	char hashes[BDD_SIZE][64];
+	int hash_len = 0;
+	int skip = 0;
+
+	for(int i = 0; i < len; ++i){
+		skip = 0;
+		char cur_hash[64];
+		strcpy(cur_hash, copy[i].hash);
+
+		for(int j = 0; j < hash_len; j++){
+			if(!strcmp(hashes[j], cur_hash)){
+				skip = 1;
+				break;
+			}
+		}
+
+		if(skip)continue;
+
+		strcpy(hashes[hash_len], cur_hash);
+		arr[hash_len] = copy[i];
+		hash_len++;
+	}
+
+	return hash_len;
+}
+
 // remove e in bdd based on host, return true on success
 int remove_host(struct host host) {
   int res = 0;
