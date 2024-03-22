@@ -1,13 +1,15 @@
 // src/com.rs
-use crate::config::{ExpectList, ExpectOk, ExpectedAnswer, FileProp}; // Import trait from config
+use crate::network_config::{ExpectList, ExpectOk, ExpectedAnswer, FileProp, TrackerConfig}; // Import trait from config
 use crate::parse::goes_well;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 
 fn send_message(msg: String, expected_answer: &dyn ExpectedAnswer) {
-    let ip = "127.0.1";
-    let port = "7878";
-    let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).unwrap();
+    let tracker_config = TrackerConfig::from_config().unwrap();
+    let ip = tracker_config.ip;
+    let port = tracker_config.port;
+    println!("Connecting to {}:{}", ip, port);
+    let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).expect("Could not connect to tracker");
     stream.write(msg.as_bytes()).unwrap();
     let mut reader = BufReader::new(stream);
     let mut buffer = String::new();

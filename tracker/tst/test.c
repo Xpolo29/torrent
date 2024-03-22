@@ -1,33 +1,37 @@
 #include "test.h"
 
 int cur_test = 1;
-const int max_test = 13;
+const int max_test = 18;
 
-void ok(char* s){
-	printf(G "PASSED (%d/%d): %s\n" W, cur_test, max_test,  s);
-	cur_test++;
+void ok(char *s) {
+  printf(G "PASSED (%d/%d): %s\n" W, cur_test, max_test, s);
+  cur_test++;
 }
 
-void no(char* s){
-	printf(R "FAILED (%d/%d): %s\n" W, cur_test, max_test,  s);
-	cur_test++;
+void no(char *s) {
+  printf(R "FAILED (%d/%d): %s\n" W, cur_test, max_test, s);
+  cur_test++;
 }
 
-int main(){
-	printf("##### DATABASE tests #####\n");
-	test_database();
+int main() {
 
-	printf("##### LOGGING tests #####\n");
-	test_logging();
+  printf("##### DATABASE tests #####\n");
+  test_database();
 
-	printf("##### NETWORK tests #####\n");
-	test_network();
+  printf("##### LOGGING tests #####\n");
+  test_logging();
 
-	printf("##### THREADS tests #####\n");
-	test_threads();
+  printf("##### NETWORK tests #####\n");
+  test_network();
 
-	printf("##### TRACKER tests #####\n");
-	test_tracker();
+  printf("##### THREADS tests #####\n");
+  test_threads();
 
-	return 0;
+  printf("##### TRACKER tests #####\n");
+  test_tracker();
+
+  printf("##### PARSER tests #####\n");
+  test_parser();
+
+  return 0;
 };

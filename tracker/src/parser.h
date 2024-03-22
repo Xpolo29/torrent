@@ -1,6 +1,7 @@
 #ifndef PARSER
 #define PARSER
 
+#include "database.h"
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,10 +10,13 @@
 #define MAX_SEED 32
 #define HASH_SIZE 64
 
+//type of tcp incoming message
 enum request_t { announce = 0, look, getfile, update };
 
+//convert string to enum request_t
 enum request_t char_to_req(char *request);
 
-char *parse_request(char *buf, char *request, int peer_ip);
+//i
+int parse_request(char *buf, char *request, struct host h);
 
 #endif

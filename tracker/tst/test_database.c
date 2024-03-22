@@ -41,7 +41,7 @@ void test_database(){
 
 	strcpy(d2.hash,HASH);
 
-	cond = !equals(d1, d2) && equals(d1, d1);
+	cond = !data_equals(d1, d2) && data_equals(d1, d1);
 	m = "Struct data equality";
 	test(cond, m);
 
@@ -49,7 +49,7 @@ void test_database(){
 	store(d1);
 	store(d1);
 	load_all(DB_COPY);
-	cond = equals(DB_COPY[0], DB_COPY[1]); 
+	cond = data_equals(DB_COPY[0], DB_COPY[1]); 
 	m = "Retrieving all DB";
 	test(cond, m);
 

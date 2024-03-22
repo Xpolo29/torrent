@@ -2,77 +2,58 @@
 #include "logging.h"
 #include "parameters.h"
 
-//Catch ctrl+c for clean exit
+// Catch ctrl+c for clean exit
 void sigint_handler(int signum) {
-	if(signum !=  SIGINT)return;
-	logging(LOG, "Ctrl+c received, exiting\n");
-	running--;
-	if(running < -1){
-		logging(WARNING, "Double ctrl+c received, forcing exit\n");
-		exit(6);
-	}
-}
-
-//TODO Need to move this to right .c and .h
-int compare(struct data *in, struct data *out, long filesize, enum op_t op,
-            int len) {
-  int count = 0;
-  for (int i = 0; i < len; i++) {
-    switch (op) {
-    case eq:
-      if (in[i].size == filesize)
-        out[count++] = in[i];
-      break;
-    case gt:
-      if (in[i].size > filesize)
-        out[count++] = in[i];
-      break;
-    case lt:
-      if (in[i].size < filesize)
-        out[count++] = in[i];
-      break;
-    default:
-      break;
-    }
-  }
-  return count;
-}
-
-
-//TODO Need to move this to right .c and .h
-int filter(struct data *list, char *filename, long filesize, enum op_t op) {
-  if (filesize < 0) {
-    return load_files(list, filename);
-  }
-  if (strlen(filename) == 0) {
-    struct data all[BDD_SIZE];
-    int len = get_size();
-    load_all(all);
-    return compare(all, list, filesize, op, len);
-  } else {
-    struct data all[BDD_SIZE];
-    int len = load_files(all, filename);
-    return compare(all, list, filesize, op, len);
+  if (signum != SIGINT)
+    return;
+  logging(LOG, "Ctrl+c received, exiting\n");
+  running--;
+  if (running < -1) {
+    logging(WARNING, "Double ctrl+c received, forcing exit\n");
+    exit(6);
   }
 }
 
-//Handle request comprehension and answers for peer <connection>
-int process(int connection){
-	char buff[16*1024] = {0};
-	int read = recv(connection, buff, 1024*16, 0);
-	if(read < 0){
-		logging(ERROR, "Could not read from socket %d\n", connection);
-		return 3;
-	}
+// Handle request comprehension and answers for peer <connection>
+int process(int connection) {
+  char buff[16 * 1024] = {0};
+  int read = recv(connection, buff, 1024 * 16, 0);
+  if (read < 0) {
+    logging(ERROR, "Could not read from socket %d\n", connection);
+    return 3;
+  }
 
-	logging(LOG, "< %s\n", buff);
+  logging(LOG, "< %s", buff);
 
-	//TODO parse then process the answer
-	
-	//mimic worload
-	sleep(1);
+  // Get the local address of the socket
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  socklen_t addr_len = sizeof(addr);
+  if (getsockname(connection, (struct sockaddr *)&addr, &addr_len) == -1) {
+    logging(WARNING, "Could not fetch ip from socket\n");
+  }
 
-	close(connection);
-	return 0;
+  char ip_address[INET_ADDRSTRLEN];
+  int port = ntohs(addr.sin_port);
+  inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+
+  logging(DEBUG, "Task %d is from %s:%d\n", connection, ip_address, port);
+  struct host h = {"", port};
+  strncpy(h.ip, ip_address, 16);
+
+  /*
+   mimic worload
+   sleep(1);
+  */
+
+  // parsing request
+  char out[16 * 1024];
+  memset(out, 0, 16*1024);
+  parse_request(out, buff, h);
+
+  // answer peer
+  send_msg(connection, out);
+
+  close(connection);
+  return 0;
 }
-

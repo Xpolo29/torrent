@@ -2,20 +2,22 @@
 #define TRACKER
 
 #include "database.h"
+#include "parser.h"
+#include "network.h"
 
 #include <netinet/in.h>
-#include <sys/socket.h>
-#include <string.h>
 #include <signal.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 
-enum op_t { eq, gt, lt };
-
-int filter(struct data*, char*, long, enum op_t);
-
+//topmost fonction that is called on each connection,
+//handle request parsing, logic processing and answering the peer
 int process(int);
 
+//handle ctrl+c for clean exit (thread kill/closing log file/ etc) 
 void sigint_handler(int);
 
 #endif

@@ -57,11 +57,14 @@ int create_thread_pool(int size){
 }
 
 //delete thread pool, cleanup before exit
-int delete_thread_pool(){
-	logging(LOG, "Deleting thread pool of size %d\n", thread_pool_size);
-	for(int i = 0; i < thread_pool_size; ++i){
-		pthread_join(pool[i], NULL);
+int delete_thread_pool(int size){
+	logging(LOG, "Deleting thread pool of size %d\n", size);
+	running = 0;
+	int res = 0;
+	for(int i = 0; i < size; ++i){
+		res += pthread_join(pool[i], NULL);
 	}
+	if(res)logging(WARNING, "Could not stop threads cleanly");
 	if(!pool)return 1;
 	free(pool);
 	return 0;

@@ -1,5 +1,5 @@
 // src/parse.rs
-use crate::config::{Answer, ExpectList, ExpectOk, ExpectedAnswer, FileProp};
+use crate::network_config::{Answer, ExpectList, ExpectOk, ExpectedAnswer, FileProp};
 use std::fmt::{Display, Error, Formatter};
 
 impl ExpectedAnswer for ExpectOk {

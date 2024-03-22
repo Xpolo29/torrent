@@ -51,4 +51,16 @@ int create_master_sock(int port){
 	return sock;
 }
 
-
+int send_msg(int sock, char* msg){
+	int len = strlen(msg);
+	if(len == 0){
+		msg = "Wrong request\n";
+		len = strlen(msg);
+	}
+	logging(LOG, "> %s", msg);
+	if (send(sock, msg, len, 0) == -1) {
+		logging(WARNING, "Could not answer %d with %s", sock, msg);
+		return 1;
+	}
+	return 0;
+}

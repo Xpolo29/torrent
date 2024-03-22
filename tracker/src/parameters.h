@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+//here are all the global vars
 extern char* config_path;
 extern enum LOG_LEVEL log_level;
 extern int16_t port;

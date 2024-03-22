@@ -1,15 +1,5 @@
 ### TODO ###
 
--Parser :
-	- Fonction pour gerer les requêtes après le passage du parser
-	- Liason avec tracker (Modification Makefile)
-	  |-> Ajout des log (propres)
-	  |-> Gestion des erreurs (propres)
-
--mono threaded
-
--mock_peer.py needs to send custom request to tracker to test it
-
 ### DONE ###
 
 -database.h / .c -> api de stockage
@@ -25,3 +15,15 @@ key1 = value1
 
 -logging to .log file based on verbose level
 log files use .log extension
+
+-Parser :
+	- Fonction pour gerer les requêtes après le passage du parser
+	- Liason avec tracker (Modification Makefile)
+	  |-> Ajout des log (propres)
+	  |-> Gestion des erreurs (propres)
+
+-mono threaded
+
+-mock_peer.py needs to send custom request to tracker to test it
+
+

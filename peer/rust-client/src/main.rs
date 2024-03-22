@@ -1,23 +1,24 @@
 // src/main.rs
 mod com;
-mod config;
+mod network_config;
 mod parse;
 mod userinput;
 use com::{send_port_seed_to_tracker, send_search_to_tracker};
-use config::Config;
+use network_config::PeerConfig;
 use userinput::{get_available_files, get_file, get_listen_port, get_proposed_files};
 
 fn main() {
-    let mut config = Config {
-        ip: "127.0.0.1".to_string(),
-        port: 8080,
-        files: Vec::new(),
-    };
+    let interactive = false;
+    let mut peer_config = PeerConfig::new();
     // nul si le port change pas et en plus ça marche pas
-    config.port = get_listen_port();
-    config.files = get_proposed_files();
-    send_port_seed_to_tracker(config.port, config.files);
-    get_available_files();
+    if interactive {
+        peer_config.port = get_listen_port();
+        peer_config.files = get_proposed_files(None);
+    } else {
+        // let args: Vec<String> = std::env::args().collect();
+    }
+    send_port_seed_to_tracker(peer_config.port, peer_config.files);
+    get_proposed_files(Some("test_taille".to_string()));
     send_search_to_tracker(get_available_files());
     get_file();
     /*
