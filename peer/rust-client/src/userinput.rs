@@ -1,17 +1,26 @@
 // src/userinput.rs
-use std::fs;
-use std::io;
-use std::path::Path;
-
-// because config is a top level one should write use crate::config and not mod config
 use crate::config::FileProp;
-// One port per peer/thread
+use md5::{Digest, Md5};
+use std::fs;
+use std::io::{self, Write};
+use std::path::Path; // because config is at top level
+                     // One port per peer/thread
+pub fn get_hash(file: &str) -> io::Result<String> {
+    let mut file = fs::File::open(file)?; // Add ? to handle the Result
+    let mut hasher = Md5::new(); // Create new hasher
+    io::copy(&mut file, &mut hasher)?; // Add ? to handle the Result
+    let result = hasher.finalize(); // Use compute instead of finalize
+    Ok(format!("{:x}", result)) // format the result in hexadecimal
+}
 pub fn get_listen_port() -> u16 {
     fn get_listen_port_rec() -> u16 {
         // TODO : let port be a parameter to avoid creation of a new string
         let mut port = String::new();
         // Takes the port number from the user that the peer will use to receive and forward files
-        println!("Port associé à ce peer? Appuie sur Entrée pour utiliser le port par défaut: 8080");
+        print!(
+            "Enter the port number you want to use to receive and forward files (default: 8080) : "
+        );
+        io::stdout().flush().unwrap();
         // Create a new string to store the port number
         // Call the stdin handle to call the read_line method then call the expect method to crash if the System call fails
         io::stdin()
@@ -20,15 +29,18 @@ pub fn get_listen_port() -> u16 {
         // trim to remove whites spaces and generic parse that expect a type with ::
         match port.trim().parse::<u16>() {
             Ok(port) => {
-                println!("Port choisi: {port}");
+                print!("Port choisi: {port}");
+                io::stdout().flush().unwrap();
+
                 return port;
             }
             Err(_) => {
                 if port.trim().is_empty() {
-                    println!("Port vide, utilisation du port par défaut: 8080");
+                    print!("Port vide, utilisation du port par défaut: 8080");
                     return 8080;
                 }
-                println!("Port invalide, veuillez réessayer.");
+                print!("Port invalide, veuillez réessayer.");
+                io::stdout().flush().unwrap();
                 return get_listen_port_rec();
             }
         }
@@ -42,14 +54,14 @@ pub fn get_proposed_files() -> Vec<FileProp> {
             file_name: file.trim().to_string(),
             length: fs::metadata(file).unwrap().len(),
             piece_size: 1024, // taille de bloc constante pour l'instant
-            hash: "hash_constant".to_string(), // hash constant pour l'instant
+            hash: get_hash(file).unwrap(),
         };
     }
     let mut files: Vec<FileProp> = Vec::new();
 
-    println!(
-        "Quels fichiers veux-tu envoyer? (séparés par des espaces blancs) tape Entree si tu ne veux rien partager"
-    );
+    print!("Enter the files you want to share, separated by white spaces (press Enter if you don't want to share anything) :");
+    io::stdout().flush().unwrap();
+
     let mut input = String::new();
     io::stdin()
         .read_line(&mut input)
@@ -63,22 +75,26 @@ pub fn get_proposed_files() -> Vec<FileProp> {
                 files.push(file_prop);
             }
             false => {
-                println!("Le fichier {} n'existe pas", file);
+                print!("Le fichier {} n'existe pas", file);
+                io::stdout().flush().unwrap();
+
                 continue;
             }
         }
     }
 
     if files.len() != 0 {
-        println!("Tu veux télécharger les fichiers suivants:");
+        print!("Here are the files you are sharing : ");
+        io::stdout().flush().unwrap();
+
         for file in files.iter() {
-            println!(
+            print!(
                 "{} -- taille: {} bytes, taille de bloc: {}, hash: {}",
                 file.file_name, file.length, file.piece_size, file.hash
             );
         }
     } else {
-        println!("Pas de fichiers à partager.");
+        print!("You are not sharing any file.");
     }
 
     files
@@ -86,7 +102,7 @@ pub fn get_proposed_files() -> Vec<FileProp> {
 // return
 pub fn get_available_files() -> String {
     let mut criterions = String::new();
-    println!("Quel fichier cherches-tu? Appuie sur Entrée pour voir tous les fichiers disponibles");
+    print!("Enter the name of the file you are looking for (press Enter if you want to see the list of all available files) : ");
     io::stdin()
         .read_line(&mut criterions)
         .expect("Pas réussi à lire la ligne");
@@ -94,5 +110,13 @@ pub fn get_available_files() -> String {
     return criterions.trim().to_string();
 }
 
+pub fn get_file() -> String {
+    print!("Enter the name of the file you want to download : ");
+    let mut file = String::new();
+    io::stdin()
+        .read_line(&mut file)
+        .expect("Failed to read line");
+    return file.trim().to_string();
+}
 #[cfg(test)]
 mod tests {}

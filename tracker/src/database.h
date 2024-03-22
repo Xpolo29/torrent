@@ -1,23 +1,27 @@
-#include <stdint.h>
+#ifndef DATABASE
+#define DATABASE
 
-#ifndef BDD_SIZE
+#include <stdint.h>
+#include <string.h>
+
 #define BDD_SIZE 64
-#endif
 
 struct host {
-  char ip[16];
-  int16_t port;
+	char ip[16];
+	int16_t port;
 };
 
 struct data {
-  struct host host;
-  long size;
-  int chunk_size;
-  char hash[64];
-  char filename[352];
+	struct host host;
+	long size;
+	int chunk_size;
+	char hash[64];
+	char filename[352];
 };
 
-static const struct data EMPTY = {"", 0, 0, 0, "", ""};
+extern struct data bdd[BDD_SIZE];
+
+static const struct data EMPTY = {{"", 0}, 0, 0, "", ""};
 
 int get_size();
 
@@ -28,3 +32,7 @@ struct data load_hash(char hash[64]);
 int remove_host(struct host);
 int remove_file(char *filename);
 int remove_hash(char hash[64]);
+
+int equals(struct data, struct data);
+	
+#endif

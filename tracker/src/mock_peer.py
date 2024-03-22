@@ -2,6 +2,7 @@ import socket
 import hashlib
 import json
 import random
+import threading
 
 # Tracker address and port
 TRACKER_ADDRESS = "localhost"
@@ -26,26 +27,43 @@ def send_message(message):
 
 # Function to announce presence and files to tracker
 def announce_files(port, files):
-    message = f"< announce listen {port} seed {json.dumps(files)} leech []\r\n"
+    message = f"announce listen {port} seed {json.dumps(files)} leech []\r\n"
     return send_message(message)
 
 
 # Function to look for files on tracker
 def look_for_files(criteria):
-    message = f"< look {json.dumps(criteria)}\r\n"
+    message = f"look {json.dumps(criteria)}\r\n"
     return send_message(message)
 
 
 # Function to get peers for a file from tracker
 def get_peers(file_key):
-    message = f"< getfile {file_key}\r\n"
+    message = f"getfile {file_key}\r\n"
     return send_message(message)
+
+
+def send_id(x):
+    i = 1
+    while(i <= 4):
+        send_message(x + "(" + str(i) + ")")
+        i += 1
 
 
 # Example usage
 if __name__ == "__main__":
+    L = []
+    for i in range(100):
+        thread = threading.Thread(target=send_id, args=(str(i),))
+        thread.start()
+        L.append(thread)
+
+    L[-1].join()
+    exit()
+
     # Announce files to tracker
-    port = 2222
+    port = 12345
+
     files = [
         {"filename": "file_a.dat", "filesize": 2097152, "piecesize": 1024, "key": calculate_hash()},
         {"filename": "file_b.dat", "filesize": 3145728, "piecesize": 1536, "key": calculate_hash()}

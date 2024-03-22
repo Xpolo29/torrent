@@ -1,5 +1,11 @@
 ### TODO ###
 
+-Parser :
+	- Fonction pour gerer les requêtes après le passage du parser
+	- Liason avec tracker (Modification Makefile)
+	  |-> Ajout des log (propres)
+	  |-> Gestion des erreurs (propres)
+
 -mono threaded
 
 -mock_peer.py needs to send custom request to tracker to test it

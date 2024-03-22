@@ -12,8 +12,14 @@ pub struct Config {
     pub files: Vec<FileProp>,
 }
 
-pub enum Message {
-    OK,
-    LIST,
+pub enum Answer {
+    Ok,
+    List(Vec<FileProp>),
 }
 
+pub trait ExpectedAnswer {
+    fn parse_answer(&self, answer: String) -> Result<Answer, &'static str>;
+}
+
+pub struct ExpectOk;
+pub struct ExpectList;

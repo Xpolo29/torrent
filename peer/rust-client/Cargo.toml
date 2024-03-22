@@ -1,3 +1,4 @@
+workspace = { members = [] }
 [package]
 name = "rust-client"
 version = "0.1.0"
@@ -26,3 +27,4 @@ path = "src/userinput.rs"
 
 
 [dependencies]
+md-5 = "0.10.6"
