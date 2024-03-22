@@ -1,4 +1,4 @@
-use crate::com::{receive, seed, send, Answer, ExpectOk, ExpectedAnswer};
+use crate::com::{receive, seed, send, Answer, ExpectOk, ExpectedAnswer, connect};
 use crate::data::{MetaFile, TrackerConfig};
 use crate::userinput::get_file_names;
 use log::{error, info, trace};
@@ -41,9 +41,17 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         .collect(); // Create vector of Metafiles out of the files name
     let seeded_files = seed(seeded_files, "8080".to_string(), "".to_string()); // create the message
     trace!("Prepared message: {}", seeded_files);
-    send(seeded_files, tracker_port, tracker_adress.to_string()); // send the message
+    let mut stream = connect(tracker_port, &tracker_adress.to_string()); // connect to the tracker
+    let mut stream = match stream {
+        Ok(stream) => stream,
+        Err(e) => {
+            error!("Could not connect to tracker: {}", e);
+            return;
+        }
+    };
+    send(&mut stream, seeded_files); // send the message
     trace!("Message sent waiting for answer");
-    let mut response = receive(&ExpectOk, tracker_port, tracker_adress.to_string()); // receive the answer as a string
+    let response = receive(&ExpectOk, stream); // receive the answer
     trace!("Received: {}", response);
     match ExpectOk.check_answer(&response) {
         Ok(valeur) => {

@@ -1,6 +1,6 @@
 use crate::data::{MetaFile, PeerConfig, TrackerConfig};
 use log::{debug, error, info, warn};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Write, Read};
 use std::net::TcpStream;
 /// Takes a list of seeded and leeched files with medata data and returns the right message to be sent
 pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
@@ -28,44 +28,39 @@ pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String
     );
     msg
 }
-/// Sends a message to a given adress and port
-pub fn send(message: String, port: u16, adress: String) {
+pub fn connect(port:u16, adress:&str) -> Result<TcpStream, std::io::Error>{
     let mut stream = TcpStream::connect(format!("{}:{}", adress, port));
     match stream {
         Ok(mut stream) => {
-            stream.write(message.as_bytes()).unwrap();
-            info!("Sending to {}:{} < {}", adress, port, message);
+            info!("Connected to {}:{}", adress, port);
+            return Ok(stream);
         }
         Err(e) => {
             error!("Could not connect to tracker: {}", e);
+            return Err(e);
         }
     }
 }
-
+/// Sends a message to a given adress and port
+pub fn send(stream: &mut TcpStream, message:String) {
+    stream.write(message.as_bytes()).unwrap();
+    info!("Sending to tracker: {}", message);
+}
 /// Receives a message from a given adress and port
-pub fn receive(expected_answer: &dyn ExpectedAnswer, port: u16, adress: String) -> String {
-    let mut stream = TcpStream::connect(format!("{}:{}", adress, port));
-    match stream {
-        Ok(mut stream) => {
-            let mut buffer = String::new();
-            let mut reader = BufReader::new(&stream);
-            debug!("About to read from {}:{}", adress, port);
-            match reader.read_line(&mut buffer) {
-                Ok(_) => {
-                    info!("Received from {}:{} > {}", adress, port, buffer);
-                    expected_answer.shutdown(&mut stream);
-                    return buffer;
-                }
-                Err(e) => {
-                    error!("Could not receive from tracker: {}", e);
-                    expected_answer.shutdown(&mut stream);
-                    return String::from("");
-                }
-            }
+pub fn receive(expected_answer: &dyn ExpectedAnswer, mut stream:TcpStream) -> String {
+    let mut buffer = [0; 1024];
+    let mut reader = BufReader::new(&stream);
+    debug!("About to read from {}:{}", stream.peer_addr().unwrap().ip(), stream.peer_addr().unwrap().port());
+    match reader.read(&mut buffer) {
+        Ok(_) => {
+            info!("Received from tracker: {}", String::from_utf8_lossy(&buffer));
+            expected_answer.shutdown(&mut stream);
+            buffer.iter().map(|&c| char::from_u32(c as u32).unwrap()).collect::<String>()
         }
         Err(e) => {
-            error!("Could not connect to tracker: {}", e);
-            return String::from("");
+            error!("Could not receive from tracker: {}", e);
+            expected_answer.shutdown(&mut stream);
+            String::from("")
         }
     }
 }
