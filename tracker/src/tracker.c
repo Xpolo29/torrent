@@ -2,6 +2,8 @@
 #include "logging.h"
 #include "parameters.h"
 
+int current_sleeping_time = MIN_SLEEPING_TIME;
+
 // Catch ctrl+c for clean exit
 void sigint_handler(int signum) {
   if (signum != SIGINT)
@@ -14,46 +16,63 @@ void sigint_handler(int signum) {
   }
 }
 
+void mysleep(int charge){
+	if(charge){
+		int temp = current_sleeping_time / 2;
+		if(temp >= MIN_SLEEPING_TIME)
+			current_sleeping_time = temp;
+
+	} else {
+		int temp = current_sleeping_time * 2;
+		if(temp <= MAX_SLEEPING_TIME)
+			current_sleeping_time = temp;
+	}	
+	usleep(current_sleeping_time);
+}
+
 // Handle request comprehension and answers for peer <connection>
 int process(int connection) {
-  char buff[16 * 1024] = {0};
-  int read = recv(connection, buff, 1024 * 16, 0);
-  if (read < 0) {
-    logging(ERROR, "Could not read from socket %d\n", connection);
-    return 3;
-  }
+	char buff[16 * 1024] = {0};
+	fcntl(connection, F_SETFL, O_NONBLOCK);
+	int read = recv(connection, buff, 1024 * 16, 0);
 
-  logging(LOG, "< %s", buff);
+	if (read < 0) {
+		mysleep(0);
+		new_task(connection);
+		return 0;
+	}
 
-  // Get the local address of the socket
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
-  socklen_t addr_len = sizeof(addr);
-  if (getsockname(connection, (struct sockaddr *)&addr, &addr_len) == -1) {
-    logging(WARNING, "Could not fetch ip from socket\n");
-  }
+	logging(LOG, "< %s", buff);
 
-  char ip_address[INET_ADDRSTRLEN];
-  int port = ntohs(addr.sin_port);
-  inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+	// Get the local address of the socket
+	struct sockaddr_in addr;
+	memset(&addr, 0, sizeof(addr));
+	socklen_t addr_len = sizeof(addr);
+	if (getsockname(connection, (struct sockaddr *)&addr, &addr_len) == -1) {
+		logging(WARNING, "Could not fetch ip from socket\n");
+	}
 
-  logging(DEBUG, "Task %d is from %s:%d\n", connection, ip_address, port);
-  struct host h = {"", port};
-  strncpy(h.ip, ip_address, 16);
+	char ip_address[INET_ADDRSTRLEN];
+	int port = ntohs(addr.sin_port);
+	inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
 
-  /*
-   mimic worload
-   sleep(1);
-  */
+	logging(DEBUG, "Task %d is from %s:%d\n", connection, ip_address, port);
+	struct host h = {"", port};
+	strncpy(h.ip, ip_address, 16);
 
-  // parsing request
-  char out[16 * 1024];
-  memset(out, 0, 16*1024);
-  parse_request(out, buff, h);
+	/*
+	mimic worload
+	sleep(1);
+	*/
 
-  // answer peer
-  send_msg(connection, out);
+	// parsing request
+	char out[16 * 1024];
+	memset(out, 0, 16*1024);
+	parse_request(out, buff, h);
 
-  close(connection);
-  return 0;
+	// answer peer
+	send_msg(connection, out);
+
+	close(connection);
+	return 0;
 }
