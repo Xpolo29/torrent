@@ -54,12 +54,12 @@ pub fn receive(expected_answer: &dyn ExpectedAnswer, mut stream:TcpStream) -> St
     match reader.read(&mut buffer) {
         Ok(_) => {
             info!("Received from tracker: {}", String::from_utf8_lossy(&buffer));
-            expected_answer.shutdown(&mut stream);
+            //expected_answer.shutdown(&mut stream);
             buffer.iter().map(|&c| char::from_u32(c as u32).unwrap()).collect::<String>()
         }
         Err(e) => {
             error!("Could not receive from tracker: {}", e);
-            expected_answer.shutdown(&mut stream);
+            //expected_answer.shutdown(&mut stream);
             String::from("")
         }
     }
@@ -73,9 +73,11 @@ pub trait ExpectedAnswer {
 
 impl ExpectedAnswer for ExpectOk {
     fn check_answer(&self, answer: &str) -> Result<String, std::io::Error> {
-        if answer == "ok\n" {
+        let first_line = answer.lines().next().unwrap_or("");
+        if first_line == "ok" {
             Ok("Correct tracker answer".to_string())
         } else {
+            error!("Failed tracker answer: {}", answer);
             Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "Bad tracker answer",
@@ -123,3 +125,9 @@ mod tests {
         assert_eq!(answer, "ok\n");
     }
 }
+
+trait request {
+    fn request(&self, message: String) -> String;
+}
+
+    
