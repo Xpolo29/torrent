@@ -20,8 +20,23 @@ pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
             warn!("File {} does not exist. Skipping.", file_name);
         }
     }
-
     valid_files
+}
+
+pub fn get_criterions<R: Read>(reader: R) -> Vec<String> {
+    let mut reader = BufReader::new(reader);
+    let mut input = String::new();
+    let mut criterions = Vec::new();
+
+    print!("Enter the criterions you want files to verify (separated by spaces): ");
+    io::stdout().flush().unwrap();
+    reader.read_line(&mut input).unwrap();
+
+    let criterions = input.trim().split_whitespace();
+
+    // verify that criterions verify filename=”???.???” orfilesize>”???” or filesize<”???” or piece_size>”???” or piece_size<”???” or key=”???”
+
+
 }
 
 #[cfg(test)]

@@ -29,9 +29,31 @@ pub fn display_menu(tracker_config: TrackerConfig) {
         }
     }
 }
-fn search_section() {
+fn search_section(tracker_port: u16, tracker_adress: &str) {
     println!("You're in Search")
+    let criterions = get_criterions(io::stdin()); // take the files the user wish to seed
+    let criterions: Vec<MetaFile> = criterions // change the criterions into a vector of ???
+        .into_iter()
+        .map(|file| MetaFile::new(file.to_string()))
+        .collect(); 
+    let criterions = seed(criterions, "8080".to_string(), "".to_string()); // create the message
+    trace!("Prepared message: {}", criterions);
+    send(criterions, tracker_port, tracker_adress.to_string()); // send the message
+    trace!("Message sent waiting for answer");
+    let mut response = receive(&ExpectOk, tracker_port, tracker_adress.to_string()); // receive the answer as a string
+    trace!("Received: {}", response);
+
+    // to finish
+    match ExpectOk.check_answer(&response) {
+        Ok(valeur) => {
+            info!("{}", valeur);
+        }
+        Err(valeur) => {
+            info!("{}", valeur);
+        }
+    }
 }
+
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
     println!("You're in upload");
     let seeded_files = get_file_names(io::stdin()); // take the files the user wish to seed
@@ -54,6 +76,7 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         }
     }
 }
+
 fn download_section() {
     println!("You're in download")
 }
