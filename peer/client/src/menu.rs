@@ -1,6 +1,7 @@
-use crate::com::{receive, seed, send, Answer, ExpectOk, ExpectedAnswer, connect};
+use crate::com::{connect, look, receive, seed, send};
 use crate::data::{MetaFile, TrackerConfig};
-use crate::userinput::get_file_names;
+use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer};
+use crate::userinput::{get_file_criterions, get_file_names};
 use log::{error, info, trace};
 use std::io;
 pub fn display_menu(tracker_config: TrackerConfig) {
@@ -22,15 +23,33 @@ pub fn display_menu(tracker_config: TrackerConfig) {
 
         match input {
             // Escape should get back to menu from search, upload and download
-            1 => search_section(),
+            1 => search_section(tracker_config.port, &tracker_config.address),
             2 => upload_section(tracker_config.port, &tracker_config.address),
             3 => download_section(),
             _ => println!("Invalid input, please enter 1, 2 or 3"),
         }
     }
 }
-fn search_section() {
-    println!("You're in Search")
+fn search_section(tracker_port: u16, tracker_adress: &str) {
+    println!("You're in Search");
+    let criterion = get_file_criterions(io::stdin());
+    let look_message = look(criterion);
+    trace!("Prepared message: {}", look_message);
+    if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
+        send(&mut stream, look_message);
+        trace!("Message sent waiting for answer");
+        let response = receive(&mut stream);
+        trace!("Received {}", response);
+        match ExpectList.check_answer(&response) {
+            Ok(valeur) => {
+                info!("{}", valeur);
+            }
+            Err(valeur) => {
+                error!("{}", valeur);
+            }
+        }
+    }
+    let present_files = ExpectList.retrieve_data("".to_string());
 }
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
     println!("You're in upload");
@@ -41,28 +60,22 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         .collect(); // Create vector of Metafiles out of the files name
     let seeded_files = seed(seeded_files, "8080".to_string(), "".to_string()); // create the message
     trace!("Prepared message: {}", seeded_files);
-    let mut stream = connect(tracker_port, &tracker_adress.to_string()); // connect to the tracker
-    let mut stream = match stream {
-        Ok(stream) => stream,
-        Err(e) => {
-            error!("Could not connect to tracker: {}", e);
-            return;
+    if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
+        // connect to the tracker
+        send(&mut stream, seeded_files); // send the message
+        trace!("Message sent waiting for answer");
+        let response = receive(&mut stream); // receive the answer
+        trace!("Received: {}", response);
+        match ExpectOk.check_answer(&response) {
+            Ok(valeur) => {
+                info!("{}", valeur);
+            }
+            Err(valeur) => {
+                info!("{}", valeur);
+            }
         }
-    };
-    let mut stream_clone = stream.try_clone().expect("Failed to clone stream");
-    send(&mut stream, seeded_files); // send the message
-    trace!("Message sent waiting for answer");
-    let response = receive(&ExpectOk, &mut stream_clone); // receive the answer
-    trace!("Received: {}", response);
-    match ExpectOk.check_answer(&response) {
-        Ok(valeur) => {
-            info!("{}", valeur);
-        }
-        Err(valeur) => {
-            info!("{}", valeur);
-        }
+        ExpectOk.shutdown(&mut stream);
     }
-    ExpectOk.shutdown(&mut stream_clone);
 }
 fn download_section() {
     println!("You're in download")

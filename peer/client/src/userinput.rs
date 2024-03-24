@@ -23,7 +23,17 @@ pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
 
     valid_files
 }
+pub fn get_file_criterions<R: Read>(reader: R) -> String {
+    let mut reader = BufReader::new(reader);
+    let mut input = String::new();
 
+    print!("Enter the file name you wish to search for: ");
+    io::stdout().flush().unwrap();
+    reader.read_line(&mut input).unwrap();
+
+    let criterion = input.trim();
+    criterion.to_string()
+}
 #[cfg(test)]
 mod tests {
     use super::*;
