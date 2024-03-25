@@ -23,14 +23,14 @@ void test_parser() {
   // printf(buf, "result : %s \n", buf);
 
   parse_request(buf, "look [filename='file.file']", me);
-  printf("result : %s \n", buf);
+  // printf("result : %s \n", buf);
   cond = !strcmp(buf, "list [file.file 100 2 hash]\n");
   m = "Look request with only filename";
   test(cond, m);
   strcpy(buf, "");
 
   parse_request(buf, "look [filesize='100']", me);
-  printf("result : %s \n", buf);
+  // printf("result : %s \n", buf);
   cond = !strcmp(buf, "list [file.file 100 2 hash]\n");
   m = "Look request with only filesize";
   test(cond, m);
