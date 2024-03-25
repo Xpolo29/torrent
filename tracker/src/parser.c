@@ -2,6 +2,7 @@
 #include "database.h"
 #include "logging.h"
 #include <string.h>
+#include <strings.h>
 
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
@@ -71,7 +72,6 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
     if (i > 0)
       strcat(buf, " ");
 
-    // printf("HERE\n");
     sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size,
             d[i].hash);
     strcat(buf, info);
@@ -135,7 +135,7 @@ void process_announce(char *buf, struct data *seeds, int seed_size,
   strcpy(buf, "ok\n");
 }
 
-int parse_request(char *buf, char *request, struct host h) {
+int handle_regex(int index[MATCH_SIZE][2], char* request){
   char *reg_update = "^(update) (seed \\[(([[:alnum:]]* ?)*)\\])? ?(leech "
                      "\\[(([[:alnum:]]+ ?)*)\\])?((\r)?(\n)?)?$";
   char *reg_look = "^(look) (\\[(filename=[\"']([[:graph:]]+)[\"'])? "
@@ -150,7 +150,6 @@ int parse_request(char *buf, char *request, struct host h) {
 
   regex_t regex;
   regmatch_t matches[MATCH_SIZE];
-  int index[MATCH_SIZE][2] = {};
   int result;
   int nb_matches = 0;
   logging(DEBUG, "Parser : Compiling regex\n");
@@ -190,41 +189,23 @@ int parse_request(char *buf, char *request, struct host h) {
       exit(1);
     }
   }
-  // DEBUG purpose
-  // for (int i = 0; i < nb_matches; i++) {
-  //   int start = index[i][0];
-  //   int size = index[i][1] - index[i][0];
-  //   printf("start : %d, size %d\n", start, size);
-  //   char message[size];
-  //   memcpy(message, request + start, size);
-  //   printf("Group %d : %s\n", i, message);
-  // }
+  return 0;
+}
 
-  int start = index[0][0];
-  int size = index[0][1] - index[0][0];
-  // printf("start : %d, size %d\n", start, size);
-
-  char req[size];
-  memcpy(req, request + start, size);
-  req[size] = 0;
-  // printf("req : %s\n", req);
-  enum request_t reqt = char_to_req(req);
-  // printf("reqt : %d\n", reqt);
-
-  switch (reqt) {
-  case getfile: {
-    logging(DEBUG, "Parser : Processing getfile request\n");
-    start = index[1][0];
-    size = index[1][1] - index[1][0];
+void parse_getfile(char* buf, int index[MATCH_SIZE][2], char* request){
+  logging(DEBUG, "Parser : Processing getfile request\n");
+    int start = index[1][0];
+    int size = index[1][1] - index[1][0];
     char hash[size];
     memcpy(hash, request + start, size);
     hash[size] = 0;
     // printf("hash : %s\n", hash);
     process_getfile(buf, hash);
-    break;
-  }
-  case look: {
-    logging(DEBUG, "Parser : Look request\n");
+
+}
+
+void parse_look(char* buf, int index[MATCH_SIZE][2], char* request){
+   logging(DEBUG, "Parser : Look request\n");
 
     int filename_match;
     int filesize_match;
@@ -232,8 +213,8 @@ int parse_request(char *buf, char *request, struct host h) {
     (void)filename_match;
     (void)filesize_match;
 
-    start = index[3][0];
-    size = index[3][1] - index[3][0];
+    int start = index[3][0];
+    int size = index[3][1] - index[3][0];
     char filename[size];
     strncpy(filename, request + start, size);
     filename[size] = 0;
@@ -256,12 +237,13 @@ int parse_request(char *buf, char *request, struct host h) {
 
     process_look(buf, filename, char_to_op(op), filesize);
     // printf("look filename: %s filesize%s%d\n", filename, op, filesize);
-    break;
-  }
-  case update: {
-    logging(DEBUG, "Parser : Update request\n");
-    start = index[2][0];
-    size = index[2][1] - index[2][0];
+
+}
+
+void parse_update(char* buf, int index[MATCH_SIZE][2], char* request, struct host h){
+  logging(DEBUG, "Parser : Update request\n");
+    int start = index[2][0];
+    int size = index[2][1] - index[2][0];
     char seed[size];
     memcpy(seed, request + start, size);
     seed[size] = 0;
@@ -310,14 +292,14 @@ int parse_request(char *buf, char *request, struct host h) {
     // }
     // printf("\n");
     // exit(0);
-    break;
-  }
-  case announce: {
 
-    logging(DEBUG, "Parser : announce request\n");
+}
 
-    start = index[3][0];
-    size = index[3][1] - index[3][0];
+void parse_announce(char* buf, int index[MATCH_SIZE][2], char* request, struct host h){
+  logging(DEBUG, "Parser : announce request\n");
+
+    int start = index[3][0];
+    int size = index[3][1] - index[3][0];
     char seed[size];
     memcpy(seed, request + start, size);
     seed[size] = 0;
@@ -394,7 +376,50 @@ int parse_request(char *buf, char *request, struct host h) {
     // }
     // printf("\n");
     // exit(0);
-    break;
+}
+
+int parse_request(char *buf, char *request, struct host h) {
+  int index[MATCH_SIZE][2] = {};
+  int res = handle_regex(index, request);
+  if(res == 1)return 1;
+  
+  // DEBUG purpose
+  // for (int i = 0; i < nb_matches; i++) {
+  //   int start = index[i][0];
+  //   int size = index[i][1] - index[i][0];
+  //   printf("start : %d, size %d\n", start, size);
+  //   char message[size];
+  //   memcpy(message, request + start, size);
+  //   printf("Group %d : %s\n", i, message);
+  // }
+
+  int start = index[0][0];
+  int size = index[0][1] - index[0][0];
+  // printf("start : %d, size %d\n", start, size);
+
+  char req[size];
+  memcpy(req, request + start, size);
+  req[size] = 0;
+  // printf("req : %s\n", req);
+  enum request_t reqt = char_to_req(req);
+  // printf("reqt : %d\n", reqt);
+
+  switch (reqt) {
+  case getfile: {
+      parse_getfile(buf, index, request);
+      break;
+  }
+  case look: {
+      parse_look(buf, index, request);
+      break;
+  }
+  case update: {
+      parse_update(buf, index, request, h);
+      break;
+  }
+  case announce: {
+      parse_announce(buf, index, request, h);
+      break;
   }
     return 0;
   }

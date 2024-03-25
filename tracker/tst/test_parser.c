@@ -90,9 +90,9 @@ void test_parser() {
   // strcpy(buf, "");
 
   len1 = get_size();
-  parse_request(buf, "announce listen 2333 seed []\n", me2);
+  parse_request(buf, "announce listen 2333\n", me2);
   len2 = get_size();
-  m = "Announce Request";
+  m = "Announce Request no seed no leech";
   cond = len2 == len1;
   // printf("len1 : %d, len2 : %d", len1, len2);
   test(cond, m);
@@ -103,7 +103,7 @@ void test_parser() {
   parse_request(buf, "announce listen 2333 seed [file3.file 10 1 hash3]\n",
                 me2);
   len2 = get_size();
-  m = "Announce Request";
+  m = "Announce Request seed only";
   cond = len2 > len1;
   // printf("len1 : %d, len2 : %d", len1, len2);
   test(cond, m);
@@ -116,7 +116,7 @@ void test_parser() {
       buf, "announce listen 2333 seed [file3.file 10 1 hash3] leech [hash]\n",
       me2);
   len2 = get_size();
-  m = "Announce Request";
+  m = "Announce Request seed and leech";
   cond = len2 > len1;
   // printf("len1 : %d, len2 : %d", len1, len2);
   test(cond, m);
@@ -127,7 +127,7 @@ void test_parser() {
   len1 = get_size();
   parse_request(buf, "announce listen 2333 leech [hash]\n", me2);
   len2 = get_size();
-  m = "Announce Request";
+  m = "Announce Request leech only";
   cond = len2 > len1;
   // printf("len1 : %d, len2 : %d", len1, len2);
   test(cond, m);
