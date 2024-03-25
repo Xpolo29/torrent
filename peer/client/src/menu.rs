@@ -62,7 +62,7 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
     trace!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         // connect to the tracker
-        send(&mut stream, seeded_files); // send the message
+            send(&mut stream, seeded_files); // send the message
         trace!("Message sent waiting for answer");
         let response = receive(&mut stream); // receive the answer
         trace!("Received: {}", response);
