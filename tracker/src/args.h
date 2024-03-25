@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#define LEN_ARGS 10
+#define LEN_ARGS 12
 
 //list of possible args
 static const char ARGS[LEN_ARGS][16] = {
@@ -14,7 +14,8 @@ static const char ARGS[LEN_ARGS][16] = {
        	"-h", "--help",
 	"-p", "--port",
     	"-c", "--config",
-	"-m", "--max-conn"
+	"-m", "--max-conn",
+	"-t", "--cache-time"
 };
 
 //load config.ini at config_path

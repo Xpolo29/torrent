@@ -4,8 +4,8 @@
 
 //used by load config to apply parameters in file
 int apply_parameter(char* key, char* value){
-	const char key_arr[4][16] = {
-		"port", "verbose", "max-conn"," "	
+	const char key_arr[5][16] = {
+		"port", "verbose", "max-conn", "cache-time", " "	
 	};
 
 	int i = 0;
@@ -29,6 +29,12 @@ int apply_parameter(char* key, char* value){
 					if( thread_pool_size == -1){
 						logging(DEBUG, "Loading parameter %s to %s\n", key, value);
 						thread_pool_size = atoi(value);
+					}
+					break;
+				case 3: //cache-time
+					if(time_to_live == -1){
+						logging(DEBUG, "Loading parameter %s to %s\n", key, value);
+						time_to_live = atoi(value);
 					}
 					break;
 
@@ -139,6 +145,16 @@ int parse_args(int argc, char** argv){
 							++i;
 						}else{
 							logging(WARNING, "Got -m but no max connection is specified, using default\n");
+						}
+						break;
+					case 10: // -t
+					case 11: // --cache-time
+						if(i + 1 < argc){
+							time_to_live = atoi(argv[i + 1]);
+							logging(LOG, "Cache lifespan updated to %d\n", time_to_live);
+							++i;
+						}else{
+							logging(WARNING, "Got -t but no value is specified, using default\n");
 						}
 						break;
 					default:

@@ -16,5 +16,6 @@ extern int thread_pool_size;
 extern pthread_t* pool;
 extern int tasks[LEN_TASKS];
 extern pthread_mutex_t mutex_array[LEN_TASKS];
+extern int time_to_live;
 
 #endif

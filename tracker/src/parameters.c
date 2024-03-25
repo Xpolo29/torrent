@@ -9,5 +9,5 @@ int thread_pool_size = -1;
 pthread_t* pool;
 int tasks[LEN_TASKS];
 pthread_mutex_t mutex_array[LEN_TASKS];
-
+int time_to_live = -1;
 
