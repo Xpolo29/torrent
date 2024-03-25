@@ -6,8 +6,8 @@ void test_parser() {
   int cond;
   char *m;
   char buf[1024];
-  struct host me = {"moi.ip", 2332};
-  struct host me2 = {"moi2.ip", 2333};
+  struct host me = {"moi.ip", 2332, 0};
+  struct host me2 = {"moi2.ip", 2333, 0};
   struct data d1 = {me, 100, 2, "hash", "file.file"};
   struct data d2 = {me2, 100, 2, "hash", "file.file"};
   struct data d3 = {me2, 200, 2, "hash2", "file3.file"};
@@ -29,8 +29,10 @@ void test_parser() {
   test(cond, m);
   strcpy(buf, "");
 
-  parse_request(buf, "look [filesize='100']", me);
-  // printf("result : %s \n", buf);
+  //printf("request : look [filesize='100']\n");
+  parse_request(buf, "look [filesize=\"100\"]", me);
+  //printf("result : %s \n", buf);
+  //printf("Wanted : list [file.file 100 2 hash]\n");
   cond = !strcmp(buf, "list [file.file 100 2 hash]\n");
   m = "Look request with only filesize";
   test(cond, m);

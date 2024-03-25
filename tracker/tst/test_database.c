@@ -12,7 +12,7 @@ void test_database(){
 	test(cond, m);
 	
 	struct data d1 = {
-		{"127.0.0.1", 2222},
+		{"127.0.0.1", 2222, 0},
 	       	128, 16, "", "filename.ext"
 	};
 	strcpy(d1.hash,HASH);
@@ -35,7 +35,7 @@ void test_database(){
 	test(cond, m);
 
 	struct data d2 = {
-		{"127.0.0.2", 2222},
+		{"127.0.0.2", 2222, 0},
 	       	128, 16, "", "filename.ext"
 	};
 
@@ -51,6 +51,22 @@ void test_database(){
 	load_all(DB_COPY);
 	cond = data_equals(DB_COPY[0], DB_COPY[1]); 
 	m = "Retrieving all DB";
+	test(cond, m);
+
+
+	struct data d10 = {
+		{"127.0.0.2", 2222, time(NULL)},
+	       	128, 16, "", "exp"
+	};
+	store(d10);
+	int a = db_exists(d10);
+	time_to_live = 0;
+	sleep(1);
+	remove_old_entries();
+	int b = db_exists(d10);
+
+	cond = a && !b;
+	m = "Time to live";
 	test(cond, m);
 
 }

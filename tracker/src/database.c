@@ -29,6 +29,8 @@ int compare(struct data *in, struct data *out, long filesize, enum op_t op, int 
 }
 
 int filter(struct data *list, char *filename, long filesize, enum op_t op) {
+
+	//printf("Filename %s and size %ld\n", filename, strlen(filename));
 	if (filesize == 0) {
 		if(strlen(filename) == 0){
 			load_all(list);
@@ -39,11 +41,19 @@ int filter(struct data *list, char *filename, long filesize, enum op_t op) {
 			return remove_doublon_hash(list, len);
 		}
 	}
+
 	if (strlen(filename) == 0) {
 		struct data all[BDD_SIZE];
 		int len = get_size();
 		load_all(all);
 		len = compare(all, list, filesize, op, len);
+		/*
+		printf("LEN : %d\n", len);
+		for(int i = 0; i < BDD_SIZE; ++i){
+			if (list[i].size != 0)
+			print_data(list[i]);
+		}
+		*/
 		return remove_doublon_hash(list, len);
 	} else {
 		struct data all[BDD_SIZE];

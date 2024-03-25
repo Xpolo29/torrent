@@ -5,10 +5,10 @@ void test_tracker(){
 	int cond;
 	char* m;
 	
-	struct data d1 = {{"127.0.0.1", 3212}, 
+	struct data d1 = {{"127.0.0.1", 3212, 0}, 
 	1024, 16, "HSAH", "filename.ext"};	
 
-	struct data d2 = {{"127.0.0.2", 3212}, 
+	struct data d2 = {{"127.0.0.2", 3212, 0}, 
 	4096, 16, "HSAH", "filename2.ext"};	
 
 	store(d1);

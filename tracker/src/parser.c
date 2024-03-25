@@ -58,15 +58,15 @@ void process_getfile(char *buf, char *hash) {
 
 void process_look(char *buf, char *filename, enum op_t op, long filesize) {
   struct data d[BDD_SIZE];
-  // printf("look : %s, %d, %ld\n", filename, op, filesize);
+  //printf("look : %s, %d, %ld\n", filename, op, filesize);
   int len = filter(d, filename, filesize, op);
-  // printf("len : %d\n", len);
+  //printf("len : %d\n", len);
+ 
 
   strcat(buf, "list [");
   char info[1024];
   for (int i = 0; i < len; i++) {
-    // printf("f:%s s:%ld cs:%d h:%s\n", d[i].filename, d[i].size,
-    // d[i].chunk_size, d[i].hash);
+	//printf("f:%s s:%ld cs:%d h:%s\n", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
     if (d[i].size == 0)
       continue; // pass empty
     if (i > 0)
@@ -215,7 +215,7 @@ void parse_look(char* buf, int index[MATCH_SIZE][2], char* request){
 
     int start = index[3][0];
     int size = index[3][1] - index[3][0];
-    char filename[size];
+    char filename[352];
     strncpy(filename, request + start, size);
     filename[size] = 0;
 
@@ -226,14 +226,17 @@ void parse_look(char* buf, int index[MATCH_SIZE][2], char* request){
     } else
       op[0] = request[start];
 
+
     start = index[6][0];
     size = index[6][1] - index[6][0];
+	
     char filesize_c[size + 1];
+
     strncpy(filesize_c, request + start, size);
     filesize_c[size] = 0;
     int filesize = atoi(filesize_c);
     // printf("filesize : %d\n", filesize);
-    // printf("filename : %s\n", filename);
+
 
     process_look(buf, filename, char_to_op(op), filesize);
     // printf("look filename: %s filesize%s%d\n", filename, op, filesize);

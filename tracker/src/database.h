@@ -72,6 +72,9 @@ int data_equals(struct data, struct data);
 //print db
 void print_db();
 
+//print data d
+void print_data(struct data d);
+
 //Check if <data> is already in db, reutrn true if is in
 int db_exists(struct data);
 
