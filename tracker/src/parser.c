@@ -138,8 +138,8 @@ void process_announce(char *buf, struct data *seeds, int seed_size,
 int parse_request(char *buf, char *request, struct host h) {
   char *reg_update = "^(update) (seed \\[(([[:alnum:]]* ?)*)\\])? ?(leech "
                      "\\[(([[:alnum:]]+ ?)*)\\])?((\r)?(\n)?)?$";
-  char *reg_look = "^(look) (\\[(filename='([[:graph:]]+)')? "
-                   "?(filesize([<=>])'([[:digit:]]+)')?\\])((\r)?(\n)?)?$";
+  char *reg_look = "^(look) (\\[(filename=[\"']([[:graph:]]+)[\"'])? "
+                   "?(filesize([<=>])[\"']([[:digit:]]+)[\"'])?\\])((\r)?(\n)?)?$";
   char *reg_get_file = "^(getfile) ([[:alnum:]]+)((\r)?(\n)?)?$";
   char *reg_announce =
       "^(announce) listen ([[:digit:]]+) ?(seed \\[(([[:graph:]]+ [[:digit:]]+ "

@@ -35,18 +35,21 @@ int filter(struct data *list, char *filename, long filesize, enum op_t op) {
 			return get_size();
 		}
 		else{
-			return load_files(list, filename) - 1;
+			int len = load_files(list, filename) - 1;
+			return remove_doublon_hash(list, len);
 		}
 	}
 	if (strlen(filename) == 0) {
 		struct data all[BDD_SIZE];
 		int len = get_size();
 		load_all(all);
-		return compare(all, list, filesize, op, len);
+		len = compare(all, list, filesize, op, len);
+		return remove_doublon_hash(list, len);
 	} else {
 		struct data all[BDD_SIZE];
 		int len = load_files(all, filename);
-		return compare(all, list, filesize, op, len);
+		compare(all, list, filesize, op, len);
+		return remove_doublon_hash(list, len);
 	}
 }
 

@@ -78,7 +78,7 @@ if __name__ == "__main__":
     print("Update reponse:", update_response)
 
     # Retry look knowing its gone now
-    criteria = "[filename='file_a.dat' filesize<'2048']"
+    criteria = '[filename="file_a.dat" filesize<"2048"]'
     look_response = look_for_files(criteria)
     print("Look response:", look_response)
 
