@@ -219,3 +219,22 @@ int remove_hash(char hash[64]) {
   }
   return 0;
 }
+
+void update_host(struct host* h){
+	long now = time(NULL);
+	h->last_update = now;
+}
+
+void remove_old_entries(){
+	long now = time(NULL);
+	for(int i = 0; i < BDD_SIZE; ++i){
+		struct host curh = bdd[i].host;
+		if(curh.last_update == 0)continue;
+
+		long diff = now - curh.last_update;
+
+		if( diff > time_to_live){
+			remove_host(curh);
+		}
+	}	
+}

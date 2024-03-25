@@ -8,7 +8,7 @@ $(TARGET):
 	cp client/target/debug/client ./$(TARGET)
 
 run: $(TARGET)
-	./$(TARGET)
+	RUST_LOG=trace ./$(TARGET)
 
 test: 
 	echo no test for now

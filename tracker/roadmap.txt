@@ -1,5 +1,7 @@
 ### TODO ###
 
+-add thing where database hosts are deleted when no update request as been sent in 5 min
+
 ### DONE ###
 
 -database.h / .c -> api de stockage

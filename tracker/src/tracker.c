@@ -54,13 +54,16 @@ int process(int connection) {
 	inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
 
 	logging(DEBUG, "Task %d is from %s:%d\n", connection, ip_address, port);
-	struct host h = {"", port};
+	struct host h = {"", port, time(NULL)};
 	strncpy(h.ip, ip_address, 16);
 
 	/*
 	mimic worload
 	sleep(1);
 	*/
+
+	//cleanup ttl
+	remove_old_entries();
 
 	// parsing request
 	char out[16 * 1024];
