@@ -41,7 +41,7 @@ impl ExpectedAnswer for ExpectOk {
 impl ExpectedAnswer for ExpectList {
 
     fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {
-        match Regex::new(r"^list \[(\S+ \d+ \d+ \w+ ?)*\]((\u{000A})?(\u{000D})?)?$") {
+        match Regex::new(r"^list \[(\S+ \d+ \d+ \w+ ?)*\] ?((\u{000A})?(\u{000D})?(\u{0000})*)?$") {
             Ok(re) => {
                 let first_line = answer;
                 trace!("Answer to be checked: {}", first_line);
@@ -49,7 +49,7 @@ impl ExpectedAnswer for ExpectList {
                     Ok("Correct tracker answer".to_string())
                 } else {
                     error!("Failed tracker answer: {}", answer);
-                    for c in first_line.chars().filter(|&c| c != '\u{0000}'){
+                    for c in first_line.chars(){
                         trace!("U+{:04X} {}", c as u32, c)                        
                     }
                     Err(Box::new(io::Error::new(io::ErrorKind::Other, "Bad tracker answer")))

@@ -28,8 +28,12 @@ pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String
     );
     msg
 }
-pub fn look(criterion: String) -> String {
-    format!("look [filename=\"{}\"]\n", criterion)
+pub fn look(filename: String) -> String {
+    if filename.is_empty() {
+        format!("look []\r\n")
+    } else {
+        format!("look [filename=\"{}\"]\n", filename)
+    }
 }
 pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
     let stream = TcpStream::connect(format!("{}:{}", adress, port));
