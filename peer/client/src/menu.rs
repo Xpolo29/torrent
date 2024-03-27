@@ -1,7 +1,7 @@
 use crate::com::{connect, look, receive, seed, send};
 use crate::data::{MetaFile, TrackerConfig};
 use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer};
-use crate::userinput::{get_file_criterions, get_file_names};
+use crate::userinput::{get_filename, get_filesize, get_file_names};
 use log::{error, info, trace};
 use std::io;
 pub fn display_menu(tracker_config: TrackerConfig) {
@@ -32,8 +32,9 @@ pub fn display_menu(tracker_config: TrackerConfig) {
 }
 fn search_section(tracker_port: u16, tracker_adress: &str) {
     println!("You're in Search");
-    let criterion = get_file_criterions(io::stdin());
-    let look_message = look(criterion);
+    let filename = get_filename(io::stdin());
+    let op_filesize = get_filesize(io::stdin());
+    let look_message = look(filename, op_filesize);
     trace!("Prepared message: {}", look_message);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         send(&mut stream, look_message);

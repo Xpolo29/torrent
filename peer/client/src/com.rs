@@ -28,12 +28,22 @@ pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String
     );
     msg
 }
-pub fn look(filename: String) -> String {
-    if filename.is_empty() {
-        format!("look []\r\n")
-    } else {
-        format!("look [filename=\"{}\"]\n", filename)
+pub fn look(filename: String, filesize: String) -> String {
+    let mut res : String = "look [".to_string();
+    let mut b : bool = false;
+    if !filename.is_empty(){
+        res = format!("{}filename=\"{}\"", res, filename);
+        b = true;
     }
+    if !filesize.is_empty(){
+        if b{
+            res = format!("{} filesize{}", res, filesize);
+        }
+        else{
+            res = format!("{}filesize{}", res, filesize);
+        }
+    }
+    format!("{}]\n",res)
 }
 pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
     let stream = TcpStream::connect(format!("{}:{}", adress, port));
