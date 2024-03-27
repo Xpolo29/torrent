@@ -1,8 +1,36 @@
+//! communication between the peer and the tracker
 use crate::data::MetaFile;
 use log::{debug, error, info};
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
-/// Takes a list of seeded and leeched files with medata data and returns the right message to be sent
+/// # Examples
+///
+/// ```
+/// let seeded_files = vec![
+///     MetaFile {
+///         file_name: "file1.txt".to_string(),
+///         length: 100,
+///         piece_size: 10,
+///         hash: "abc123".to_string(),
+///     },
+///     MetaFile {
+///         file_name: "file2.txt".to_string(),
+///         length: 200,
+///         piece_size: 20,
+///         hash: "def456".to_string(),
+///     },
+/// ];
+/// let peer_port = "8000".to_string();
+/// let leeched_files = "file3.txt".to_string();
+/// let message = seed(seeded_files, peer_port, leeched_files);
+/// println!("{}", message);
+/// ```
+///
+/// This will print:
+///
+/// ```
+/// announce listen 8000 seed [file1.txt 100 10 abc123 file2.txt 200 20 def456] leech [file3.txt]
+/// ```
 pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
     /*
     into_iter() : transform the vector into an iterator
@@ -28,23 +56,24 @@ pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String
     );
     msg
 }
+/// takes a filename and a filesize as String and format them into a look message
 pub fn look(filename: String, filesize: String) -> String {
-    let mut res : String = "look [".to_string();
-    let mut b : bool = false;
-    if !filename.is_empty(){
+    let mut res: String = "look [".to_string();
+    let mut b: bool = false;
+    if !filename.is_empty() {
         res = format!("{}filename=\"{}\"", res, filename);
         b = true;
     }
-    if !filesize.is_empty(){
-        if b{
+    if !filesize.is_empty() {
+        if b {
             res = format!("{} filesize{}", res, filesize);
-        }
-        else{
+        } else {
             res = format!("{}filesize{}", res, filesize);
         }
     }
-    format!("{}]\n",res)
+    format!("{}]\n", res)
 }
+/// connects to a given adress and port
 pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
     let stream = TcpStream::connect(format!("{}:{}", adress, port));
     match stream {

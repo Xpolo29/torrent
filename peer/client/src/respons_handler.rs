@@ -8,7 +8,7 @@ pub trait ExpectedAnswer {
     // Check if the answer is correctly formatted
     fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>>;
     // Retrieve the relevant data from the answer returns an Answer enum which convey right data type
-    fn retrieve_data(&self, answer: String) -> Result<Answer, Box<dyn Error>>;
+    fn retrieve_data(&self, answer: String) -> Answer;
     // Shutdown the stream so that it does ping pong style communication
     fn shutdown(&self, stream: &mut TcpStream);
 }
@@ -33,11 +33,8 @@ impl ExpectedAnswer for ExpectOk {
             }
         }
     }
-    fn retrieve_data(&self, _answer: String) -> Result<Answer, Box<dyn Error>> {
-        Err(Box::new(io::Error::new(
-            io::ErrorKind::Other,
-            "Not implemented",
-        )))
+    fn retrieve_data(&self, _answer: String) -> Answer {
+        Answer::Ok
     }
 
     fn shutdown(&self, stream: &mut TcpStream) {
@@ -71,16 +68,26 @@ impl ExpectedAnswer for ExpectList {
         }
     }
 
-    fn retrieve_data(&self, answer: String) -> Result<Answer, Box<dyn Error>> {
-        Err(Box::new(io::Error::new(
-            io::ErrorKind::Other,
-            "Not implemented",
-        )))
+    fn retrieve_data(&self, answer: String) -> Answer {
+        let files = answer
+            .split_whitespace()
+            .skip(2)
+            .collect::<Vec<&str>>()
+            .chunks(4)
+            .map(|chunk| MetaFile {
+                file_name: chunk[0].to_string(),
+                length: chunk[1].parse().unwrap(),
+                piece_size: chunk[2].parse().unwrap(),
+                hash: chunk[3].to_string(),
+            })
+            .collect();
+        Answer::List(files)
     }
     fn shutdown(&self, stream: &mut TcpStream) {
         stream.shutdown(std::net::Shutdown::Both).unwrap();
     }
 }
+#[derive(Debug)]
 pub enum Answer {
     Ok,
     List(Vec<MetaFile>),

@@ -1,7 +1,8 @@
 use crate::com::{connect, look, receive, seed, send};
 use crate::data::{MetaFile, TrackerConfig};
 use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer};
-use crate::userinput::{get_filename, get_filesize, get_file_names};
+use crate::store::number_to_file_name;
+use crate::userinput::{display_downloadable_files, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
 use std::io;
 pub fn display_menu(tracker_config: TrackerConfig) {
@@ -51,6 +52,7 @@ fn search_section(tracker_port: u16, tracker_adress: &str) {
         }
     }
     let present_files = ExpectList.retrieve_data("".to_string());
+    info!("files retrieved {:?}", present_files);
 }
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
     println!("You're in upload");
@@ -63,7 +65,7 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
     trace!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         // connect to the tracker
-            send(&mut stream, seeded_files); // send the message
+        send(&mut stream, seeded_files); // send the message
         trace!("Message sent waiting for answer");
         let response = receive(&mut stream); // receive the answer
         trace!("Received: {}", response);
@@ -79,5 +81,9 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
     }
 }
 fn download_section() {
-    println!("You're in download")
+    println!("You're in download");
+    display_downloadable_files();
+    let choice = get_filename(io::stdin());
+    let file_name = number_to_file_name(choice.parse().unwrap());
+    println!("You chose to download: {}", file_name);
 }
