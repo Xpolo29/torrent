@@ -113,26 +113,32 @@ void process_update(char *buf, struct data *seeds, int seed_size,
 
 void process_announce(char *buf, struct data *seeds, int seed_size,
                       struct data *leeches, int leech_size) {
-  // to get rid of warning
-  // (void)leeches;
-  // (void)leech_size;
-  // printf("seed_size : %d", seed_size);
-  struct data all[BDD_SIZE];
-  load_all(all);
-  for (int i = 0; i < seed_size; i++) {
-    store(seeds[i]);
-  }
-  for (int j = 0; j < get_size(); j++) {
-    for (int i = 0; i < leech_size; i++) {
-      if (strcmp(all[j].hash, leeches[i].hash) == 0) {
-        leeches[i].size = all[j].size;
-        strcpy(leeches[i].filename, all[j].filename);
-        leeches[i].chunk_size = all[j].chunk_size;
-        store(leeches[i]);
-      }
-    }
-  }
-  strcpy(buf, "ok\n");
+	// to get rid of warning
+	// (void)leeches;
+	// (void)leech_size;
+	// printf("seed_size : %d", seed_size);
+	struct data all[BDD_SIZE];
+	load_all(all);
+	int size = get_size();
+	for (int i = 0; i < seed_size; i++) {
+		if(!db_exists(seeds[i]))
+			store(seeds[i]);
+		}
+
+
+	for (int i = 0; i < leech_size; i++) {
+	for (int j = 0; j < size; j++) {
+		if (strcmp(all[j].hash, leeches[i].hash) == 0
+		&& !host_equals(all[j].host, leeches[i].host)) {
+			leeches[i].size = all[j].size;
+			strcpy(leeches[i].filename, all[j].filename);
+			leeches[i].chunk_size = all[j].chunk_size;
+			store(leeches[i]);
+			break;
+		}
+	}
+	}
+	strcpy(buf, "ok\n");
 }
 
 int handle_regex(int index[MATCH_SIZE][2], char* request){

@@ -85,7 +85,7 @@ int store(struct data e) {
 }
 
 void print_data(struct data d){
-	printf("ip : %s, port : %d, size : %ld, chunk_size : %d, hash : %s, filename : %s\n", d.host.ip, d.host.port, d.size, d.chunk_size, d.hash, d.filename);
+	printf("ip : %s, port : %d, last_seen : %ld, size : %ld, chunk_size : %d, hash : %s, filename : %s\n", d.host.ip, d.host.port, d.host.last_update, d.size, d.chunk_size, d.hash, d.filename);
 }
 
 void print_db(){
