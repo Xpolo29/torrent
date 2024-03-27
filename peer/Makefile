@@ -1,9 +1,13 @@
 CC = cargo
 TARGET = peer
 
+SRCS = $(wildcard client/src/*.rs)
+
 all: $(TARGET)
 
-$(TARGET):
+
+$(TARGET): $(SRCS)
+	echo $^ > /dev/null
 	cd client && $(CC) build
 	cp client/target/debug/client ./$(TARGET)
 
