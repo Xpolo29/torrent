@@ -41,14 +41,17 @@ impl ExpectedAnswer for ExpectOk {
 impl ExpectedAnswer for ExpectList {
 
     fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {
-        match Regex::new(r"^list \[(\S+ \d+ \d+ \w+ ?)*\]$") {
+        match Regex::new(r"^list \[(\S+ \d+ \d+ \w+ ?)*\]((\u{000A})?(\u{000D})?)?$") {
             Ok(re) => {
-                let first_line = answer.trim();
+                let first_line = answer;
                 trace!("Answer to be checked: {}", first_line);
                 if re.is_match(first_line) {
                     Ok("Correct tracker answer".to_string())
                 } else {
                     error!("Failed tracker answer: {}", answer);
+                    for c in first_line.chars().filter(|&c| c != '\u{0000}'){
+                        trace!("U+{:04X} {}", c as u32, c)                        
+                    }
                     Err(Box::new(io::Error::new(io::ErrorKind::Other, "Bad tracker answer")))
                 }
             },
