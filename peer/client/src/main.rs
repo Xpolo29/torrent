@@ -1,8 +1,8 @@
 mod com;
 mod data;
+mod database;
 mod menu;
 mod respons_handler;
-mod store;
 mod userinput;
 use data::TrackerConfig;
 use menu::display_menu;

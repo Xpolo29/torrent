@@ -1,7 +1,7 @@
 use crate::com::{connect, look, receive, seed, send};
 use crate::data::{MetaFile, TrackerConfig};
+use crate::database::number_to_file_name;
 use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer};
-use crate::store::number_to_file_name;
 use crate::userinput::{display_downloadable_files, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
 use std::io;
