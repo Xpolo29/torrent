@@ -19,10 +19,13 @@ void* thread_main(void* arg){
 				process(temp);
 			}
 			pthread_mutex_unlock(&mutex_array[i]);
+			mysleep(1);
+		} else {
+			mysleep(0);
 		}
 
 		i = (i + 1) % LEN_TASKS;
-		usleep(1000);
+
 	}	
 	logging(DEBUG, "Thread %lu stopped\n", pthread_self());
 	return 0;

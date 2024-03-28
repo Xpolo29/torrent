@@ -53,8 +53,9 @@ int main(int argc, char** argv){
 		if(connection > 0){
 			//create task to process client request
 			new_task(connection);
-		}
-		usleep(1000);
+			mysleep(1);
+		} else 
+			mysleep(0);
 	}
 
 	//clean exit

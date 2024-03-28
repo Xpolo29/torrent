@@ -52,7 +52,7 @@ pub fn send_port_seed_to_tracker(port: u16, files: Vec<FileProp>) {
 // works if there is one criterion
 pub fn send_search_to_tracker(criterions: String) {
     if criterions.is_empty() {
-        send_message("look\r\n".to_string(), &ExpectList);
+        send_message("look []\r\n".to_string(), &ExpectList);
     } else {
         send_message(
             format!("look [filename=\"{}\"]\r\n", criterions),

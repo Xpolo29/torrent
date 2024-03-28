@@ -1,6 +1,8 @@
-use crate::com::{receive, seed, send, Answer, ExpectOk, ExpectedAnswer};
+use crate::com::{connect, look, receive, seed, send};
 use crate::data::{MetaFile, TrackerConfig};
-use crate::userinput::get_file_names;
+use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer};
+use crate::store::number_to_file_name;
+use crate::userinput::{display_downloadable_files, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
 use std::io;
 pub fn display_menu(tracker_config: TrackerConfig) {
@@ -22,7 +24,7 @@ pub fn display_menu(tracker_config: TrackerConfig) {
 
         match input {
             // Escape should get back to menu from search, upload and download
-            1 => search_section(),
+            1 => search_section(tracker_config.port, &tracker_config.address),
             2 => upload_section(tracker_config.port, &tracker_config.address),
             3 => download_section(),
             _ => println!("Invalid input, please enter 1, 2 or 3"),
@@ -30,28 +32,27 @@ pub fn display_menu(tracker_config: TrackerConfig) {
     }
 }
 fn search_section(tracker_port: u16, tracker_adress: &str) {
-    println!("You're in Search")
-    let criterions = get_criterions(io::stdin()); // take the files the user wish to seed
-    let criterions: Vec<MetaFile> = criterions // change the criterions into a vector of ???
-        .into_iter()
-        .map(|file| MetaFile::new(file.to_string()))
-        .collect(); 
-    let criterions = seed(criterions, "8080".to_string(), "".to_string()); // create the message
-    trace!("Prepared message: {}", criterions);
-    send(criterions, tracker_port, tracker_adress.to_string()); // send the message
-    trace!("Message sent waiting for answer");
-    let mut response = receive(&ExpectOk, tracker_port, tracker_adress.to_string()); // receive the answer as a string
-    trace!("Received: {}", response);
-
-    // to finish
-    match ExpectOk.check_answer(&response) {
-        Ok(valeur) => {
-            info!("{}", valeur);
-        }
-        Err(valeur) => {
-            info!("{}", valeur);
+    println!("You're in Search");
+    let filename = get_filename(io::stdin());
+    let op_filesize = get_filesize(io::stdin());
+    let look_message = look(filename, op_filesize);
+    trace!("Prepared message: {}", look_message);
+    if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
+        send(&mut stream, look_message);
+        trace!("Message sent waiting for answer");
+        let response = receive(&mut stream);
+        trace!("Received {}", response);
+        match ExpectList.check_answer(&response) {
+            Ok(valeur) => {
+                info!("{}", valeur);
+            }
+            Err(valeur) => {
+                error!("{}", valeur);
+            }
         }
     }
+    let present_files = ExpectList.retrieve_data("".to_string());
+    info!("files retrieved {:?}", present_files);
 }
 
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
@@ -63,20 +64,28 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         .collect(); // Create vector of Metafiles out of the files name
     let seeded_files = seed(seeded_files, "8080".to_string(), "".to_string()); // create the message
     trace!("Prepared message: {}", seeded_files);
-    send(seeded_files, tracker_port, tracker_adress.to_string()); // send the message
-    trace!("Message sent waiting for answer");
-    let mut response = receive(&ExpectOk, tracker_port, tracker_adress.to_string()); // receive the answer as a string
-    trace!("Received: {}", response);
-    match ExpectOk.check_answer(&response) {
-        Ok(valeur) => {
-            info!("{}", valeur);
+    if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
+        // connect to the tracker
+        send(&mut stream, seeded_files); // send the message
+        trace!("Message sent waiting for answer");
+        let response = receive(&mut stream); // receive the answer
+        trace!("Received: {}", response);
+        match ExpectOk.check_answer(&response) {
+            Ok(valeur) => {
+                info!("{}", valeur);
+            }
+            Err(valeur) => {
+                info!("{}", valeur);
+            }
         }
-        Err(valeur) => {
-            info!("{}", valeur);
-        }
+        ExpectOk.shutdown(&mut stream);
     }
 }
 
 fn download_section() {
-    println!("You're in download")
+    println!("You're in download");
+    display_downloadable_files();
+    let choice = get_filename(io::stdin());
+    let file_name = number_to_file_name(choice.parse().unwrap());
+    println!("You chose to download: {}", file_name);
 }

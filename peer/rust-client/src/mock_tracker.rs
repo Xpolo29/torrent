@@ -10,7 +10,7 @@ fn handle_client(mut stream: TcpStream) {
     loop {
         match stream.read(&mut buffer) {
             Ok(0) => {
-                // Connection was closed by the client
+                println!("Connection closed by peer");
                 break;
             }
             Ok(_) => {
@@ -19,7 +19,7 @@ fn handle_client(mut stream: TcpStream) {
                 println!("Command received: {}", command);
                 let response = match command {
                     "announce" => "ok\r\n",
-                    "look" => "list [file_a.dat 2097152 1024 8905e92afeb80fc7722ec89eb0bf0966]\r\n",
+                    "look" => "list [file_a.dat 2097152 1024 8905e92afeb80fc7722ec89eb0bf0966 file_b.dat 2020208 1024 8987zdzea8988798aas]\r\n",
                     "getfile" => {
                         "peers 8905e92afeb80fc7722ec89eb0bf0966 [1.1.1.2:2222 1.1.1.3:3333]\r\n"
                     }

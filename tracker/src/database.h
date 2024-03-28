@@ -3,8 +3,12 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
+#include "parameters.h"
 
 #define BDD_SIZE 64
+
+
 
 // possible operator for file filtering
 enum op_t { nu = -1, eq, gt, lt };
@@ -12,6 +16,7 @@ enum op_t { nu = -1, eq, gt, lt };
 struct host {
   char ip[16];
   int16_t port;
+  long last_update;
 };
 
 struct data {
@@ -26,7 +31,7 @@ struct data {
 extern struct data bdd[BDD_SIZE];
 
 // in case you need an empy data field
-static const struct data EMPTY = {{"", 0}, 0, 0, "", ""};
+static const struct data EMPTY = {{"", 0, 0}, 0, 0, "", ""};
 
 // return size of bdd
 int get_size();
@@ -66,5 +71,20 @@ int data_equals(struct data, struct data);
 
 //print db
 void print_db();
+
+//print data d
+void print_data(struct data d);
+
+//Check if <data> is already in db, reutrn true if is in
+int db_exists(struct data);
+
+//remove doublon from arr of len <len>, returns new size
+int remove_doublon_hash(struct data* arr, int len);
+
+//remove entries of database if peers haven't been heard since time_to_live 
+void remove_old_entries();
+
+//update ttl in host arr
+void update_host(struct host*);
 
 #endif

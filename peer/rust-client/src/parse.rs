@@ -4,7 +4,7 @@ use std::fmt::{Display, Error, Formatter};
 
 impl ExpectedAnswer for ExpectOk {
     fn parse_answer(&self, answer: String) -> Result<Answer, &'static str> {
-        if answer == "ok\r\n" {
+        if answer == "ok\n" {
             ("Réponse correcte du tracker");
             Ok(Answer::Ok)
         } else {

@@ -1,8 +1,36 @@
-use crate::data::{MetaFile, PeerConfig, TrackerConfig};
-use log::{debug, error, info, warn};
-use std::io::{BufRead, BufReader, Write};
+//! communication between the peer and the tracker
+use crate::data::MetaFile;
+use log::{debug, error, info};
+use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
-/// Takes a list of seeded and leeched files with medata data and returns the right message to be sent
+/// # Examples
+///
+/// ```
+/// let seeded_files = vec![
+///     MetaFile {
+///         file_name: "file1.txt".to_string(),
+///         length: 100,
+///         piece_size: 10,
+///         hash: "abc123".to_string(),
+///     },
+///     MetaFile {
+///         file_name: "file2.txt".to_string(),
+///         length: 200,
+///         piece_size: 20,
+///         hash: "def456".to_string(),
+///     },
+/// ];
+/// let peer_port = "8000".to_string();
+/// let leeched_files = "file3.txt".to_string();
+/// let message = seed(seeded_files, peer_port, leeched_files);
+/// println!("{}", message);
+/// ```
+///
+/// This will print:
+///
+/// ```
+/// announce listen 8000 seed [file1.txt 100 10 abc123 file2.txt 200 20 def456] leech [file3.txt]
+/// ```
 pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
     /*
     into_iter() : transform the vector into an iterator
@@ -28,104 +56,68 @@ pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String
     );
     msg
 }
-
-/// Sends a message to a given adress and port
-pub fn send(message: String, port: u16, adress: String) {
-    let mut stream = TcpStream::connect(format!("{}:{}", adress, port));
-    match stream {
-        Ok(mut stream) => {
-            stream.write(message.as_bytes()).unwrap();
-            info!("Sending to {}:{} < {}", adress, port, message);
-        }
-        Err(e) => {
-            error!("Could not connect to tracker: {}", e);
-        }
+/// takes a filename and a filesize as String and format them into a look message
+pub fn look(filename: String, filesize: String) -> String {
+    let mut res: String = "look [".to_string();
+    let mut b: bool = false;
+    if !filename.is_empty() {
+        res = format!("{}filename=\"{}\"", res, filename);
+        b = true;
     }
-}
-
-/// Receives a message from a given adress and port
-pub fn receive(expected_answer: &dyn ExpectedAnswer, port: u16, adress: String) -> String {
-    let mut stream = TcpStream::connect(format!("{}:{}", adress, port));
-    match stream {
-        Ok(mut stream) => {
-            let mut buffer = String::new();
-            let mut reader = BufReader::new(&stream);
-            debug!("About to read from {}:{}", adress, port);
-            match reader.read_line(&mut buffer) {
-                Ok(_) => {
-                    info!("Received from {}:{} > {}", adress, port, buffer);
-                    expected_answer.shutdown(&mut stream);
-                    return buffer;
-                }
-                Err(e) => {
-                    error!("Could not receive from tracker: {}", e);
-                    expected_answer.shutdown(&mut stream);
-                    return String::from("");
-                }
-            }
-        }
-        Err(e) => {
-            error!("Could not connect to tracker: {}", e);
-            return String::from("");
-        }
-    }
-}
-
-pub trait ExpectedAnswer {
-    fn check_answer(&self, answer: &str) -> Result<String, std::io::Error>;
-    fn retrieve_data(&self, answer: String) -> Result<Answer, std::io::Error>;
-    fn shutdown(&self, stream: &mut TcpStream);
-}
-
-impl ExpectedAnswer for ExpectOk {
-    fn check_answer(&self, answer: &str) -> Result<String, std::io::Error> {
-        if answer == "ok\n" {
-            Ok("Correct tracker answer".to_string())
+    if !filesize.is_empty() {
+        if b {
+            res = format!("{} filesize{}", res, filesize);
         } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Bad tracker answer",
-            ))
+            res = format!("{}filesize{}", res, filesize);
         }
     }
-    fn retrieve_data(&self, _answer: String) -> Result<Answer, std::io::Error> {
-        Ok(Answer::Ok)
-    }
-
-    fn shutdown(&self, stream: &mut TcpStream) {
-        stream.shutdown(std::net::Shutdown::Both).unwrap();
+    format!("{}]\n", res)
+}
+/// connects to a given adress and port
+pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
+    let stream = TcpStream::connect(format!("{}:{}", adress, port));
+    match stream {
+        Ok(stream) => {
+            info!("Connected to {}:{}", adress, port);
+            Some(stream)
+        }
+        Err(e) => {
+            error!("Could not connect to tracker: {}", e);
+            None
+        }
     }
 }
-
-pub enum Answer {
-    Ok,
-    List(Vec<MetaFile>),
+/// Sends a message to a given adress and port
+pub fn send(stream: &mut TcpStream, message: String) {
+    stream.write(message.as_bytes()).unwrap();
+    info!("Sending to tracker: {}", message);
 }
-pub struct ExpectOk;
+/// Receives a message from a given adress and port
+pub fn receive(stream: &mut TcpStream) -> String {
+    let mut buffer = [0; 1024];
+    let port = stream.peer_addr().unwrap().port();
+    let ip = stream.peer_addr().unwrap().ip();
+    let mut reader = BufReader::new(stream);
+    debug!("About to read from {}:{}", ip, port);
+    match reader.read(&mut buffer) {
+        Ok(_) => {
+            info!(
+                "Received from {}:{} {}",
+                ip,
+                port,
+                String::from_utf8_lossy(&buffer)
+            );
+            buffer
+                .iter()
+                .map(|&c| char::from_u32(c as u32).unwrap())
+                .collect::<String>()
+        }
+        Err(e) => {
+            error!("Could not receive from tracker{}:{} {}", ip, port, e);
+            String::from("")
+        }
+    }
+}
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Write;
-    use std::net::{TcpListener, TcpStream};
-    use std::thread;
-
-    #[test]
-    fn test_receive() {
-        // Start a mock server in a new thread
-        let handle = thread::spawn(|| {
-            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-            let port = listener.local_addr().unwrap().port();
-            let (mut stream, _) = listener.accept().unwrap();
-            write!(stream, "ok\n").unwrap();
-            port
-        });
-
-        // Get the port that the mock server is listening on
-        let port = handle.join().unwrap();
-
-        // Test the receive function
-        let answer = receive(&ExpectOk, port, "127.0.0.1".to_string());
-        assert_eq!(answer, "ok\n");
-    }
-}
+mod tests {}

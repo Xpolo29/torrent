@@ -2,6 +2,7 @@
 #include "database.h"
 #include "logging.h"
 #include <string.h>
+#include <strings.h>
 
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
@@ -57,21 +58,20 @@ void process_getfile(char *buf, char *hash) {
 
 void process_look(char *buf, char *filename, enum op_t op, long filesize) {
   struct data d[BDD_SIZE];
-  // printf("look : %s, %d, %ld\n", filename, op, filesize);
+  //printf("look : %s, %d, %ld\n", filename, op, filesize);
   int len = filter(d, filename, filesize, op);
-  // printf("len : %d\n", len);
+  //printf("len : %d\n", len);
+ 
 
   strcat(buf, "list [");
   char info[1024];
   for (int i = 0; i < len; i++) {
-    // printf("f:%s s:%ld cs:%d h:%s\n", d[i].filename, d[i].size,
-    // d[i].chunk_size, d[i].hash);
+	//printf("f:%s s:%ld cs:%d h:%s\n", d[i].filename, d[i].size, d[i].chunk_size, d[i].hash);
     if (d[i].size == 0)
       continue; // pass empty
     if (i > 0)
       strcat(buf, " ");
 
-    // printf("HERE\n");
     sprintf(info, "%s %ld %d %s", d[i].filename, d[i].size, d[i].chunk_size,
             d[i].hash);
     strcat(buf, info);
@@ -84,13 +84,15 @@ void process_update(char *buf, struct data *seeds, int seed_size,
   // to get rid of warning
   // (void)leeches;
   // (void)leech_size;
+  // printf("seed_size : %d, leech_side : %d\n", seed_size, leech_size);
   struct data dbb_host[BDD_SIZE];
   struct data new_host[BDD_SIZE];
   int new_len = 0;
-  int len = load_host(dbb_host, h);
+  int len = get_size();
+  load_all(dbb_host);
   for (int i = 0; i < len; i++) {
     for (int j = 0; j < seed_size; j++) {
-      if (strcmp(dbb_host[i].hash, seeds[j].hash) == 0) {
+      if ((strcmp(dbb_host[i].hash, seeds[j].hash) == 0)) {
         new_host[new_len++] = dbb_host[i];
       }
     }
@@ -101,50 +103,59 @@ void process_update(char *buf, struct data *seeds, int seed_size,
     }
   }
   remove_host(h);
-  for (int i = 0; i < new_len; i++)
-    store(new_host[i]);
+  for (int i = 0; i < new_len; i++) {
+    new_host[i].host = h;
+    if (!db_exists(new_host[i]))
+      store(new_host[i]);
+  }
   strcpy(buf, "ok\n");
 }
 
 void process_announce(char *buf, struct data *seeds, int seed_size,
                       struct data *leeches, int leech_size) {
-  // to get rid of warning
-  // (void)leeches;
-  // (void)leech_size;
-  struct data all[BDD_SIZE];
-  load_all(all);
-  for (int i = 0; i < seed_size; i++) {
-    store(seeds[i]);
-  }
-  for (int j = 0; j < get_size(); j++) {
-    for (int i = 0; i < leech_size; i++) {
-      if (strcmp(all[j].hash, leeches[i].hash) == 0) {
-        leeches[i].size = all[j].size;
-        strcpy(leeches[i].filename, all[j].filename);
-        leeches[i].chunk_size = all[j].chunk_size;
-        store(leeches[i]);
-      }
-    }
-  }
-  strcpy(buf, "ok\n");
+	// to get rid of warning
+	// (void)leeches;
+	// (void)leech_size;
+	// printf("seed_size : %d", seed_size);
+	struct data all[BDD_SIZE];
+	load_all(all);
+	int size = get_size();
+	for (int i = 0; i < seed_size; i++) {
+		if(!db_exists(seeds[i]))
+			store(seeds[i]);
+		}
+
+
+	for (int i = 0; i < leech_size; i++) {
+	for (int j = 0; j < size; j++) {
+		if (strcmp(all[j].hash, leeches[i].hash) == 0
+		&& !host_equals(all[j].host, leeches[i].host)) {
+			leeches[i].size = all[j].size;
+			strcpy(leeches[i].filename, all[j].filename);
+			leeches[i].chunk_size = all[j].chunk_size;
+			store(leeches[i]);
+			break;
+		}
+	}
+	}
+	strcpy(buf, "ok\n");
 }
 
-int parse_request(char *buf, char *request, struct host h) {
-  char *reg_update = "^(update) seed \\[(([[:alnum:]]* ?)*)\\] leech "
-                     "\\[(([[:alnum:]]+ ?)*)\\]((\r)?(\n)?)?$";
-  char *reg_look = "^(look) (\\[(filename='([[:graph:]]+)')? "
-                   "?(filesize([<=>])'([[:digit:]]+)')?\\])((\r)?(\n)?)?$";
+int handle_regex(int index[MATCH_SIZE][2], char* request){
+  char *reg_update = "^(update) (seed \\[(([[:alnum:]]* ?)*)\\])? ?(leech "
+                     "\\[(([[:alnum:]]+ ?)*)\\])?((\r)?(\n)?)?$";
+  char *reg_look = "^(look) (\\[(filename=[\"']([[:graph:]]+)[\"'])? "
+                   "?(filesize([<=>])[\"']([[:digit:]]+)[\"'])?\\])((\r)?(\n)?)?$";
   char *reg_get_file = "^(getfile) ([[:alnum:]]+)((\r)?(\n)?)?$";
   char *reg_announce =
-      "^(announce) listen ([[:digit:]]+) seed \\[(([[:graph:]]+ [[:digit:]]+ "
-      "[[:digit:]]+ [[:alnum:]]+ ?)*)\\] leech \\[(([[:alnum:]]+ "
-      "?)*)\\]((\r)?(\n)?)?$";
+      "^(announce) listen ([[:digit:]]+) ?(seed \\[(([[:graph:]]+ [[:digit:]]+ "
+      "[[:digit:]]+ [[:alnum:]]+ ?)*)\\])? ?(leech \\[(([[:alnum:]]+ "
+      "?)*)\\])?((\r)?(\n)?)?$";
 
   char *all_reg[4] = {reg_update, reg_look, reg_get_file, reg_announce};
 
   regex_t regex;
   regmatch_t matches[MATCH_SIZE];
-  int index[MATCH_SIZE][2] = {};
   int result;
   int nb_matches = 0;
   logging(DEBUG, "Parser : Compiling regex\n");
@@ -184,41 +195,23 @@ int parse_request(char *buf, char *request, struct host h) {
       exit(1);
     }
   }
-  // DEBUG purpose
-  // for (int i = 0; i < nb_matches; i++) {
-  //   int start = index[i][0];
-  //   int size = index[i][1] - index[i][0];
-  //   printf("start : %d, size %d\n", start, size);
-  //   char message[size];
-  //   memcpy(message, request + start, size);
-  //   printf("Group %d : %s\n", i, message);
-  // }
+  return 0;
+}
 
-  int start = index[0][0];
-  int size = index[0][1] - index[0][0];
-  // printf("start : %d, size %d\n", start, size);
-
-  char req[size];
-  memcpy(req, request + start, size);
-  req[size] = 0;
-  // printf("req : %s\n", req);
-  enum request_t reqt = char_to_req(req);
-  // printf("reqt : %d\n", reqt);
-
-  switch (reqt) {
-  case getfile: {
-    logging(DEBUG, "Parser : Processing getfile request\n");
-    start = index[1][0];
-    size = index[1][1] - index[1][0];
+void parse_getfile(char* buf, int index[MATCH_SIZE][2], char* request){
+  logging(DEBUG, "Parser : Processing getfile request\n");
+    int start = index[1][0];
+    int size = index[1][1] - index[1][0];
     char hash[size];
     memcpy(hash, request + start, size);
     hash[size] = 0;
     // printf("hash : %s\n", hash);
     process_getfile(buf, hash);
-    break;
-  }
-  case look: {
-    logging(DEBUG, "Parser : Look request\n");
+
+}
+
+void parse_look(char* buf, int index[MATCH_SIZE][2], char* request){
+   logging(DEBUG, "Parser : Look request\n");
 
     int filename_match;
     int filesize_match;
@@ -226,9 +219,9 @@ int parse_request(char *buf, char *request, struct host h) {
     (void)filename_match;
     (void)filesize_match;
 
-    start = index[3][0];
-    size = index[3][1] - index[3][0];
-    char filename[size];
+    int start = index[3][0];
+    int size = index[3][1] - index[3][0];
+    char filename[352];
     strncpy(filename, request + start, size);
     filename[size] = 0;
 
@@ -239,23 +232,27 @@ int parse_request(char *buf, char *request, struct host h) {
     } else
       op[0] = request[start];
 
+
     start = index[6][0];
     size = index[6][1] - index[6][0];
+	
     char filesize_c[size + 1];
+
     strncpy(filesize_c, request + start, size);
     filesize_c[size] = 0;
     int filesize = atoi(filesize_c);
     // printf("filesize : %d\n", filesize);
-    // printf("filename : %s\n", filename);
+
 
     process_look(buf, filename, char_to_op(op), filesize);
     // printf("look filename: %s filesize%s%d\n", filename, op, filesize);
-    break;
-  }
-  case update: {
-    logging(DEBUG, "Parser : Update request\n");
-    start = index[1][0];
-    size = index[1][1] - index[1][0];
+
+}
+
+void parse_update(char* buf, int index[MATCH_SIZE][2], char* request, struct host h){
+  logging(DEBUG, "Parser : Update request\n");
+    int start = index[2][0];
+    int size = index[2][1] - index[2][0];
     char seed[size];
     memcpy(seed, request + start, size);
     seed[size] = 0;
@@ -269,8 +266,8 @@ int parse_request(char *buf, char *request, struct host h) {
       seed_size++;
     }
 
-    start = index[3][0];
-    size = index[3][1] - index[3][0];
+    start = index[5][0];
+    size = index[5][1] - index[5][0];
     char leech[size];
     memcpy(leech, request + start, size);
     leech[size] = 0;
@@ -304,20 +301,21 @@ int parse_request(char *buf, char *request, struct host h) {
     // }
     // printf("\n");
     // exit(0);
-    break;
-  }
-  case announce: {
 
-    logging(DEBUG, "Parser : announce request\n");
+}
 
-    start = index[2][0];
-    size = index[2][1] - index[2][0];
+void parse_announce(char* buf, int index[MATCH_SIZE][2], char* request, struct host h){
+  logging(DEBUG, "Parser : announce request\n");
+
+    int start = index[3][0];
+    int size = index[3][1] - index[3][0];
     char seed[size];
     memcpy(seed, request + start, size);
     seed[size] = 0;
     char *token = strtok(seed, " ");
     struct data seeds[MAX_SEED];
     int seed_size = 0;
+
     int modulo = 0;
     while (token != NULL) {
       switch (modulo) {
@@ -352,19 +350,21 @@ int parse_request(char *buf, char *request, struct host h) {
       }
     }
 
-    start = index[4][0];
-    size = index[4][1] - index[3][0];
+    start = index[6][0];
+    size = index[6][1] - index[6][0];
     char leech[size];
-    memcpy(leech, request + start, size);
-    leech[size] = 0;
-    token = strtok(leech, " ");
-    char leeches[MAX_SEED][HASH_SIZE + 1];
     int leech_size = 0;
-    while (token != NULL) {
-      memcpy(leeches[leech_size], token, HASH_SIZE + 1);
-      leeches[leech_size][HASH_SIZE] = 0;
-      token = strtok(NULL, " ");
-      leech_size++;
+    char leeches[MAX_SEED][HASH_SIZE + 1];
+    if (size != 0) {
+      memcpy(leech, request + start, size);
+      leech[size] = 0;
+      token = strtok(leech, " ");
+      while (token != NULL) {
+        memcpy(leeches[leech_size], token, HASH_SIZE + 1);
+        leeches[leech_size][HASH_SIZE] = 0;
+        token = strtok(NULL, " ");
+        leech_size++;
+      }
     }
     struct data leech_d[MAX_SEED];
     for (int i = 0; i < leech_size; i++) {
@@ -385,7 +385,50 @@ int parse_request(char *buf, char *request, struct host h) {
     // }
     // printf("\n");
     // exit(0);
-    break;
+}
+
+int parse_request(char *buf, char *request, struct host h) {
+  int index[MATCH_SIZE][2] = {};
+  int res = handle_regex(index, request);
+  if(res == 1)return 1;
+  
+  // DEBUG purpose
+  // for (int i = 0; i < nb_matches; i++) {
+  //   int start = index[i][0];
+  //   int size = index[i][1] - index[i][0];
+  //   printf("start : %d, size %d\n", start, size);
+  //   char message[size];
+  //   memcpy(message, request + start, size);
+  //   printf("Group %d : %s\n", i, message);
+  // }
+
+  int start = index[0][0];
+  int size = index[0][1] - index[0][0];
+  // printf("start : %d, size %d\n", start, size);
+
+  char req[size];
+  memcpy(req, request + start, size);
+  req[size] = 0;
+  // printf("req : %s\n", req);
+  enum request_t reqt = char_to_req(req);
+  // printf("reqt : %d\n", reqt);
+
+  switch (reqt) {
+  case getfile: {
+      parse_getfile(buf, index, request);
+      break;
+  }
+  case look: {
+      parse_look(buf, index, request);
+      break;
+  }
+  case update: {
+      parse_update(buf, index, request, h);
+      break;
+  }
+  case announce: {
+      parse_announce(buf, index, request, h);
+      break;
   }
     return 0;
   }

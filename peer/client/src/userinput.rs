@@ -22,6 +22,36 @@ pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
     }
     valid_files
 }
+pub fn get_filename<R: Read>(reader: R) -> String {
+    let mut reader = BufReader::new(reader);
+    let mut input = String::new();
+
+    print!("Enter the file name you wish to search for: ");
+    io::stdout().flush().unwrap();
+    reader.read_line(&mut input).unwrap();
+
+    let input = input.trim();
+    input.to_string()
+}
+pub fn get_filesize<R: Read>(reader: R) -> String {
+    let mut reader = BufReader::new(reader);
+    let mut input = String::new();
+
+    print!("Enter the operator and the filesize you wish to search for: (Ex: <\"10\") ");
+    io::stdout().flush().unwrap();
+    reader.read_line(&mut input).unwrap();
+
+    let criterion = input.trim();
+    criterion.to_string()
+}
+pub fn display_downloadable_files() {
+    println!("Files available for download:");
+    println!("1. file1.txt");
+    println!("2. file2.txt");
+    println!("3. file3.txt");
+    println!("4. file4.txt");
+    println!("5. file5.txt");
+}
 
 pub fn get_criterions<R: Read>(reader: R) -> Vec<String> {
     let mut reader = BufReader::new(reader);

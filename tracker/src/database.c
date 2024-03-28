@@ -29,24 +29,37 @@ int compare(struct data *in, struct data *out, long filesize, enum op_t op, int 
 }
 
 int filter(struct data *list, char *filename, long filesize, enum op_t op) {
+
+	//printf("Filename %s and size %ld\n", filename, strlen(filename));
 	if (filesize == 0) {
 		if(strlen(filename) == 0){
 			load_all(list);
 			return get_size();
 		}
 		else{
-			return load_files(list, filename) - 1;
+			int len = load_files(list, filename) - 1;
+			return remove_doublon_hash(list, len);
 		}
 	}
+
 	if (strlen(filename) == 0) {
 		struct data all[BDD_SIZE];
 		int len = get_size();
 		load_all(all);
-		return compare(all, list, filesize, op, len);
+		len = compare(all, list, filesize, op, len);
+		/*
+		printf("LEN : %d\n", len);
+		for(int i = 0; i < BDD_SIZE; ++i){
+			if (list[i].size != 0)
+			print_data(list[i]);
+		}
+		*/
+		return remove_doublon_hash(list, len);
 	} else {
 		struct data all[BDD_SIZE];
 		int len = load_files(all, filename);
-		return compare(all, list, filesize, op, len);
+		compare(all, list, filesize, op, len);
+		return remove_doublon_hash(list, len);
 	}
 }
 
@@ -72,7 +85,7 @@ int store(struct data e) {
 }
 
 void print_data(struct data d){
-	printf("ip : %s, port : %d, size : %ld, chunk_size : %d, hash : %s, filename : %s\n", d.host.ip, d.host.port, d.size, d.chunk_size, d.hash, d.filename);
+	printf("ip : %s, port : %d, last_seen : %ld, size : %ld, chunk_size : %d, hash : %s, filename : %s\n", d.host.ip, d.host.port, d.host.last_update, d.size, d.chunk_size, d.hash, d.filename);
 }
 
 void print_db(){
@@ -97,6 +110,16 @@ int data_equals(struct data d1, struct data d2) {
 	int filename_eq = !strcmp(d1.filename, d2.filename);
 
 	return host_eq && size_eq && chunk_size_eq && hash_eq && filename_eq;
+}
+
+int db_exists(struct data h){
+	struct data clone[BDD_SIZE];
+	load_all(clone);
+	for(int i = 0; i < BDD_SIZE; ++i){
+		if(data_equals(clone[i], h))
+				return 1;
+	}
+	return 0;
 }
 // load bdd into arr
 void load_all(struct data *arr) {
@@ -140,6 +163,38 @@ int load_host(struct data *d, struct host h){
 	d[c] = EMPTY;
 	return c;
 }
+
+int remove_doublon_hash(struct data* arr, int len){
+	struct data copy[BDD_SIZE] ;
+	memcpy(copy, arr, len* sizeof(struct data));
+	memset(arr, 0, BDD_SIZE * sizeof(struct data));
+
+	char hashes[BDD_SIZE][64];
+	int hash_len = 0;
+	int skip = 0;
+
+	for(int i = 0; i < len; ++i){
+		skip = 0;
+		char cur_hash[64];
+		strcpy(cur_hash, copy[i].hash);
+
+		for(int j = 0; j < hash_len; j++){
+			if(!strcmp(hashes[j], cur_hash)){
+				skip = 1;
+				break;
+			}
+		}
+
+		if(skip)continue;
+
+		strcpy(hashes[hash_len], cur_hash);
+		arr[hash_len] = copy[i];
+		hash_len++;
+	}
+
+	return hash_len;
+}
+
 // remove e in bdd based on host, return true on success
 int remove_host(struct host host) {
   int res = 0;
@@ -173,4 +228,23 @@ int remove_hash(char hash[64]) {
     }
   }
   return 0;
+}
+
+void update_host(struct host* h){
+	long now = time(NULL);
+	h->last_update = now;
+}
+
+void remove_old_entries(){
+	long now = time(NULL);
+	for(int i = 0; i < BDD_SIZE; ++i){
+		struct host curh = bdd[i].host;
+		if(curh.last_update == 0)continue;
+
+		long diff = now - curh.last_update;
+
+		if( diff > time_to_live){
+			remove_host(curh);
+		}
+	}	
 }

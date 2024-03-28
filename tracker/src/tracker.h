@@ -1,6 +1,9 @@
 #ifndef TRACKER
 #define TRACKER
 
+#define MAX_SLEEPING_TIME 1280000
+#define MIN_SLEEPING_TIME 1024
+
 #include "database.h"
 #include "parser.h"
 #include "network.h"
@@ -19,5 +22,8 @@ int process(int);
 
 //handle ctrl+c for clean exit (thread kill/closing log file/ etc) 
 void sigint_handler(int);
+
+//return the current waiting time base on workload
+void mysleep(int charge);
 
 #endif

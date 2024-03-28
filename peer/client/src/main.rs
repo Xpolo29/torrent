@@ -1,12 +1,26 @@
-mod menu;
-mod userinput;
 mod com;
 mod data;
+mod menu;
+mod respons_handler;
+mod store;
+mod userinput;
+use data::TrackerConfig;
 use menu::display_menu;
-use data::{TrackerConfig};
+use simplelog::*;
+use std::fs::File;
 fn main() {
-    env_logger::init();
+    let log_file = File::create("client.log").unwrap();
+
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            LevelFilter::Trace,
+            Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(LevelFilter::Trace, Config::default(), log_file),
+    ])
+    .unwrap();
     let tracker_config = TrackerConfig::new();
     display_menu(tracker_config);
-    
 }
