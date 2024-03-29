@@ -22,7 +22,8 @@ void print_help(){
 	--help or -h # # Show this message \n\
 	--config or -c # <path to config> # Sets path to config.ini \n\
 	--max-conn or -m # [1:MAX_TASKS] # Set the number of simultaneous task processing \n\
-	--port or -p # [1:65535] # Sets the tracker's listening port \n";
+	--port or -p # [1:65535] # Sets the tracker's listening port \n\
+	--cache-time or -t # int # time to live in seconds of databse entry\n";
 
 
 	printf("%s", help_message);
