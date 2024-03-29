@@ -1,6 +1,11 @@
 use sqlx::{Pool, Postgres, Error};
 use sqlx::postgres::PgPoolOptions;
 
+// problem with sqlx-macros - move this file somewhere else or ignore for the moment if you want
+// Some errors have detailed explanations: E0425, E0432, E0433.
+// For more information about an error, try `rustc --explain E0425`.
+// error: could not compile `sqlx-macros` (lib) due to 53 previous errors
+
 pub struct Database {
     pool: Pool<Postgres>,
 }
