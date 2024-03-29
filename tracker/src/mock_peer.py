@@ -2,10 +2,11 @@ import socket
 import hashlib
 import json
 import random
+import threading
 
 # Tracker address and port
 TRACKER_ADDRESS = "localhost"
-TRACKER_PORT = 7878
+TRACKER_PORT = 12345
 
 
 # Function to calculate MD5 hash
@@ -47,8 +48,25 @@ def update_tracker(update):
     return send_message(message)
 
 
+def thread_main():
+    for i in range(100):
+        send_message(str(i) + " from " + str(threading.get_ident()) + "\n")
+
+
 # Example usage
 if __name__ == "__main__":
+    # benchmark
+    NUM_THREADS = 100
+    L = [None for _ in range(NUM_THREADS)]
+    for i in range(NUM_THREADS):
+        L[i] = threading.Thread(target=thread_main)
+        L[i].start()
+
+    for i in range(NUM_THREADS):
+        L[i].join()
+
+    exit(0)
+
     # Announce files to tracker
     hash1 = calculate_hash()
     hash2 = calculate_hash()
