@@ -26,7 +26,7 @@ pub fn display_menu(tracker_config: TrackerConfig) {
             // Escape should get back to menu from search, upload and download
             1 => search_section(tracker_config.port, &tracker_config.address),
             2 => upload_section(tracker_config.port, &tracker_config.address),
-            3 => download_section(),
+            3 => download_section(tracker_config.port, &tracker_config.address),
             _ => println!("Invalid input, please enter 1, 2 or 3"),
         }
     }
@@ -80,8 +80,13 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         ExpectOk.shutdown(&mut stream);
     }
 }
-fn download_section() {
+fn download_section(tracker_port: u16, tracker_adress: &str) {
+    search_section(tracker_port, tracker_adress);
+    // The list of downloadable files should be the result of search section 
+    // todo!();
     println!("You're in download");
+    // display files along with their size
+    // if two files are name the same user should be able to choose which one to download
     display_downloadable_files();
     let choice = get_filename(io::stdin());
     let file_name = number_to_file_name(choice.parse().unwrap());

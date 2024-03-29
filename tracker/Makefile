@@ -6,10 +6,14 @@ SRCS = $(wildcard src/*.c)
 TST_SRCS = $(filter-out src/main.c, $(wildcard src/*.c)) $(wildcard tst/*.c)
 
 OBJS = $(SRCS:.c=.o)
+ROBJS = $(SRCS:.c=.or)
 TST_OBJS = $(TST_SRCS:.c=.o)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+%.or: %.c
+	$(CC) -O3 -c $< -o $@
 
 all: $(TARGET)
 
@@ -26,8 +30,10 @@ check: test
 	./test
 
 clean:
-	rm -f $(TARGET) test src/*.o tst/*.o log/*.log
+	rm -f $(TARGET) test src/*.o* tst/*.o log/*.log
 
 help:
 	grep '^[a-zA-Z0-9_\-]*:' Makefile | sed 's/://'
 
+release: $(ROBJS) 
+	$(CC) -O3 -o $(TARGET) $^

@@ -2,8 +2,6 @@
 #include "logging.h"
 #include "parameters.h"
 
-int current_sleeping_time = MIN_SLEEPING_TIME;
-
 // Catch ctrl+c for clean exit
 void sigint_handler(int signum) {
   if (signum != SIGINT)
@@ -16,15 +14,8 @@ void sigint_handler(int signum) {
   }
 }
 
-void mysleep(int charge){
-	if(charge){
-		current_sleeping_time = MIN_SLEEPING_TIME;
-	} else {
-		int temp = current_sleeping_time * 2;
-		if(temp <= MAX_SLEEPING_TIME)
-			current_sleeping_time = temp;
-	}	
-	usleep(current_sleeping_time);
+void mysleep(){
+	if(task_len == 0)usleep(MAX_SLEEPING_TIME);
 }
 
 // Handle request comprehension and answers for peer <connection>
@@ -34,8 +25,9 @@ int process(int connection) {
 	int read = recv(connection, buff, 1024 * 16, 0);
 
 	if (read < 0) {
-		mysleep(1);
+		mysleep();
 		new_task(connection);
+
 		return 0;
 	}
 

@@ -50,12 +50,13 @@ pub fn get_filesize<R: Read>(reader: R) -> String {
     criterion.to_string()
 }
 pub fn display_downloadable_files() {
+    // use metafiles
     println!("Files available for download:");
-    println!("1. file1.txt");
-    println!("2. file2.txt");
-    println!("3. file3.txt");
-    println!("4. file4.txt");
-    println!("5. file5.txt");
+    println!("1. file1.txt size 10MB"); // hash 
+    println!("2. file2.txt size 20MB");
+    println!("3. file3.txt size 30MB");
+    println!("4. file4.txt size 40MB");
+    println!("5. file5.txt size 50MB");
 }
 
 // hash - md5
