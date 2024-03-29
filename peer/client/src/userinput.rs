@@ -1,6 +1,12 @@
 use log::{info, warn};
-use std::io::{self, BufRead, BufReader, Read, Write};
+use std::io::{self, BufRead, BufReader, Read, Result, Write};
 use std::path::Path;
+use crate::data::MetaFile;
+
+// for hash - md5
+use md5::{Digest, Md5};
+use std::fs::File;
+
 pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
     let mut reader = BufReader::new(reader);
     let mut input = String::new();
@@ -20,7 +26,6 @@ pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
             warn!("File {} does not exist. Skipping.", file_name);
         }
     }
-
     valid_files
 }
 pub fn get_filename<R: Read>(reader: R) -> String {
@@ -45,13 +50,34 @@ pub fn get_filesize<R: Read>(reader: R) -> String {
     let criterion = input.trim();
     criterion.to_string()
 }
-pub fn display_downloadable_files() {
+pub fn choose_file(files:Vec<MetaFile>) -> String{
+    // use metafiles
     println!("Files available for download:");
-    println!("1. file1.txt");
-    println!("2. file2.txt");
-    println!("3. file3.txt");
-    println!("4. file4.txt");
-    println!("5. file5.txt");
+    println!("1. file1.txt size 10MB"); // hash 
+    println!("2. file2.txt size 20MB");
+    println!("3. file3.txt size 30MB");
+    println!("4. file4.txt size 40MB");
+    println!("5. file5.txt size 50MB");
+    "aefeef87987esazfsq89".to_string()
+}
+
+// hash - md5
+pub fn get_file_key(path: &str) -> Result<String> {
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file);
+    let mut buffer = [0; 8192];
+    let mut context = Md5::new();
+
+    loop {
+        let count = reader.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        context.update(&buffer[..count]);
+    }
+
+    let result = context.finalize();
+    Ok(format!("{:x}", result))
 }
 
 #[cfg(test)]
@@ -71,4 +97,17 @@ mod tests {
         let result = get_file_names(&input[..]);
         assert_eq!(result, Vec::<String>::new());
     }
+
+    /*
+    use tempfile::NamedTempFile;
+    #[test]
+    async fn test_get_file_key() {
+        let mut tmpfile: File = NamedTempFile::new().unwrap().into_file();
+        writeln!(tmpfile, "Hello, world!").unwrap();
+
+        let expected_hash = "6cd3556deb0da54bca060b4c39479839";
+        let actual_hash = get_file_key(tmpfile.path().to_str().unwrap()).unwrap();
+
+        assert_eq!(expected_hash, actual_hash);
+    } */
 }

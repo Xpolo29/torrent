@@ -18,10 +18,10 @@ impl MetaFile {
         }
     }
 }
+#[derive(Debug)]
 pub struct PeerConfig {
     pub address: String,
     pub port: u16,
-    pub seeded_file: Vec<MetaFile>,
 }
 pub struct TrackerConfig {
     pub address: String,

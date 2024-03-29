@@ -65,5 +65,6 @@ pub fn send_wanted_files_to_tracker(files: Vec<String>) {
     let msg = format!("getfile [{}]\r\n", files.join(" "));
     send_message(msg, &ExpectList);
 }
+
 #[cfg(test)]
 mod tests {}
