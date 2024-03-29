@@ -5,6 +5,7 @@
 
 //Main thread fonction, permanently looking for task to process
 void* thread_main(void* arg){
+	int treated = 0;
 	(void)arg; // to disable warning
 	logging(DEBUG, "Thread %lu started\n", pthread_self());
 	int i = 0;
@@ -21,6 +22,7 @@ void* thread_main(void* arg){
 				pthread_mutex_unlock(&len_mutex);
 
 				process(temp);
+				treated++;
 			}
 			else
 				pthread_mutex_unlock(&mutex_array[i]);
@@ -29,7 +31,7 @@ void* thread_main(void* arg){
 		i = (i + 1) % LEN_TASKS;
 
 	}	
-	logging(DEBUG, "Thread %lu stopped\n", pthread_self());
+	logging(DEBUG, "Thread %lu stopped and processed %d tasks\n", pthread_self(), treated);
 	return 0;
 }
 
