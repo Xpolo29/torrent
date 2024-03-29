@@ -1,5 +1,16 @@
 use crate::data::{MetaFile};
-use log{info};
+// use log{info};
+
+
+struct Data {
+    pub file: MetaFile,
+    pub peer: PeerConfig,
+    pub buffermap: Vec<u8>, 
+}
+
+static db: Vec<Data> = Vec::new();
+
+
 /// Add a file to the database and asign a bufermap with 1 used in upload
 pub fn add_seed_file_to_db(file: MetaFile) {
     todo!();

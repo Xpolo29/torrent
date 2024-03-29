@@ -1,11 +1,11 @@
 use log::{info, warn};
-use std::io::{self, BufRead, BufReader, Read, Write, Result};
+use std::io::{self, BufRead, BufReader, Read, Result, Write};
 use std::path::Path;
 use crate::data::MetaFile;
 
 // for hash - md5
-use std::fs::File;
 use md5::{Digest, Md5};
+use std::fs::File;
 
 pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
     let mut reader = BufReader::new(reader);
@@ -60,19 +60,6 @@ pub fn choose_file(files:Vec<MetaFile>) {
     println!("5. file5.txt size 50MB");
 }
 
-pub fn get_criterions<R: Read>(reader: R) -> Vec<String> {
-    let mut reader = BufReader::new(reader);
-    let mut input = String::new();
-
-    print!("Enter the criterions you want files to verify (separated by spaces): ");
-    io::stdout().flush().unwrap();
-    reader.read_line(&mut input).unwrap();
-
-    let criterions: Vec<String> = input.trim().split_whitespace().map(|s| s.to_string()).collect();
-    criterions
-    // verify that criterions verify filename=”???.???” orfilesize>”???” or filesize<”???” or piece_size>”???” or piece_size<”???” or key=”???”
-}
-
 // hash - md5
 pub fn get_file_key(path: &str) -> Result<String> {
     let file = File::open(path)?;
@@ -91,7 +78,6 @@ pub fn get_file_key(path: &str) -> Result<String> {
     let result = context.finalize();
     Ok(format!("{:x}", result))
 }
-
 
 #[cfg(test)]
 mod tests {
