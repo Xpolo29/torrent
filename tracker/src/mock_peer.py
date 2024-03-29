@@ -49,7 +49,7 @@ def update_tracker(update):
 
 
 def thread_main():
-    for i in range(100):
+    for i in range(1000):
         send_message(str(i) + " from " + str(threading.get_ident()) + "\n")
 
 
