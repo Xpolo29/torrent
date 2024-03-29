@@ -1,7 +1,7 @@
 use crate::com::{connect, look, receive, seed, send};
 use crate::data::{MetaFile, TrackerConfig};
+use crate::database::number_to_file_name;
 use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer};
-use crate::store::number_to_file_name;
 use crate::userinput::{display_downloadable_files, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
 use std::io;
@@ -54,7 +54,6 @@ fn search_section(tracker_port: u16, tracker_adress: &str) {
     let present_files = ExpectList.retrieve_data("".to_string());
     info!("files retrieved {:?}", present_files);
 }
-
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
     println!("You're in upload");
     let seeded_files = get_file_names(io::stdin()); // take the files the user wish to seed
@@ -81,7 +80,6 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         ExpectOk.shutdown(&mut stream);
     }
 }
-
 fn download_section() {
     println!("You're in download");
     display_downloadable_files();
