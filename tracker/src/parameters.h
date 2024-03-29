@@ -18,4 +18,7 @@ extern int tasks[LEN_TASKS];
 extern pthread_mutex_t mutex_array[LEN_TASKS];
 extern int time_to_live;
 
+extern pthread_mutex_t len_mutex;
+extern int task_len;
+
 #endif
