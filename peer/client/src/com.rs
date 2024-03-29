@@ -73,6 +73,11 @@ pub fn look(filename: String, filesize: String) -> String {
     }
     format!("{}]\n", res)
 }
+
+/// 
+pub fn getfile_request(key: String) -> String {
+    format!("getfile [{}]\n", key)
+}
 /// connects to a given adress and port
 pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
     let stream = TcpStream::connect(format!("{}:{}", adress, port));

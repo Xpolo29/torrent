@@ -1,6 +1,5 @@
 use crate::com::{connect, look, receive, seed, send};
 use crate::data::{MetaFile, TrackerConfig};
-use crate::database::number_to_file_name;
 use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer, Answer};
 use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
@@ -87,8 +86,6 @@ fn download_section(tracker_port: u16, tracker_adress: &str) {
     println!("You're in download");
     // display files along with their size
     // if two files are name the same user should be able to choose which one to download
-    choose_file(Vec::new());
-    let choice = get_filename(io::stdin());
-    let file_name = number_to_file_name(choice.parse().unwrap());
-    println!("You chose to download: {}", file_name);
+    let file_key = choose_file(Vec::new());
+    println!("You chose to download: ok");
 }

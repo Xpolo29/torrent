@@ -1,6 +1,5 @@
 mod com;
 mod data;
-mod database;
 mod menu;
 mod respons_handler;
 mod userinput;

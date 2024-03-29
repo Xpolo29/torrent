@@ -1,5 +1,6 @@
-use crate::data::MetaFile;
+use crate::data::{MetaFile, PeerConfig};
 use log::{error, trace};
+
 use regex::Regex;
 use std::error::Error;
 use std::io;
@@ -89,14 +90,22 @@ impl ExpectedAnswer for ExpectList {
         stream.shutdown(std::net::Shutdown::Both).unwrap();
     }
 }
+
+impl ExpectedAnswer for ExpectPeers {
+    fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {todo!()}
+    fn retrieve_data(&self, answer: String) -> Answer {todo!()}
+    fn shutdown(&self, stream: &mut TcpStream) {todo!()}
+
+}
 #[derive(Debug)]
 pub enum Answer {
     Ok,
     List(Vec<MetaFile>),
+    Peers(Vec<PeerConfig>)
 }
 pub struct ExpectOk;
 pub struct ExpectList;
-
+pub struct ExpectPeers;
 #[cfg(test)]
 mod tests {
     use super::*;
