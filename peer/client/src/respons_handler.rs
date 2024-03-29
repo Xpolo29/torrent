@@ -69,6 +69,7 @@ impl ExpectedAnswer for ExpectList {
     }
 
     fn retrieve_data(&self, answer: String) -> Answer {
+        trace!("Answer to be retrieved: {}", answer);
         let files = answer
             .split_whitespace()
             .skip(2)
@@ -77,10 +78,11 @@ impl ExpectedAnswer for ExpectList {
             .map(|chunk| MetaFile {
                 file_name: chunk[0].to_string(),
                 length: chunk[1].parse().unwrap(),
-                piece_size: chunk[2].parse().unwrap(),
+                piece_size: chunk[2].parse().expect("Failed to parse piece size"),
                 hash: chunk[3].to_string(),
             })
             .collect();
+        trace!("Files retrieved: {:?}", files);
         Answer::List(files)
     }
     fn shutdown(&self, stream: &mut TcpStream) {

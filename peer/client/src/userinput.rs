@@ -1,6 +1,7 @@
 use log::{info, warn};
 use std::io::{self, BufRead, BufReader, Read, Write, Result};
 use std::path::Path;
+use crate::data::MetaFile;
 
 // for hash - md5
 use std::fs::File;
@@ -49,7 +50,7 @@ pub fn get_filesize<R: Read>(reader: R) -> String {
     let criterion = input.trim();
     criterion.to_string()
 }
-pub fn display_downloadable_files() {
+pub fn choose_file(files:Vec<MetaFile>) {
     // use metafiles
     println!("Files available for download:");
     println!("1. file1.txt size 10MB"); // hash 
