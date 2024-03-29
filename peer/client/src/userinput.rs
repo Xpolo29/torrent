@@ -1,10 +1,11 @@
 use log::{info, warn};
-use std::io::{self, BufRead, BufReader, Read, Write, Result};
+use std::io::{self, BufRead, BufReader, Read, Result, Write};
 use std::path::Path;
+use crate::data::MetaFile;
 
 // for hash - md5
-use std::fs::File;
 use md5::{Digest, Md5};
+use std::fs::File;
 
 pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
     let mut reader = BufReader::new(reader);
@@ -49,7 +50,7 @@ pub fn get_filesize<R: Read>(reader: R) -> String {
     let criterion = input.trim();
     criterion.to_string()
 }
-pub fn display_downloadable_files() {
+pub fn choose_file(files:Vec<MetaFile>) -> String{
     // use metafiles
     println!("Files available for download:");
     println!("1. file1.txt size 10MB"); // hash 
@@ -57,19 +58,7 @@ pub fn display_downloadable_files() {
     println!("3. file3.txt size 30MB");
     println!("4. file4.txt size 40MB");
     println!("5. file5.txt size 50MB");
-}
-
-pub fn get_criterions<R: Read>(reader: R) -> Vec<String> {
-    let mut reader = BufReader::new(reader);
-    let mut input = String::new();
-
-    print!("Enter the criterions you want files to verify (separated by spaces): ");
-    io::stdout().flush().unwrap();
-    reader.read_line(&mut input).unwrap();
-
-    let criterions: Vec<String> = input.trim().split_whitespace().map(|s| s.to_string()).collect();
-    criterions
-    // verify that criterions verify filename=”???.???” orfilesize>”???” or filesize<”???” or piece_size>”???” or piece_size<”???” or key=”???”
+    "aefeef87987esazfsq89".to_string()
 }
 
 // hash - md5
@@ -90,7 +79,6 @@ pub fn get_file_key(path: &str) -> Result<String> {
     let result = context.finalize();
     Ok(format!("{:x}", result))
 }
-
 
 #[cfg(test)]
 mod tests {
