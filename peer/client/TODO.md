@@ -1,3 +1,9 @@
+## TODO 
+- choose_file : boucle recursive comme dans menu.rs qui demande que l'input soit un nombre compris entre 1 et nbr de fichiers téléchargables
+
+
+
+
 ## Intro 
     - port, ip of tracker and peer in config.ini
     - port of peer can be changed in command line via -p

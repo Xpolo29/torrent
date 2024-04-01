@@ -15,10 +15,10 @@ impl MetaFile {
         let path = Path::new(&file_name);
         let length = path.metadata().unwrap().len();
         MetaFile {
+            hash: get_file_key(&file_name),
             file_name,
             length,
             piece_size: 1024,
-            hash: get_file_key(&file_name),
         }
     }
 }

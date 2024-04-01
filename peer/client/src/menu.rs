@@ -80,12 +80,15 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
     }
 }
 fn download_section(tracker_port: u16, tracker_adress: &str) {
-    let looked_files = search_section(tracker_port, tracker_adress);
     // The list of downloadable files should be the result of search section 
     // todo!();
     println!("You're in download");
     // display files along with their size
     // if two files are name the same user should be able to choose which one to download
-    let file_key = choose_file(Vec::new());
-    println!("You chose to download: ok");
+let file_key = match choose_file(io::stdin(), &search_section(tracker_port, tracker_adress)) {
+    Some(hash) => hash.to_string(),
+    None => String::new(),
+};    println!("You chose to download: {}", file_key);
+    // download the file
+    // todo!();
 }

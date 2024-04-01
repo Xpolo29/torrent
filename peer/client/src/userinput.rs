@@ -1,4 +1,5 @@
 use crate::data::MetaFile;
+use crate::respons_handler::Answer;
 use log::{info, warn};
 use std::io::{self, BufRead, BufReader, Read, Result, Write};
 use std::path::Path;
@@ -46,15 +47,26 @@ pub fn get_filesize<R: Read>(reader: R) -> String {
     let criterion = input.trim();
     criterion.to_string()
 }
-pub fn choose_file(files: Vec<MetaFile>) -> String {
-    // use metafiles
-    println!("Files available for download:");
-    println!("1. file1.txt size 10MB"); // hash
-    println!("2. file2.txt size 20MB");
-    println!("3. file3.txt size 30MB");
-    println!("4. file4.txt size 40MB");
-    println!("5. file5.txt size 50MB");
-    "aefeef87987esazfsq89".to_string()
+pub fn choose_file<R: Read>(reader: R, response: &Answer) -> Option<&str> {
+    match response {
+        Answer::List(files) => {
+            for (i, file) in files.iter().enumerate() {
+                println!("{}: {}", i, file.file_name);
+            }
+            let mut reader = BufReader::new(reader);
+            let mut input = String::new();
+            print!("Which file do you wish to download : ");
+            io::stdout().flush().unwrap();
+            reader.read_line(&mut input).unwrap();
+
+            let choice: usize = input.trim().parse().expect("ERROR MATCHING NOT IMPLEMENTED"); // the ithest file
+            // TODO verify choice before going after this line
+            return Some(&files[choice].hash);
+        },
+        _ => println!("No files found"),
+    }
+
+    None
 }
 
 // hash - md5
@@ -74,7 +86,7 @@ mod tests {
     fn test_get_file_name_non_existing_file() {
         let input = b"non_existing_file.txt";
         let result = get_file_names(&input[..]);
-        assert_eq!(result, Vec::<String>::new());
+        assert_eq!(result.to_u8(), Vec::<String>::new());
     }
 
     /*
