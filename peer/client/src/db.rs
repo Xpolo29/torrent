@@ -31,6 +31,12 @@ fn get_peer(key: &str) -> Option<PeerConfig> {
     drop(db);
     ret
 }
+
+fn set_peer(key: &str, peer: PeerConfig) {
+    let mut db = PEERSDB.lock().unwrap();
+    db.insert(key.to_string(), peer);
+    drop(db);
+}
 /// Add a file to the database and asign a bufermap with 1 used in upload
 pub fn add_seed_file_to_db(file: MetaFile) {
     todo!();
@@ -96,11 +102,33 @@ mod tests {
         };
         let mut db = PEERSDB.lock().unwrap();
         db.insert("1.1.1.1:1234".to_string(), peer.clone());
+        // db.clear();
         drop(db);
         let result = match get_peer("1.1.1.1:1234") {
-            Some(value) => value,
+            Some(value) => value.clone(),
             None => emptypeer,
         };
         assert_eq!(result.address, peer.address);
+    }
+    #[test]
+    fn test_set_peer() {
+        let peer = PeerConfig {
+            address: "1.1.1.1".to_string(),
+            port: 1234,
+        };
+        let emptypeer = PeerConfig {
+            address: "".to_string(),
+            port: 0,
+        };
+        let key = "1.1.1.1:1234";
+        set_peer(key, peer);
+        let mut db = PEERSDB.lock().unwrap();
+        let result = match db.get("1.1.1.1:1234") {
+            Some(value) => value.clone(),
+            None => emptypeer,
+        };
+        db.clear();
+        drop(db);
+        assert_eq!(result.port, 1234);
     }
 }
