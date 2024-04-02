@@ -27,3 +27,7 @@ clean:
 help:
 	grep '^[a-zA-Z0-9_\-]*:' Makefile | sed 's/://'
 
+release: $(SRCS)
+	echo $^ > /dev/null
+	cd client && $(CC) build --release
+	cp client/target/release/client ./$(TARGET)
