@@ -22,7 +22,7 @@ impl MetaFile {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PeerConfig {
     pub address: String,
     pub port: u16,
