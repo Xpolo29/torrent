@@ -27,27 +27,27 @@ fn get_peer_key(peer: PeerConfig) -> String {
 fn get_peer(key: &str) -> Option<PeerConfig> {
     let db = PEERSDB.lock().unwrap();
     let ret = db.get(&key.to_string()).cloned();
-    drop(db);
+    // drop(db);
     ret
 }
 
 fn set_peer(key: &str, peer: PeerConfig) {
     let mut db = PEERSDB.lock().unwrap();
     db.insert(key.to_string(), peer);
-    drop(db);
+    // drop(db);
 }
 
 fn get_file(key: &str) -> Option<MetaFile> {
     let db = FILEDB.lock().unwrap();
     let ret = db.get(&key.to_string()).cloned();
-    drop(db);
+    // drop(db);
     ret
 }
 
 fn set_file(key: &str, file: MetaFile) {
     let mut db = FILEDB.lock().unwrap();
     db.insert(key.to_string(), file);
-    drop(db);
+    // drop(db);
 }
 
 fn set_buffermap(file_key: String, peer_key: String, buffermap: Vec<u8>) {
@@ -57,6 +57,13 @@ fn set_buffermap(file_key: String, peer_key: String, buffermap: Vec<u8>) {
         .or_insert_with(HashMap::new);
     file_buffermaps.insert(peer_key, buffermap);
     drop(buffermap_db);
+}
+
+fn __get_buffermap(file_key: &str, peer_key: &str) -> Option<Vec<u8>> {
+    let buffermap_db = BUFFERMAPDB.lock().unwrap();
+    let file_buffermaps = buffermap_db.get(file_key)?;
+    let buffermap = file_buffermaps.get(peer_key)?;
+    Some(buffermap.clone())
 }
 
 /// Add a file to the database and asign a bufermap with 1 used in upload
@@ -100,6 +107,16 @@ pub fn log_db() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_get_buffermap() {
+        let peer = "1.1.1.1:1234";
+        let file = "hash";
+        let buffermap: Vec<u8> = vec![1u8; 10];
+        set_buffermap(file.to_string(), peer.to_string(), buffermap.clone());
+        let result = __get_buffermap(file, peer).unwrap();
+        assert_eq!(result, buffermap);
+    }
 
     #[test]
     fn test_set_buffermap() {
