@@ -57,6 +57,22 @@ impl TrackerConfig {
         }
     }
 }
+impl PeerConfig {
+    pub fn from_config() -> Self {
+        let conf = Ini::load_from_file("config.ini").unwrap();
+        let peer_section = conf.section(Some("Peer")).unwrap();
+        let peer_address = peer_section.get("peer-address").unwrap().to_string();
+        let peer_port = peer_section
+            .get("peer-port")
+            .unwrap()
+            .parse::<u16>()
+            .unwrap();
+        PeerConfig {
+            address: peer_address,
+            port: peer_port,
+        }
+    }
+}
 pub fn get_file_key(path: &str) -> String {
     let path = Path::new(path);
     let file = File::open(path).unwrap();
@@ -69,4 +85,17 @@ pub fn get_file_key(path: &str) -> String {
 
 pub fn get_buffer_size(file: MetaFile) -> u64 {
     file.length / file.piece_size + 1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_peer_config_from_config() {
+        // Set up the test
+        let peer_config = PeerConfig::from_config();
+        assert_eq!(peer_config.address, "127.0.0.1");
+        assert_eq!(peer_config.port, 54321);
+    }
 }

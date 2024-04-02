@@ -68,29 +68,21 @@ impl ExpectedAnswer for ExpectList {
             }
         }
     }
-
+// precond : answer is a valid list answer
     fn retrieve_data(&self, answer: String) -> Answer {
         let answer = answer.trim().to_string();
         trace!("Answer to be retrieved: {}", answer);
-        let re = Regex::new(r"(\S+ \d+ \d+ \w+)").unwrap();
+        let answer = &answer[6..answer.len()-1]; // Remove "list [" and "]"
+        let re_file = Regex::new(r"(?P<file_name>\S+) (?P<length>\d+) (?P<piece_size>\d+) (?P<hash>\w+)").unwrap();
         let mut files = Vec::new();
-        for cap in re.captures_iter(&answer) {
-            let file = cap.get(1).unwrap().as_str();
-            let mut split = file.split_whitespace();
-            let file_name = split.next().unwrap().to_string();
-            trace!("File name: {}", file_name);
-            let length = split.next().unwrap().parse::<u64>().unwrap();
-            trace!("Length: {}", length);
-            let piece_size = split.next().unwrap().parse::<u64>().unwrap();
-            trace!("Piece size: {}", piece_size);
-            let hash = split.next().unwrap().to_string();
-            trace!("Hash: {}", hash);
-            files.push(MetaFile {
-                file_name,
-                length,
-                piece_size,
-                hash,
-            });
+        for caps in re_file.captures_iter(answer) {
+            let file = MetaFile {
+                file_name: caps["file_name"].to_string(),
+                length: caps["length"].parse().unwrap(),
+                piece_size: caps["piece_size"].parse().unwrap(),
+                hash: caps["hash"].to_string(),
+            };
+            files.push(file);
         }
         Answer::List(files)
     }
