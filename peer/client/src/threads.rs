@@ -1,9 +1,17 @@
 use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::Mutex;
 use rand::Rng;
+use tokio::task;
+use tokio::sync::mpsc;
+use rayon::prelude::*; // for thread pool
+use std::thread;
+use std::thread::ThreadId;
 
 pub struct Pool {
     stack: Arc<Mutex<Vec<Task>>>,
+    pool: rayon::ThreadPool,
+    tx : tokio::sync::mpsc::Sender<Task>,
+    rx: tokio::sync::mpsc::Receiver<Task>
 }
 
 pub struct Task {
@@ -17,38 +25,55 @@ impl Task {
 }
 
 impl Pool {
-    pub fn new() -> Self {
+    pub fn new(num_threads : usize, task_len: usize) -> Self {
         let stack = Arc::new(Mutex::new(Vec::new()));
-        Self { stack }
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build()
+            .unwrap();
+
+        let (tx, mut rx) = mpsc::channel::<Task>(task_len);
+        Self { stack, pool , tx, rx}
     }
 
-    pub async fn execute(&self) {
-        let stack_clone = Arc::clone(&self.stack);
-        let (tx, mut rx) = mpsc::channel(10);
+    pub fn execute(&self){
+        let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
 
-        for _ in 0..10 {
-            let stack_clone = Arc::clone(&stack_clone);
-            let tx = tx.clone();
+        rt.block_on(self.execute_async());
+    }
 
-            tokio::spawn(async move {
-                let mut stack = stack_clone.lock().await;
-                while let Some(task) = stack.pop() {
-                    println!("Processing {}", task.value);
-                }
-                tx.send(()).await.unwrap();
-            });
-        }
+    async fn process_task(&self, task: Task, thread_id: ThreadId) {
+        println!("Thread {:?} processing task: {}", thread_id, task.value);
+    }
 
-        drop(tx);
-
-        while let Some(_) = rx.recv().await {
-            // Wait for all tasks to complete.
+    async fn execute_async(&self) {
+        loop {
+            if let Some(task) = self.rx.recv().await {
+                self.pool.spawn(move || {
+                    self.process_task(task);
+                });
+            } else {
+                break; // Exit the loop if the channel is closed
+            }
         }
     }
 
-    pub async fn add_task(&self, task: Task) {
+
+    async fn add_task_async(&self, task: Task) {
         let mut stack = self.stack.lock().await;
         stack.push(task);
+    }
+
+    pub fn add_task(&self, task: Task){
+        let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+        rt.block_on(self.add_task_async(task));
     }
 
     fn get_id(&self) -> usize {
