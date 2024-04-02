@@ -83,17 +83,26 @@ pub fn update_buffermap(config: PeerConfig, key: String, buffermap: Vec<u8>) {
     todo!();
 }
 /// get buffermap to share it among other peers
-pub fn get_buffermap(config: PeerConfig, key: String) {
-    todo!();
+pub fn get_buffermap(config: PeerConfig, key: &str) -> Option<Vec<u8>> {
+    __get_buffermap(key, &get_peer_key(config))
 }
 
-pub fn get_peer_from_file(key: String) {
+pub fn get_peer_from_file(key: String) -> Option<PeerConfig> {
     todo!();
 }
 
 /// Add a file to the database and asign a bufermap with 1 used in upload
 pub fn remove_file_from_db(file: MetaFile) {
-    todo!();
+    let mut file_db = FILEDB.lock().unwrap();
+    let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
+    if let Some(file_key) = file_db
+        .clone()
+        .keys()
+        .find(|key| key.to_string() == file.hash)
+    {
+        file_db.remove(file_key);
+        buffermap_db.remove(file_key);
+    }
 }
 
 /// Associate a peer with a key in the database
@@ -107,6 +116,31 @@ pub fn log_db() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_remove_file_from_db() {
+        let meta = MetaFile {
+            file_name: "test".to_string(),
+            length: 10,
+            piece_size: 10,
+            hash: "hash".to_string(),
+        };
+        let file1 = "hash";
+        let file2 = "hash2";
+        let peer = "1.1.1.1:1234";
+        let buffermap = vec![1u8, 10];
+        set_buffermap(file1.to_string(), peer.to_string(), buffermap.clone());
+        set_buffermap(file2.to_string(), peer.to_string(), buffermap.clone());
+        let result = __get_buffermap(file1, peer);
+        assert_eq!(result.unwrap(), buffermap);
+        let result = __get_buffermap(file2, peer);
+        assert_eq!(result.unwrap(), buffermap);
+        remove_file_from_db(meta);
+        let result = __get_buffermap(peer, file1);
+        assert!(result.is_none());
+        let result = __get_buffermap(file2, peer);
+        assert_eq!(result.unwrap(), buffermap);
+    }
 
     #[test]
     fn test_get_buffermap() {
