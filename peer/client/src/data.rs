@@ -3,7 +3,7 @@ use md5::{Digest, Md5};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MetaFile {
     pub file_name: String,
     pub length: u64,
@@ -65,4 +65,8 @@ pub fn get_file_key(path: &str) -> String {
     std::io::copy(&mut reader, &mut hasher).unwrap();
     let result = hasher.finalize();
     format!("{:x}", result)
+}
+
+pub fn get_buffer_size(file: MetaFile) -> u64 {
+    file.length / file.piece_size + 1
 }
