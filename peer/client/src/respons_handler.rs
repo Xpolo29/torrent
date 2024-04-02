@@ -70,22 +70,31 @@ impl ExpectedAnswer for ExpectList {
     }
 
     fn retrieve_data(&self, answer: String) -> Answer {
+        let answer = answer.trim().to_string();
         trace!("Answer to be retrieved: {}", answer);
-        let files = answer
-            .split_whitespace()
-            .skip(2)
-            .collect::<Vec<&str>>()
-            .chunks(4)
-            .map(|chunk| MetaFile {
-                file_name: chunk[0].to_string(),
-                length: chunk[1].parse().unwrap(),
-                piece_size: chunk[2].parse().expect("Failed to parse piece size"),
-                hash: chunk[3].to_string(),
-            })
-            .collect();
-        trace!("Files retrieved: {:?}", files);
+        let re = Regex::new(r"(\S+ \d+ \d+ \w+)").unwrap();
+        let mut files = Vec::new();
+        for cap in re.captures_iter(&answer) {
+            let file = cap.get(1).unwrap().as_str();
+            let mut split = file.split_whitespace();
+            let file_name = split.next().unwrap().to_string();
+            trace!("File name: {}", file_name);
+            let length = split.next().unwrap().parse::<u64>().unwrap();
+            trace!("Length: {}", length);
+            let piece_size = split.next().unwrap().parse::<u64>().unwrap();
+            trace!("Piece size: {}", piece_size);
+            let hash = split.next().unwrap().to_string();
+            trace!("Hash: {}", hash);
+            files.push(MetaFile {
+                file_name,
+                length,
+                piece_size,
+                hash,
+            });
+        }
         Answer::List(files)
     }
+        
     fn shutdown(&self, stream: &mut TcpStream) {
         stream.shutdown(std::net::Shutdown::Both).unwrap();
     }
