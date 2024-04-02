@@ -1,6 +1,6 @@
 mod com;
 mod data;
-// mod db;
+mod db;
 mod menu;
 mod respons_handler;
 mod threads;
@@ -10,7 +10,6 @@ use menu::display_menu;
 use simplelog::*;
 use std::fs::File;
 use threads::{Pool, Task};
-
 
 fn main() {
     //multi thread part
@@ -24,7 +23,6 @@ fn main() {
     }
     //delete pool
     pool.drop();
-    
 
     let log_file = File::create("client.log").unwrap();
 
@@ -40,6 +38,4 @@ fn main() {
     .unwrap();
     let tracker_config = TrackerConfig::new();
     display_menu(tracker_config);
-
-
 }

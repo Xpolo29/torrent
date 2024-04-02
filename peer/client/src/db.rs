@@ -13,6 +13,7 @@ use std::sync::Mutex;
 //
 // static db: Vec<Data> = Vec::new();
 //
+//FILEDB and PEERSDB might be useless
 lazy_static! {
     static ref PEERSDB: Mutex<HashMap<String, PeerConfig>> = Mutex::new(HashMap::new());
     static ref FILEDB: Mutex<HashMap<String, MetaFile>> = Mutex::new(HashMap::new());

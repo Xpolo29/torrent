@@ -83,8 +83,12 @@ pub fn get_file_key(path: &str) -> String {
     format!("{:x}", result)
 }
 
-pub fn get_buffer_size(file: MetaFile) -> u64 {
+pub fn get_buffer_size(file: &MetaFile) -> u64 {
     file.length / file.piece_size + 1
+}
+
+pub fn get_file_hash(file: &MetaFile) -> String {
+    file.hash.clone()
 }
 
 #[cfg(test)]
