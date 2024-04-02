@@ -68,27 +68,50 @@ fn __get_buffermap(file_key: &str, peer_key: &str) -> Option<Vec<u8>> {
 
 /// Add a file to the database and asign a bufermap with 1 used in upload
 pub fn add_seed_file_to_db(file: MetaFile) {
-    todo!();
+    let file_key = get_file_hash(&file);
+    let me = PeerConfig::from_config();
+    let peer_key = get_peer_key(me);
+    let buffersize = get_buffer_size(&file) as usize;
+    let buffermap = vec![1u8; buffersize];
+    set_file(file_key.as_str(), file);
+    set_buffermap(file_key, peer_key, buffermap)
 }
 /// Add a file to the database and asign a bufermap with 0 used in download
 pub fn add_leeched_file_to_db(file: MetaFile) {
-    todo!();
+    let file_key = get_file_hash(&file);
+    let me = PeerConfig::from_config();
+    let peer_key = get_peer_key(me);
+    let buffersize = get_buffer_size(&file) as usize;
+    let buffermap = vec![0u8; buffersize];
+    set_file(file_key.as_str(), file);
+    set_buffermap(file_key, peer_key, buffermap)
 }
-/// Associate a peer with a key in the database
-pub fn add_peer_to_key(config: PeerConfig, key: String) {
-    todo!();
+/// Associate a peer with a key in the database with a buffermap, can be used to update the buffermap
+/// totest
+pub fn set_peer_to_file(config: PeerConfig, key: String, buffermap: Vec<u8>) {
+    let peer_key = get_peer_key(config);
+    set_buffermap(key, peer_key, buffermap);
 }
-/// Update the buffermap of a peer on a file
-pub fn update_buffermap(config: PeerConfig, key: String, buffermap: Vec<u8>) {
-    todo!();
-}
+
 /// get buffermap to share it among other peers
 pub fn get_buffermap(config: PeerConfig, key: &str) -> Option<Vec<u8>> {
     __get_buffermap(key, &get_peer_key(config))
 }
 
-pub fn get_peer_from_file(key: String) -> Option<PeerConfig> {
-    todo!();
+///Totest
+pub fn get_peer_from_file(key: String) -> Vec<PeerConfig> {
+    let buffermap_db = BUFFERMAPDB.lock().unwrap();
+    let file_buffermaps = buffermap_db.get(&key);
+    let mut peers: Vec<PeerConfig> = vec![];
+    if let Some(file_buffermaps) = file_buffermaps {
+        for (peer_key, _) in file_buffermaps {
+            let peer_parts: Vec<&str> = peer_key.split(':').collect();
+            let address = peer_parts[0].to_string();
+            let port = peer_parts[1].parse().unwrap();
+            peers.push(PeerConfig { address, port });
+        }
+    }
+    peers
 }
 
 /// Add a file to the database and asign a bufermap with 1 used in upload
@@ -106,8 +129,13 @@ pub fn remove_file_from_db(file: MetaFile) {
 }
 
 /// Associate a peer with a key in the database
-pub fn remove_peer_to_key(config: PeerConfig, key: String) {
-    todo!();
+/// totest
+pub fn remove_peer_to_file(config: PeerConfig, key: String) {
+    let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
+    let peer_key = get_peer_key(config);
+    if let Some(file_buffermaps) = buffermap_db.get_mut(&key) {
+        file_buffermaps.remove(&peer_key);
+    }
 }
 pub fn log_db() {
     todo!();
