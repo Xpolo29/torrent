@@ -1,84 +1,97 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use rand::Rng;
-use tokio::task;
-use tokio::sync::mpsc;
-use rayon::prelude::*; // for thread pool
 use std::thread;
-use std::thread::ThreadId;
+use std::time::Duration;
+use std::sync::{Arc, Mutex};
+
+static mut RUNNING: bool = true;
 
 pub struct Pool {
-    stack: Arc<Mutex<Vec<Task>>>,
-    pool: rayon::ThreadPool,
-    tx : tokio::sync::mpsc::Sender<Task>,
-    rx: tokio::sync::mpsc::Receiver<Task>
+    tasklist : Arc<Mutex<Vec<Task>>>,
+    thread_pool : Vec<std::thread::JoinHandle<i32>>,
 }
 
 pub struct Task {
-    value: i32,
-}
-
-impl Task {
-    pub fn new(value: i32) -> Self {
-        Self { value }
-    }
+    value : i32,
 }
 
 impl Pool {
-    pub fn new(num_threads : usize, task_len: usize) -> Self {
-        let stack = Arc::new(Mutex::new(Vec::new()));
-        let pool = rayon::ThreadPoolBuilder::new()
-            .num_threads(num_threads)
-            .build()
-            .unwrap();
+    pub fn new(size : i32) -> Pool{
 
-        let (tx, mut rx) = mpsc::channel::<Task>(task_len);
-        Self { stack, pool , tx, rx}
+        let mut thread_pool = Vec::new();
+        let tasklist : Arc<Mutex<Vec<Task>>> = Arc::new(Mutex::new(Vec::new()));
+
+        for i in 0..size  {
+            let clone = Arc::clone(&tasklist);
+            let handle = thread::spawn(move || {
+                let res : i32 = 0;
+                let id : i32 = i;
+
+                println!("thread {} started", id);
+
+                unsafe{
+                    let mut option : Option<Task>;
+                    while RUNNING {
+                        {
+                            let mut data = clone.lock().unwrap();
+                            option = data.pop();
+                        }
+                        match option {
+                            Some(task) => {task.process(id)}
+                            None => {}
+                        }
+                    }
+                }
+            
+                res
+            });
+            thread_pool.push(handle);
+        }
+
+        Pool {tasklist, thread_pool}
     }
 
-    pub fn execute(&self){
-        let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-
-        rt.block_on(self.execute_async());
+    pub fn add_task(&mut self, t : Task) -> () {
+            let mut data = self.tasklist.lock().unwrap();
+            data.push(t);
     }
 
-    async fn process_task(&self, task: Task, thread_id: ThreadId) {
-        println!("Thread {:?} processing task: {}", thread_id, task.value);
-    }
-
-    async fn execute_async(&self) {
-        loop {
-            if let Some(task) = self.rx.recv().await {
-                self.pool.spawn(move || {
-                    self.process_task(task);
-                });
-            } else {
-                break; // Exit the loop if the channel is closed
-            }
+    fn join(self){
+        for thread in self.thread_pool {
+            thread.join().unwrap();
         }
     }
 
+    pub fn drop(self){
 
-    async fn add_task_async(&self, task: Task) {
-        let mut stack = self.stack.lock().await;
-        stack.push(task);
+        println!("Requested threads stop");
+
+        loop {
+            let len : usize;
+            {
+                let data = self.tasklist.lock().unwrap();
+                len = data.len();
+            }
+            if len > 0 {
+                thread::sleep(Duration::from_millis(100));
+            } else {
+                break;
+            }
+        }
+
+        unsafe{
+            RUNNING = false;
+        }
+        self.join();
+        println!("All threads have been stopped");
+    }
+}
+
+impl Task {
+    pub fn new(value : i32) -> Task {
+        Task { value }
     }
 
-    pub fn add_task(&self, task: Task){
-        let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-
-        rt.block_on(self.add_task_async(task));
-    }
-
-    fn get_id(&self) -> usize {
-        let mut rng = rand::thread_rng();
-        let random_number: usize = rng.gen_range(0..100);
-        random_number
+    pub fn process(self, thread_id : i32){
+        println!("{} is processing {}", thread_id, self.value);
+        thread::sleep(Duration::from_millis(100));
     }
 }

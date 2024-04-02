@@ -1,7 +1,6 @@
 *.o
 target/
-Cargo.lock
 **/target/
-**/Cargo.lock
+*.lock
 peer
 *.log
