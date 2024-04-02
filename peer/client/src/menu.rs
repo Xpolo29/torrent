@@ -1,5 +1,5 @@
 use crate::com::{connect, look, receive, seed, send};
-use crate::data::{MetaFile, TrackerConfig};
+use crate::data::{MetaFile, TrackerConfig, PeerConfig};
 use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer, Answer};
 use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
@@ -54,13 +54,14 @@ fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
     present_files
 }
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
+    let peer_config = PeerConfig::from_config();
     println!("You're in upload");
     let seeded_files = get_file_names(io::stdin()); // take the files the user wish to seed
     let seeded_files: Vec<MetaFile> = seeded_files
         .into_iter()
         .map(|file| MetaFile::new(file.to_string()))
         .collect(); // Create vector of Metafiles out of the files name
-    let seeded_files = seed(seeded_files, "8080".to_string(), "".to_string()); // create the message
+    let seeded_files = seed(seeded_files, peer_config.port.to_string(), "".to_string()); // create the message
     trace!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         // connect to the tracker
