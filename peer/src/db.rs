@@ -70,6 +70,7 @@ fn __get_buffermap(file_key: &str, peer_key: &str) -> Option<Vec<u8>> {
 /// Add a file to the database and asign a bufermap with 1 used in upload
 pub fn add_seed_file_to_db(file: MetaFile) {
     let file_key = get_file_hash(&file);
+    set_file(&file_key, file.clone());
     let me = PeerConfig::from_config();
     let peer_key = get_peer_key(me);
     let buffersize = get_buffer_size(&file) as usize;
@@ -80,6 +81,7 @@ pub fn add_seed_file_to_db(file: MetaFile) {
 /// Add a file to the database and asign a bufermap with 0 used in download
 pub fn add_leeched_file_to_db(file: MetaFile) {
     let file_key = get_file_hash(&file);
+    set_file(&file_key, file.clone());
     let me = PeerConfig::from_config();
     let peer_key = get_peer_key(me);
     let buffersize = get_buffer_size(&file) as usize;
@@ -88,9 +90,11 @@ pub fn add_leeched_file_to_db(file: MetaFile) {
     set_buffermap(file_key, peer_key, buffermap)
 }
 /// Associate a peer with a key in the database with a buffermap, can be used to update the buffermap
-pub fn set_peer_to_file(config: PeerConfig, key: String, buffermap: Vec<u8>) {
-    let peer_key = get_peer_key(config);
-    set_buffermap(key, peer_key, buffermap);
+pub fn set_peer_to_file(config: PeerConfig, file: MetaFile, buffermap: Vec<u8>) {
+    let peer_key = get_peer_key(config.clone());
+    set_peer(&file.hash, config);
+    set_file(&file.hash, file.clone());
+    set_buffermap(file.hash, peer_key, buffermap);
 }
 
 /// get buffermap to share it among other peers
@@ -128,7 +132,6 @@ pub fn remove_file_from_db(file: MetaFile) {
 }
 
 /// Associate a peer with a key in the database
-/// totest
 pub fn remove_peer_to_file(config: PeerConfig, key: String) {
     let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
     let peer_key = get_peer_key(config);
@@ -136,6 +139,23 @@ pub fn remove_peer_to_file(config: PeerConfig, key: String) {
         file_buffermaps.remove(&peer_key);
     }
 }
+
+pub fn remove_peer_from_db(config: PeerConfig) {
+    let key = get_peer_key(config);
+
+    // Remove the peer from the PEERSDB hash map
+    let mut db = PEERSDB.lock().unwrap();
+    db.remove(&key);
+    drop(db);
+
+    // Remove the peer from all file buffer maps in the BUFFERMAPDB hash map
+    let mut db = BUFFERMAPDB.lock().unwrap();
+    for (_file_key, file_buffermap) in db.iter_mut() {
+        file_buffermap.remove(&key);
+    }
+    drop(db);
+}
+
 fn clear_db() {
     let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
     let mut file_db = FILEDB.lock().unwrap();
@@ -143,6 +163,28 @@ fn clear_db() {
     *buffermap_db = HashMap::new();
     *file_db = HashMap::new();
     *peer_db = HashMap::new();
+}
+
+pub fn get_file_from_peer(config: PeerConfig) -> Vec<MetaFile> {
+    let key = get_peer_key(config);
+    let mut result = vec![];
+
+    // Iterate over all file buffer maps in the BUFFERMAPDB hash map
+    let db = BUFFERMAPDB.lock().unwrap();
+    for (file_key, file_buffermap) in db.iter() {
+        // Check if the peer has a non-empty buffer map for this file
+        if let Some(buffermap) = file_buffermap.get(&key) {
+            if !buffermap.is_empty() {
+                // Get the MetaFile struct for this file from the FILEDB hash map
+                let file_db = FILEDB.lock().unwrap();
+                if let Some(meta_file) = file_db.get(file_key) {
+                    result.push(meta_file.clone());
+                }
+            }
+        }
+    }
+
+    result
 }
 
 pub fn log_db() {
@@ -156,9 +198,91 @@ pub fn log_db() {
     }
 }
 
+//get all files
+pub fn get_seeding_files() -> Vec<MetaFile> {
+    let me = PeerConfig::from_config();
+    let mut result = vec![];
+
+    // Iterate over all file buffer maps in the BUFFERMAPDB hash map
+    let db = BUFFERMAPDB.lock().unwrap();
+    for (file_key, file_buffermap) in db.iter() {
+        // Check if the local peer has a buffer map filled with 1 for this file
+        if let Some(buffermap) = file_buffermap.get(&get_peer_key(me.clone())) {
+            if buffermap.iter().all(|b| *b == 1) {
+                // Get the MetaFile struct for this file from the FILEDB hash map
+                let file_db = FILEDB.lock().unwrap();
+                if let Some(meta_file) = file_db.get(file_key) {
+                    result.push(meta_file.clone());
+                }
+            }
+        }
+    }
+
+    result
+}
+
+pub fn get_leeching_files() -> Vec<MetaFile> {
+    let me = PeerConfig::from_config();
+    let mut result = vec![];
+
+    // Iterate over all file buffer maps in the BUFFERMAPDB hash map
+    let db = BUFFERMAPDB.lock().unwrap();
+    for (file_key, file_buffermap) in db.iter() {
+        // Check if the local peer has a buffer map with at least one "0" for this file
+        if let Some(buffermap) = file_buffermap.get(&get_peer_key(me.clone())) {
+            if buffermap.iter().any(|b| *b == 0) {
+                // Get the MetaFile struct for this file from the FILEDB hash map
+                let file_db = FILEDB.lock().unwrap();
+                if let Some(meta_file) = file_db.get(file_key) {
+                    result.push(meta_file.clone());
+                }
+            }
+        }
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_get_seeding_or_leeching() {
+        let meta = MetaFile {
+            file_name: "test".to_string(),
+            length: 10,
+            piece_size: 10,
+            hash: "hash".to_string(),
+        };
+        let meta2 = MetaFile {
+            file_name: "test2".to_string(),
+            length: 10,
+            piece_size: 10,
+            hash: "hash2".to_string(),
+        };
+        let meta3 = MetaFile {
+            file_name: "test3".to_string(),
+            length: 10,
+            piece_size: 10,
+            hash: "hash3".to_string(),
+        };
+        let me = PeerConfig::from_config();
+        let mut buffermap: Vec<u8> = vec![1u8; 10];
+        buffermap[0] = 0;
+        add_seed_file_to_db(meta);
+        add_leeched_file_to_db(meta2);
+        // add_leeched_file_to_db(meta3.clone());
+        set_peer_to_file(me, meta3, buffermap);
+
+        let result = get_seeding_files();
+        assert_eq!(result[0].hash, "hash");
+        let result = get_leeching_files();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].hash, "hash2");
+        assert_eq!(result[1].hash, "hash3");
+        clear_db();
+    }
 
     #[test]
     fn test_remove_peer_to_file() {
@@ -171,14 +295,17 @@ mod tests {
             address: "2.2.2.2".to_string(),
             port: 1234,
         };
-        let peer3 = PeerConfig {
-            address: "3.3.3.3".to_string(),
-            port: 1234,
+        let meta = MetaFile {
+            file_name: "test".to_string(),
+            length: 10,
+            piece_size: 10,
+            hash: "hash1".to_string(),
         };
+
         let buffermap = vec![1u8; 10];
         let buffermap2 = vec![0u8; 10];
-        set_peer_to_file(peer1.clone(), "hash1".to_string(), buffermap);
-        set_peer_to_file(peer2.clone(), "hash1".to_string(), buffermap2.clone());
+        set_peer_to_file(peer1.clone(), meta.clone(), buffermap);
+        set_peer_to_file(peer2.clone(), meta.clone(), buffermap2.clone());
         assert!(!get_peer_from_file("hash1".to_string()).is_empty());
         assert_eq!(get_peer_from_file("hash1".to_string()).len(), 2);
         remove_peer_to_file(peer1, "hash1".to_string());
@@ -202,22 +329,22 @@ mod tests {
             address: "3.3.3.3".to_string(),
             port: 1234,
         };
-        let meta1 = MetaFile {
-            file_name: "test1".to_string(),
+        let meta = MetaFile {
+            file_name: "test".to_string(),
             length: 10,
             piece_size: 10,
             hash: "hash1".to_string(),
         };
         let buffermap = vec![1u8; 10];
         let buffermap2 = vec![0u8; 10];
-        set_peer_to_file(peer1.clone(), "hash1".to_string(), buffermap);
-        set_peer_to_file(peer2.clone(), "hash1".to_string(), buffermap2.clone());
+        set_peer_to_file(peer1.clone(), meta.clone(), buffermap);
+        set_peer_to_file(peer2.clone(), meta.clone(), buffermap2.clone());
         let result = get_peer_from_file("hash1".to_string());
         assert!(!result.is_empty());
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].address, "1.1.1.1".to_string());
         assert_eq!(result[1].address, "2.2.2.2".to_string());
-        set_peer_to_file(peer3.clone(), "hash1".to_string(), buffermap2);
+        set_peer_to_file(peer3.clone(), meta, buffermap2);
         let result = get_peer_from_file("hash1".to_string());
         assert!(!result.is_empty());
         assert_eq!(result.len(), 3);
@@ -233,8 +360,14 @@ mod tests {
             address: "1.1.1.1".to_string(),
             port: 1234,
         };
+        let meta = MetaFile {
+            file_name: "test".to_string(),
+            length: 10,
+            piece_size: 10,
+            hash: "hash1".to_string(),
+        };
         let buffermap = vec![1u8; 10];
-        set_peer_to_file(peer1.clone(), "hash1".to_string(), buffermap);
+        set_peer_to_file(peer1.clone(), meta, buffermap);
         assert!(get_buffermap(peer1, "hash1").is_some());
         clear_db();
     }
