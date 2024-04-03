@@ -8,8 +8,8 @@ all: $(TARGET)
 
 $(TARGET): $(SRCS)
 	echo $^ > /dev/null
-	cd client && $(CC) build
-	cp client/target/debug/client ./$(TARGET)
+	$(CC) build
+	cp target/debug/client ./$(TARGET)
 
 run: $(TARGET)
 	RUST_LOG=trace ./$(TARGET)
@@ -22,12 +22,12 @@ check: test
 
 clean:
 	rm -f $(TARGET)
-	cd client && cargo clean
+	cargo clean
 
 help:
 	grep '^[a-zA-Z0-9_\-]*:' Makefile | sed 's/://'
 
 release: $(SRCS)
 	echo $^ > /dev/null
-	cd client && $(CC) build --release
-	cp client/target/release/client ./$(TARGET)
+	$(CC) build --release
+	cp target/release/client ./$(TARGET)
