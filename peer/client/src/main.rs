@@ -4,12 +4,14 @@ mod db;
 mod menu;
 mod respons_handler;
 mod threads;
+mod tasks;
 mod userinput;
 use data::TrackerConfig;
 use menu::display_menu;
 use simplelog::*;
 use std::fs::File;
-use threads::{Pool, Task};
+use threads::Pool;
+use tasks::Task;
 
 fn main() {
     //multi thread part
