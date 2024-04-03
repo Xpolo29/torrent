@@ -4,6 +4,9 @@ use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer, Answer};
 use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
 use std::io;
+use crate::db::add_seed_file_to_db;
+
+
 pub fn display_menu(tracker_config: TrackerConfig) {
     loop {
         println!("Main Menu");
@@ -61,6 +64,13 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         .into_iter()
         .map(|file| MetaFile::new(file.to_string()))
         .collect(); // Create vector of Metafiles out of the files name
+
+
+    let seeded_files2 = seeded_files.clone();
+    for seed in seeded_files2{
+        add_seed_file_to_db(seed);
+    }
+
     let seeded_files = seed(seeded_files, peer_config.port.to_string(), "".to_string()); // create the message
     trace!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
