@@ -26,7 +26,7 @@ fn main() {
 
     //start update thread
     let tracker_config = TrackerConfig::new();
-    pool.start_update(tracker_config);
+    pool.start_update(tracker_config, 30);
 
     //delete pool
     //pool.drop();

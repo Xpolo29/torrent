@@ -64,8 +64,8 @@ impl Pool {
 
 
     //start update thread
-    pub fn start_update(self, tc : TrackerConfig){
-        let upthread = thread::spawn( || {
+    pub fn start_update(mut self, tc : TrackerConfig, period : i32){
+        let upthread = thread::spawn(move || {
             unsafe{
                 while RUNNING {
                     let msg : String = update();
@@ -73,6 +73,7 @@ impl Pool {
                         send(&mut stream, msg);
 
                     }
+                    thread::sleep(Duration::from_secs(period as u64));
                 }
             }
             0

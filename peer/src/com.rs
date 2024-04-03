@@ -130,8 +130,8 @@ pub fn update() -> String{
     let seeds : Vec<MetaFile> = get_seeding_files();
     let leeches : Vec<MetaFile> = get_leeching_files();
     
-    let formated_seeds : String = String::new();
-    let formated_leeches : String = String::new();
+    let mut formated_seeds : String = String::new();
+    let mut formated_leeches : String = String::new();
 
     let mut i : bool = false;
 
