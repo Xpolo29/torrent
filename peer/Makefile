@@ -15,7 +15,7 @@ run: $(TARGET)
 	RUST_LOG=trace ./$(TARGET)
 
 test: 
-	echo no test for now
+	RUST_TEST_THREADS=1 cargo test
 
 check: test
 	./test
