@@ -3,6 +3,7 @@ use crate::data::MetaFile;
 use log::{debug, error, info};
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
+use crate::db::{get_seeding_files, get_leeching_files};
 /// # Examples
 ///
 /// ```
@@ -122,6 +123,39 @@ pub fn receive(stream: &mut TcpStream) -> String {
             String::from("")
         }
     }
+}
+
+pub fn update() -> String{
+    
+    let seeds : Vec<MetaFile> = get_seeding_files();
+    let leeches : Vec<MetaFile> = get_leeching_files();
+    
+    let formated_seeds : String = String::new();
+    let formated_leeches : String = String::new();
+
+    let mut i : bool = false;
+
+    for seed in seeds {
+        let hash = seed.hash;
+        formated_seeds += &hash;
+        if i {
+            formated_seeds += " ";
+        }
+        i = true;
+    }
+
+    i = false;
+
+    for leech in leeches {
+        let hash = leech.hash;
+        formated_leeches += &hash;
+        if i {
+            formated_leeches += " ";
+        }
+        i = true;
+    }
+
+    format!("update seed [{}] leech [{}]\n", formated_seeds, formated_leeches)
 }
 
 #[cfg(test)]

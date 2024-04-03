@@ -3,7 +3,8 @@ use std::time::Duration;
 use std::sync::{Arc, Mutex};
 use crate::tasks::Task; 
 use std::collections::VecDeque;
-
+use crate::com::{send, update, connect};
+use crate::data::TrackerConfig;
 
 //gloval var, used to stop threads
 static mut RUNNING: bool = true;
@@ -59,6 +60,24 @@ impl Pool {
         }
 
         Pool {tasklist, thread_pool}
+    }
+
+
+    //start update thread
+    pub fn start_update(self, tc : TrackerConfig){
+        let upthread = thread::spawn( || {
+            unsafe{
+                while RUNNING {
+                    let msg : String = update();
+                    if let Some(mut stream) = connect(tc.port, tc.address.as_str()) {
+                        send(&mut stream, msg);
+
+                    }
+                }
+            }
+            0
+        }); 
+        self.thread_pool.push(upthread);
     }
 
     //add task to pool

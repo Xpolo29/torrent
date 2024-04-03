@@ -23,6 +23,11 @@ fn main() {
         let task = Task::new(i);
         pool.add_task(task);
     }
+
+    //start update thread
+    let tracker_config = TrackerConfig::new();
+    pool.start_update(tracker_config);
+
     //delete pool
     //pool.drop();
 
@@ -38,6 +43,9 @@ fn main() {
         WriteLogger::new(LevelFilter::Trace, Config::default(), log_file),
     ])
     .unwrap();
+
+
+
     let tracker_config = TrackerConfig::new();
     display_menu(tracker_config);
 }
