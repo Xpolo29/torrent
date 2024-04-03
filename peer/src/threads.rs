@@ -2,13 +2,17 @@ use std::thread;
 use std::time::Duration;
 use std::sync::{Arc, Mutex};
 use crate::tasks::Task; 
+use std::collections::VecDeque;
+
 
 //gloval var, used to stop threads
 static mut RUNNING: bool = true;
 
+
 //pool struct
 pub struct Pool {
-    tasklist : Arc<Mutex<Vec<Task>>>,
+    //tasklist : Arc<Mutex<Vec<Task>>>,
+    tasklist : Arc<Mutex<VecDeque<Task>>>,
     thread_pool : Vec<std::thread::JoinHandle<i32>>,
 }
 
@@ -19,7 +23,7 @@ impl Pool {
     pub fn new(size : i32) -> Pool{
 
         let mut thread_pool = Vec::new();
-        let tasklist : Arc<Mutex<Vec<Task>>> = Arc::new(Mutex::new(Vec::new()));
+        let tasklist : Arc<Mutex<VecDeque<Task>>> = Arc::new(Mutex::new(VecDeque::new()));
 
         for i in 0..size  {
             let clone = Arc::clone(&tasklist);
@@ -35,7 +39,7 @@ impl Pool {
                     while RUNNING {
                         {
                             let mut data = clone.lock().unwrap();
-                            option = data.pop();
+                            option = data.pop_front();
                             len = data.len();
                         }
                         if len > 0 {
@@ -44,7 +48,7 @@ impl Pool {
                                 None => {}
                             }
                         } else {
-                            thread::sleep(Duration::from_millis(250));
+                            thread::sleep(Duration::from_millis(10));
                         }
                     }
                 }
@@ -60,7 +64,7 @@ impl Pool {
     //add task to pool
     pub fn add_task(&mut self, t : Task) -> () {
             let mut data = self.tasklist.lock().unwrap();
-            data.push(t);
+            data.push_back(t);
     }
 
     //join threads (wait for them to die)

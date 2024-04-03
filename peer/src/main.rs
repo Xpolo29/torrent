@@ -24,7 +24,7 @@ fn main() {
         pool.add_task(task);
     }
     //delete pool
-    pool.drop();
+    //pool.drop();
 
     let log_file = File::create("client.log").unwrap();
 
