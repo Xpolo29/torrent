@@ -1,7 +1,7 @@
 CC = cargo
 TARGET = peer
 
-SRCS = $(wildcard client/src/*.rs)
+SRCS = $(wildcard src/*.rs)
 
 all: $(TARGET)
 

@@ -31,14 +31,20 @@ impl Pool {
 
                 unsafe{
                     let mut option : Option<Task>;
+                    let mut len : usize;
                     while RUNNING {
                         {
                             let mut data = clone.lock().unwrap();
                             option = data.pop();
+                            len = data.len();
                         }
-                        match option {
-                            Some(task) => {task.process(id)}
-                            None => {}
+                        if len > 0 {
+                            match option {
+                                Some(task) => {task.process(id)}
+                                None => {}
+                            }
+                        } else {
+                            thread::sleep(Duration::from_millis(250));
                         }
                     }
                 }
