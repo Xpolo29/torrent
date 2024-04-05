@@ -7,6 +7,7 @@ mod respons_handler;
 mod threads;
 mod tasks;
 mod userinput;
+mod parser;
 use data::TrackerConfig;
 use menu::display_menu;
 use simplelog::*;
