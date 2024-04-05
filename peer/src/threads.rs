@@ -13,18 +13,16 @@ static mut RUNNING: bool = true;
 //pool struct
 pub struct Pool {
     //tasklist : Arc<Mutex<Vec<Task>>>,
-    tasklist : Arc<Mutex<VecDeque<Task>>>,
+    tasklist : Arc<Mutex<VecDeque<Box<dyn Task + Send>>>>,
     thread_pool : Vec<std::thread::JoinHandle<i32>>,
 }
-
-
 
 impl Pool {
     //Pool::pool.new(NB_THREADS)
     pub fn new(size : i32) -> Pool{
 
         let mut thread_pool = Vec::new();
-        let tasklist : Arc<Mutex<VecDeque<Task>>> = Arc::new(Mutex::new(VecDeque::new()));
+        let tasklist : Arc<Mutex<VecDeque<Box<dyn Task + Send>>>> = Arc::new(Mutex::new(VecDeque::new()));
 
         for i in 0..size  {
             let clone = Arc::clone(&tasklist);
@@ -35,7 +33,7 @@ impl Pool {
                 println!("thread {} started", id);
 
                 unsafe{
-                    let mut option : Option<Task>;
+                    let mut option : Option<Box<dyn Task + Send>>;
                     let mut len : usize;
                     while RUNNING {
                         {
@@ -45,7 +43,7 @@ impl Pool {
                         }
                         if len > 0 {
                             match option {
-                                Some(task) => {task.process(id)}
+                                Some(task) => {task.process()}
                                 None => {}
                             }
                         } else {
@@ -64,7 +62,7 @@ impl Pool {
 
 
     //start update thread
-    pub fn start_update(mut self, tc : TrackerConfig, period : i32){
+    pub fn start_update(&mut self, tc : TrackerConfig, period : i32){
         let upthread = thread::spawn(move || {
             unsafe{
                 while RUNNING {
@@ -82,9 +80,16 @@ impl Pool {
     }
 
     //add task to pool
-    pub fn add_task(&mut self, t : Task) -> () {
+    /*
+    pub fn add_task(&mut self, t : Box<dyn Task + Send>) -> () {
             let mut data = self.tasklist.lock().unwrap();
             data.push_back(t);
+    }
+    */
+
+    pub fn add_task<T: Task + Send + 'static>(&mut self, t: T) {
+        let mut data = self.tasklist.lock().unwrap();
+        data.push_back(Box::new(t));
     }
 
     //join threads (wait for them to die)

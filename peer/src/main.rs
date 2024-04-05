@@ -7,13 +7,13 @@ mod respons_handler;
 mod threads;
 mod tasks;
 mod userinput;
-mod parser;
+//mod parser;
 use data::TrackerConfig;
 use menu::display_menu;
 use simplelog::*;
 use std::fs::File;
 use threads::Pool;
-use tasks::Task;
+use tasks::EmptyTask;
 
 fn main() {
     //multi thread part
@@ -21,8 +21,8 @@ fn main() {
     let mut pool: Pool = Pool::new(2);
 
     //add task
-    for i in 0..10 {
-        let task = Task::new(i);
+    for _ in 0..2 {
+        let task : tasks::EmptyTask = EmptyTask {stream:None};
         pool.add_task(task);
     }
 
@@ -31,7 +31,7 @@ fn main() {
     pool.start_update(tracker_config, 30);
 
     //delete pool
-    //pool.drop();
+    pool.drop();
 
     let log_file = File::create("client.log").unwrap();
 
