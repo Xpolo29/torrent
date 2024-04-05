@@ -1,6 +1,6 @@
 use crate::tasks::*;
 use hashbrown::HashMap;
-use log::{error, trace};
+use log::error;
 use regex::Regex;
 use std::net::TcpStream;
 
@@ -30,18 +30,18 @@ fn organize_request(
     stream: TcpStream,
 ) -> Box<dyn Task + Send> {
     match req_type {
-        Data => data_request(re, request, stream),
-        Have => have_request(re, request, stream),
-        GetPieces => getpieces_request(re, request, stream),
-        Interested => interested_request(re, request, stream),
+        RequestType::Data => data_request(re, request, stream),
+        RequestType::Have => have_request(re, request, stream),
+        RequestType::GetPieces => getpieces_request(re, request, stream),
+        RequestType::Interested => interested_request(re, request, stream),
     }
 }
 
 fn data_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
-    let Some(capture) = re.captures(&request);
-    let Some(hash) = capture.get(2);
-    let Some(hashdata) = capture.get(3);
-    let mut map: HashMap<u32, Vec<u8>> = hashdata
+    let capture = re.captures(&request).unwrap();
+    let hash = capture.get(2).unwrap();
+    let hashdata = capture.get(3).unwrap();
+    let map: HashMap<u32, Vec<u8>> = hashdata
         .as_str()
         .split(' ')
         .map(|pair| {
@@ -62,9 +62,9 @@ fn data_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task +
     Box::new(ret)
 }
 fn have_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
-    let Some(capture) = re.captures(&request);
-    let Some(hash) = capture.get(2);
-    let Some(buffermap) = capture.get(3);
+    let capture = re.captures(&request).unwrap();
+    let hash = capture.get(2).unwrap();
+    let buffermap = capture.get(3).unwrap();
     let buf: Vec<u8> = buffermap
         .as_str()
         .chars()
@@ -79,9 +79,9 @@ fn have_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task +
     Box::new(ret)
 }
 fn getpieces_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
-    let Some(capture) = re.captures(&request);
-    let Some(hash) = capture.get(2);
-    let Some(indexes) = capture.get(3);
+    let capture = re.captures(&request).unwrap();
+    let hash = capture.get(2).unwrap();
+    let indexes = capture.get(3).unwrap();
     let numbers: Vec<u32> = indexes
         .as_str()
         .split_whitespace()
@@ -95,8 +95,8 @@ fn getpieces_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn T
     Box::new(ret)
 }
 fn interested_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
-    let Some(capture) = re.captures(&request);
-    let Some(hash) = capture.get(2);
+    let capture = re.captures(&request).unwrap();
+    let hash = capture.get(2).unwrap();
     let ret = Interested {
         key: hash.as_str().to_string(),
         stream: Some(stream),
@@ -105,25 +105,24 @@ fn interested_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn 
     b
 }
 pub fn parse_request(request: String, stream: TcpStream) -> Box<dyn Task + Send> {
-    let empty = EmptyTask {
-        stream: Some(stream),
-    };
-    return Box::new(empty);
-    todo!();
+    // let empty = EmptyTask {
+    //     stream: Some(stream),
+    // };
+    // return Box::new(empty);
     let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
     let regex_interested = r"^(interested) ([[:alnum:]]*)$";
     let regex_have = r"^(have) ([[:alnum:]]*) ([01]*)$";
     let regex_data = r"^(data) ([[:alnum:]]*) \\[((?:[[:digit:]]*:[01]* ?)*)\\]$";
     let regex = [regex_data, regex_have, regex_getpieces, regex_interested];
     let mut count = 0;
-    let mut reqtype = RequestType::Data;
+    // let mut reqtype = RequestType::Data;
     /* */
     for r in regex {
         match Regex::new(r) {
             Ok(re) => {
                 let request_trimmed = request.trim().to_string();
                 if re.is_match(&request_trimmed) {
-                    let Some(reqtype) = cast_to_request_type(count);
+                    let reqtype = cast_to_request_type(count).unwrap();
                     return organize_request(re, request_trimmed, reqtype, stream);
                 } else {
                     continue;
