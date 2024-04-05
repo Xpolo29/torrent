@@ -2,21 +2,6 @@ use crate::tasks::*;
 use log::{error, trace};
 use regex::Regex;
 
-impl Task for Interested {
-    fn process(&self) {
-        println!("This is an interested request");
-    }
-}
-impl Task for Getpieces {
-    fn process(&self) {
-        println!("This is an getpieces request");
-    }
-}
-impl Task for Have {
-    fn process(&self) {
-        println!("This is an have request");
-    }
-}
 //Enum for request types
 
 enum RequestType {
@@ -99,6 +84,7 @@ pub fn parse_request(request: String) -> Box<dyn Task + Send> {
     let regex = [regex_data, regex_have, regex_getpieces, regex_interested];
     let mut count = 0;
     let mut reqtype = RequestType::Data;
+    /* */
     for r in regex {
         match Regex::new(r) {
             Ok(re) => {
