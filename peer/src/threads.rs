@@ -117,7 +117,7 @@ impl Pool {
         if bytes_read > 0 {
             let msg: String = String::from_utf8_lossy(&buff).into_owned();
             info!("Received msg {}", msg);
-            let mut task: Box<dyn Task + Send> = parse_request(msg);
+            let mut task: Box<dyn Task + Send> = parse_request(msg, stream);
         } else {
             error!("Connection close by {:?}", stream.peer_addr());
         }

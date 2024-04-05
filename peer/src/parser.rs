@@ -1,6 +1,8 @@
 use crate::tasks::*;
+use hashbrown::HashMap;
 use log::{error, trace};
 use regex::Regex;
+use std::net::TcpStream;
 
 //Enum for request types
 
@@ -21,20 +23,26 @@ fn cast_to_request_type(number: u8) -> Option<RequestType> {
     }
 }
 
-fn organize_request(re: Regex, request: String, req_type: RequestType) -> Box<dyn Task + Send> {
+fn organize_request(
+    re: Regex,
+    request: String,
+    req_type: RequestType,
+    stream: TcpStream,
+) -> Box<dyn Task + Send> {
     match req_type {
-        Data => data_request(re, request),
-        Have => have_request(re, request),
-        GetPieces => getpieces_request(re, request),
-        Interested => interested_request(re, request),
+        Data => data_request(re, request, stream),
+        Have => have_request(re, request, stream),
+        GetPieces => getpieces_request(re, request, stream),
+        Interested => interested_request(re, request, stream),
     }
 }
 
-fn data_request(re: Regex, request: String) -> Box<dyn Task + Send> {
+fn data_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
     let Some(capture) = re.captures(&request);
     let Some(hash) = capture.get(2);
     let Some(hashdata) = capture.get(3);
-    let mut map: HashMap<u32, Vec<u8>> = input
+    let mut map: HashMap<u32, Vec<u8>> = hashdata
+        .as_str()
         .split(' ')
         .map(|pair| {
             let (key, value) = pair.split_once(':').unwrap();
@@ -49,11 +57,11 @@ fn data_request(re: Regex, request: String) -> Box<dyn Task + Send> {
     let ret = Data {
         key: hash.as_str().to_string(),
         pieces: map,
-        stream: None,
+        stream: Some(stream),
     };
     Box::new(ret)
 }
-fn have_request(re: Regex, request: String) -> Box<dyn Task + Send> {
+fn have_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
     let Some(capture) = re.captures(&request);
     let Some(hash) = capture.get(2);
     let Some(buffermap) = capture.get(3);
@@ -66,11 +74,11 @@ fn have_request(re: Regex, request: String) -> Box<dyn Task + Send> {
     let ret = Have {
         key: hash.as_str().to_string(),
         buffermap: buf,
-        stream: None,
+        stream: Some(stream),
     };
     Box::new(ret)
 }
-fn getpieces_request(re: Regex, request: String) -> Box<dyn Task + Send> {
+fn getpieces_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
     let Some(capture) = re.captures(&request);
     let Some(hash) = capture.get(2);
     let Some(indexes) = capture.get(3);
@@ -82,21 +90,26 @@ fn getpieces_request(re: Regex, request: String) -> Box<dyn Task + Send> {
     let ret = Getpieces {
         key: hash.as_str().to_string(),
         pieces: numbers,
-        stream: None,
+        stream: Some(stream),
     };
     Box::new(ret)
 }
-fn interested_request(re: Regex, request: String) -> Box<dyn Task + Send> {
+fn interested_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
     let Some(capture) = re.captures(&request);
     let Some(hash) = capture.get(2);
     let ret = Interested {
         key: hash.as_str().to_string(),
-        stream: None,
+        stream: Some(stream),
     };
     let b: Box<dyn Task + Send> = Box::new(ret);
     b
 }
-pub fn parse_request(request: String) -> Box<dyn Task + Send> {
+pub fn parse_request(request: String, stream: TcpStream) -> Box<dyn Task + Send> {
+    let empty = EmptyTask {
+        stream: Some(stream),
+    };
+    return Box::new(empty);
+    todo!();
     let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
     let regex_interested = r"^(interested) ([[:alnum:]]*)$";
     let regex_have = r"^(have) ([[:alnum:]]*) ([01]*)$";
@@ -111,7 +124,7 @@ pub fn parse_request(request: String) -> Box<dyn Task + Send> {
                 let request_trimmed = request.trim().to_string();
                 if re.is_match(&request_trimmed) {
                     let Some(reqtype) = cast_to_request_type(count);
-                    organize_request(re, request_trimmed, reqtype)
+                    return organize_request(re, request_trimmed, reqtype, stream);
                 } else {
                     continue;
                 };
@@ -122,4 +135,8 @@ pub fn parse_request(request: String) -> Box<dyn Task + Send> {
         }
         count += 1;
     }
+    let empty = EmptyTask {
+        stream: Some(stream),
+    };
+    return Box::new(empty);
 }
