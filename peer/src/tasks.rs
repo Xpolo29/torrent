@@ -1,25 +1,8 @@
-use std::thread::sleep;
-use std::time::Duration; 
 use hashbrown::HashMap;
-//task struct
-pub struct Task {
-    value : i32,
-}
 
-impl Task {
-    pub fn new(value : i32) -> Task {
-        Task { value }
-    }
-
-    pub fn process(self, thread_id : i32){
-        println!("{} is processing {}", thread_id, self.value);
-        sleep(Duration::from_millis(100));
-    }
-}
-
-/// 
-trait TaskTrait {
-    fn process(self, thread_id : i32);
+/// task struct, which is the parent class
+pub trait Task {
+    fn process(&self);
 }
 
 /// receieved via TCP getpieces and return a data request to be send
@@ -38,7 +21,5 @@ pub struct have {
 }
 pub struct data {
     pub key: String,
-    // TODO takes pieces size from config
     pub pieces: HashMap<u32, Vec<u8>>,
 }
-
