@@ -31,3 +31,13 @@ impl Task for Getpieces {
         }
     }
 }
+
+impl Task for Data {
+    fn process(&self){}
+}
+
+impl Task for Have {
+
+    fn process(&self){}
+}
+
