@@ -1,2 +1,0 @@
-# Sortie standard
-## LOG

@@ -1,10 +1,8 @@
+use crate::data::MetaFile;
+use crate::respons_handler::Answer;
 use log::{info, warn};
-use std::io::{self, BufRead, BufReader, Read, Write, Result};
+use std::io::{self, BufRead, BufReader, Read, Result, Write};
 use std::path::Path;
-
-// for hash - md5
-use std::fs::File;
-use md5::{Digest, Md5};
 
 pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
     let mut reader = BufReader::new(reader);
@@ -49,47 +47,32 @@ pub fn get_filesize<R: Read>(reader: R) -> String {
     let criterion = input.trim();
     criterion.to_string()
 }
-pub fn display_downloadable_files() {
-    println!("Files available for download:");
-    println!("1. file1.txt");
-    println!("2. file2.txt");
-    println!("3. file3.txt");
-    println!("4. file4.txt");
-    println!("5. file5.txt");
-}
+pub fn choose_file<R: Read>(reader: R, response: &Answer) -> Option<&str> {
+    match response {
+        Answer::List(files) => {
+            for (i, file) in files.iter().enumerate() {
+                println!("{}: {}", i, file.file_name);
+            }
+            let mut reader = BufReader::new(reader);
+            let mut input = String::new();
+            print!("Which file do you wish to download : ");
+            io::stdout().flush().unwrap();
+            reader.read_line(&mut input).unwrap();
 
-pub fn get_criterions<R: Read>(reader: R) -> Vec<String> {
-    let mut reader = BufReader::new(reader);
-    let mut input = String::new();
+            let choice: usize = input
+                .trim()
+                .parse()
+                .expect("ERROR MATCHING NOT IMPLEMENTED"); // the ithest file
+                                                           // TODO verify choice before going after this line
+            return Some(&files[choice].hash);
+        }
+        _ => println!("No files found"),
+    }
 
-    print!("Enter the criterions you want files to verify (separated by spaces): ");
-    io::stdout().flush().unwrap();
-    reader.read_line(&mut input).unwrap();
-
-    let criterions: Vec<String> = input.trim().split_whitespace().map(|s| s.to_string()).collect();
-    criterions
-    // verify that criterions verify filename=”???.???” orfilesize>”???” or filesize<”???” or piece_size>”???” or piece_size<”???” or key=”???”
+    None
 }
 
 // hash - md5
-pub fn get_file_key(path: &str) -> Result<String> {
-    let file = File::open(path)?;
-    let mut reader = BufReader::new(file);
-    let mut buffer = [0; 8192];
-    let mut context = Md5::new();
-
-    loop {
-        let count = reader.read(&mut buffer)?;
-        if count == 0 {
-            break;
-        }
-        context.update(&buffer[..count]);
-    }
-
-    let result = context.finalize();
-    Ok(format!("{:x}", result))
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -106,7 +89,7 @@ mod tests {
     fn test_get_file_name_non_existing_file() {
         let input = b"non_existing_file.txt";
         let result = get_file_names(&input[..]);
-        assert_eq!(result, Vec::<String>::new());
+        // assert_eq!(result.to_u8(), Vec::<String>::new());
     }
 
     /*

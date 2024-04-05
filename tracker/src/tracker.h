@@ -1,8 +1,7 @@
 #ifndef TRACKER
 #define TRACKER
 
-#define MAX_SLEEPING_TIME 1280000
-#define MIN_SLEEPING_TIME 1024
+#define MAX_SLEEPING_TIME 10000
 
 #include "database.h"
 #include "parser.h"
@@ -24,6 +23,6 @@ int process(int);
 void sigint_handler(int);
 
 //return the current waiting time base on workload
-void mysleep(int charge);
+void mysleep();
 
 #endif

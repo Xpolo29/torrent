@@ -50,7 +50,7 @@ void process_getfile(char *buf, char *hash) {
     if (i > 0)
       strcat(buf, " ");
     // printf("d[%d].ip = %s", i, d[i].host.ip);
-    sprintf(host, "%s:%d", d[i].host.ip, d[i].host.port);
+    snprintf(host, 23, "%.15s:%d", d[i].host.ip, d[i].host.port); 
     strcat(buf, host);
   }
   strcat(buf, "]\n");

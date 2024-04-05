@@ -1,3 +1,9 @@
+## TODO 
+- choose_file : boucle recursive comme dans menu.rs qui demande que l'input soit un nombre compris entre 1 et nbr de fichiers téléchargables
+
+
+
+
 ## Intro 
     - port, ip of tracker and peer in config.ini
     - port of peer can be changed in command line via -p
@@ -65,3 +71,5 @@ il trouve les paquets les plus rares (les moins présents dans les buffermap) et
 6 périodiquement
     envoie **have clef buffermap** 
     envoie **update seed [clef clef clef] leech [clef13 clef14 clef15]**
+
+search section list de fichiers -> download si download prend void il affiche le resultat de look (tout les fichiers disponibles)

@@ -1,5 +1,6 @@
-use crate::data::MetaFile;
+use crate::data::{MetaFile, PeerConfig};
 use log::{error, trace};
+
 use regex::Regex;
 use std::error::Error;
 use std::io;
@@ -67,34 +68,45 @@ impl ExpectedAnswer for ExpectList {
             }
         }
     }
-
+// precond : answer is a valid list answer
     fn retrieve_data(&self, answer: String) -> Answer {
-        let files = answer
-            .split_whitespace()
-            .skip(2)
-            .collect::<Vec<&str>>()
-            .chunks(4)
-            .map(|chunk| MetaFile {
-                file_name: chunk[0].to_string(),
-                length: chunk[1].parse().unwrap(),
-                piece_size: chunk[2].parse().unwrap(),
-                hash: chunk[3].to_string(),
-            })
-            .collect();
+        let answer = answer.trim().to_string();
+        trace!("Answer to be retrieved: {}", answer);
+        let answer = &answer[6..answer.len()-1]; // Remove "list [" and "]"
+        let re_file = Regex::new(r"(?P<file_name>\S+) (?P<length>\d+) (?P<piece_size>\d+) (?P<hash>\w+)").unwrap();
+        let mut files = Vec::new();
+        for caps in re_file.captures_iter(answer) {
+            let file = MetaFile {
+                file_name: caps["file_name"].to_string(),
+                length: caps["length"].parse().unwrap(),
+                piece_size: caps["piece_size"].parse().unwrap(),
+                hash: caps["hash"].to_string(),
+            };
+            files.push(file);
+        }
         Answer::List(files)
     }
+        
     fn shutdown(&self, stream: &mut TcpStream) {
         stream.shutdown(std::net::Shutdown::Both).unwrap();
     }
+}
+
+impl ExpectedAnswer for ExpectPeers {
+    fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {todo!()}
+    fn retrieve_data(&self, answer: String) -> Answer {todo!()}
+    fn shutdown(&self, stream: &mut TcpStream) {todo!()}
+
 }
 #[derive(Debug)]
 pub enum Answer {
     Ok,
     List(Vec<MetaFile>),
+    Peers(Vec<PeerConfig>)
 }
 pub struct ExpectOk;
 pub struct ExpectList;
-
+pub struct ExpectPeers;
 #[cfg(test)]
 mod tests {
     use super::*;

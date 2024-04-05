@@ -1,29 +1,33 @@
 CC = cargo
 TARGET = peer
 
-SRCS = $(wildcard client/src/*.rs)
+SRCS = $(wildcard src/*.rs)
 
 all: $(TARGET)
 
 
 $(TARGET): $(SRCS)
 	echo $^ > /dev/null
-	cd client && $(CC) build
-	cp client/target/debug/client ./$(TARGET)
+	$(CC) build
+	cp target/debug/client ./$(TARGET)
 
 run: $(TARGET)
 	RUST_LOG=trace ./$(TARGET)
 
 test: 
-	echo no test for now
+	RUST_TEST_THREADS=1 cargo test
 
 check: test
 	./test
 
 clean:
 	rm -f $(TARGET)
-	cd client && cargo clean
+	cargo clean
 
 help:
 	grep '^[a-zA-Z0-9_\-]*:' Makefile | sed 's/://'
 
+release: $(SRCS)
+	echo $^ > /dev/null
+	$(CC) build --release
+	cp target/release/client ./$(TARGET)
