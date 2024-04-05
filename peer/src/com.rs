@@ -4,6 +4,7 @@ use log::{debug, error, info};
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
 use crate::db::{get_seeding_files, get_leeching_files};
+
 /// # Examples
 ///
 /// ```
@@ -32,6 +33,10 @@ use crate::db::{get_seeding_files, get_leeching_files};
 /// ```
 /// announce listen 8000 seed [file1.txt 100 10 abc123 file2.txt 200 20 def456] leech [file3.txt]
 /// ```
+
+
+
+
 pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
     /*
     into_iter() : transform the vector into an iterator
@@ -160,3 +165,4 @@ pub fn update() -> String{
 
 #[cfg(test)]
 mod tests {}
+
