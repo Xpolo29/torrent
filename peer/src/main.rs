@@ -8,7 +8,7 @@ mod threads;
 mod tasks;
 mod userinput;
 //mod parser;
-use data::TrackerConfig;
+use data::{TrackerConfig, PeerConfig};
 use menu::display_menu;
 use simplelog::*;
 use std::fs::File;
@@ -30,8 +30,12 @@ fn main() {
     let tracker_config = TrackerConfig::new();
     pool.start_update(tracker_config, 30);
 
+    //start listening thread
+    let peer_config = PeerConfig::from_config();
+    pool.start_listening(peer_config);
+
     //delete pool
-    pool.drop();
+    //pool.drop();
 
     let log_file = File::create("client.log").unwrap();
 

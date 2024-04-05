@@ -3,8 +3,10 @@ use std::time::Duration;
 use std::sync::{Arc, Mutex};
 use crate::tasks::Task; 
 use std::collections::VecDeque;
-use crate::com::{send, update, connect};
-use crate::data::TrackerConfig;
+use crate::com::{send, update, connect, handle_client};
+use crate::data::{TrackerConfig, PeerConfig};
+use std::net::TcpListener;
+use log::*;
 
 //gloval var, used to stop threads
 static mut RUNNING: bool = true;
@@ -30,7 +32,7 @@ impl Pool {
                 let res : i32 = 0;
                 let id : i32 = i;
 
-                println!("thread {} started", id);
+                debug!("thread {} started", id);
 
                 unsafe{
                     let mut option : Option<Box<dyn Task + Send>>;
@@ -60,6 +62,29 @@ impl Pool {
         Pool {tasklist, thread_pool}
     }
 
+    pub fn start_listening(&mut self, pc: PeerConfig){
+        let add = format!("{}:{}", pc.address, pc.port);
+        let door = TcpListener::bind(add).unwrap();
+        let lithread = thread::spawn(move || {
+            unsafe{
+                while RUNNING {
+                    for con in door.incoming() {
+                        match con {
+                            Ok(stream) => {
+                                debug!("incoming from {}", stream.peer_addr().unwrap());
+                                handle_client(stream);
+                            }
+                            Err(e) => {
+                                error!("{}", e);
+                            }
+                        }
+                    }
+                }
+            }
+            0
+        }); 
+        self.thread_pool.push(lithread);
+    }
 
     //start update thread
     pub fn start_update(&mut self, tc : TrackerConfig, period : i32){
@@ -102,7 +127,7 @@ impl Pool {
     //ask for a clean exit, finish all pending tasks first
     pub fn drop(self){
 
-        println!("Requested threads stop");
+        debug!("Requested threads stop");
 
         loop {
             let len : usize;
@@ -121,7 +146,7 @@ impl Pool {
             RUNNING = false;
         }
         self.join();
-        println!("All threads have been stopped");
+        info!("All threads have been stopped");
     }
 }
 

@@ -1,9 +1,10 @@
 //! communication between the peer and the tracker
 use crate::data::MetaFile;
 use log::{debug, error, info};
-use std::io::{BufReader, Read, Write};
+use std::io::{BufReader, Read, Write, BufRead};
 use std::net::TcpStream;
 use crate::db::{get_seeding_files, get_leeching_files};
+use crate::parser::parse_request;
 /// # Examples
 ///
 /// ```
@@ -32,6 +33,24 @@ use crate::db::{get_seeding_files, get_leeching_files};
 /// ```
 /// announce listen 8000 seed [file1.txt 100 10 abc123 file2.txt 200 20 def456] leech [file3.txt]
 /// ```
+
+
+/// used by listening thread
+pub fn handle_client(mut stream: TcpStream){
+    let mut reader = BufReader::new(&mut stream);
+    let mut buff : Vec<u8>  = Vec::new();
+    let bytes_read = reader.read_until(b'\n', &mut buff).unwrap();
+
+    if bytes_read > 0 {
+        let msg: String = String::from_utf8_lossy(&buff).into_owned();
+        info!("Received msg {}", msg);
+
+    } else {
+        error!("Connection close by {:?}", stream.peer_addr());
+    }
+}
+
+
 pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
     /*
     into_iter() : transform the vector into an iterator
@@ -160,3 +179,4 @@ pub fn update() -> String{
 
 #[cfg(test)]
 mod tests {}
+
