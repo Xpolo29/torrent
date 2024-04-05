@@ -1,8 +1,28 @@
 use hashbrown::HashMap;
 
 /// task struct, which is the parent class
-pub trait Task {
+pub trait Task: Send {
+
     fn process(&self);
+
+    fn new() {
+        empty::new()
+    }
+
+}
+
+/// empty task
+pub struct empty;
+
+impl Task for empty {
+
+    fn process(&self){
+        println!("This is an empty task");
+    }
+
+    fn new(){
+        empty
+    }
 }
 
 /// receieved via TCP getpieces and return a data request to be send
