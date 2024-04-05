@@ -24,21 +24,21 @@ impl Task for EmptyTask {
 pub struct Getpieces {
     pub key: String,
     pub pieces: Vec<u32>,
-    pub stream: TcpStream,
+    pub stream: Option<TcpStream>,
 }
 /// receieved via TCP interested and return a have request to be send
 pub struct Interested {
     pub key: String,
-    pub stream: TcpStream,
+    pub stream: Option<TcpStream>,
 }
 /// receieved via TCP have and return a interested request to be send
 pub struct Have {
     pub key: String,
     pub buffermap: Vec<u8>,
-    pub stream: TcpStream,
+    pub stream: Option<TcpStream>,
 }
 pub struct Data {
     pub key: String,
     pub pieces: HashMap<u32, Vec<u8>>,
-    pub stream: TcpStream,
+    pub stream: Option<TcpStream>,
 }
