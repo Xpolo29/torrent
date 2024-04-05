@@ -1,7 +1,8 @@
 use crate::tasks::*;
 use hashbrown::HashMap;
-use log::error;
+use log::{error, info, trace};
 use regex::Regex;
+use std::io;
 use std::net::TcpStream;
 
 //Enum for request types
@@ -27,7 +28,7 @@ fn organize_request(
     re: Regex,
     request: String,
     req_type: RequestType,
-    stream: TcpStream,
+    stream: Option<TcpStream>,
 ) -> Box<dyn Task + Send> {
     match req_type {
         RequestType::Data => data_request(re, request, stream),
@@ -37,7 +38,7 @@ fn organize_request(
     }
 }
 
-fn data_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
+fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let hashdata = capture.get(3).unwrap();
@@ -56,12 +57,13 @@ fn data_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task +
         .collect();
     let ret = Data {
         key: hash.as_str().to_string(),
-        pieces: map,
-        stream: Some(stream),
+        pieces: map.clone(),
+        stream: stream,
     };
+    println!("hash : {}, HashMap : {:?}", hash.as_str().to_string(), map);
     Box::new(ret)
 }
-fn have_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
+fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let buffermap = capture.get(3).unwrap();
@@ -74,11 +76,15 @@ fn have_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task +
     let ret = Have {
         key: hash.as_str().to_string(),
         buffermap: buf,
-        stream: Some(stream),
+        stream: stream,
     };
     Box::new(ret)
 }
-fn getpieces_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
+fn getpieces_request(
+    re: Regex,
+    request: String,
+    stream: Option<TcpStream>,
+) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let indexes = capture.get(3).unwrap();
@@ -90,21 +96,26 @@ fn getpieces_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn T
     let ret = Getpieces {
         key: hash.as_str().to_string(),
         pieces: numbers,
-        stream: Some(stream),
+        stream: stream,
     };
+
     Box::new(ret)
 }
-fn interested_request(re: Regex, request: String, stream: TcpStream) -> Box<dyn Task + Send> {
+fn interested_request(
+    re: Regex,
+    request: String,
+    stream: Option<TcpStream>,
+) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let ret = Interested {
         key: hash.as_str().to_string(),
-        stream: Some(stream),
+        stream: stream,
     };
     let b: Box<dyn Task + Send> = Box::new(ret);
     b
 }
-pub fn parse_request(request: String, stream: TcpStream) -> Box<dyn Task + Send> {
+pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     // let empty = EmptyTask {
     //     stream: Some(stream),
     // };
@@ -134,8 +145,41 @@ pub fn parse_request(request: String, stream: TcpStream) -> Box<dyn Task + Send>
         }
         count += 1;
     }
-    let empty = EmptyTask {
-        stream: Some(stream),
-    };
+    let empty = EmptyTask { stream: stream };
     return Box::new(empty);
+}
+
+fn create_dummy_tcp_stream() -> Option<TcpStream> {
+    // Connect to the localhost
+    let stream = match TcpStream::connect("127.0.0.1:0") {
+        Ok(s) => s,
+        Err(_) => return None,
+    };
+
+    // Close the connection
+    if let Err(_) = stream.shutdown(std::net::Shutdown::Both) {
+        return None;
+    }
+
+    Some(stream)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use env_logger::Builder;
+    use std::io::Write;
+
+    #[test]
+    fn init_logger() {
+        Builder::new()
+            .format(|f, record| writeln!(f, "{}: {}", record.level(), record.args()))
+            .init();
+    }
+    #[test]
+    fn test_data_request() {
+        let req = "data av12 [3:110011]";
+        let stream = create_dummy_tcp_stream();
+        parse_request(req.to_string(), stream);
+    }
 }
