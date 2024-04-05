@@ -17,7 +17,8 @@ impl Task {
     }
 }
 
-trait TaskTraitResponse {
+/// 
+trait TaskTrait {
     fn process(self, thread_id : i32);
 }
 
