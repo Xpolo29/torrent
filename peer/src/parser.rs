@@ -46,7 +46,27 @@ fn organize_request(re: Regex, request: String, req_type: RequestType) -> Box<dy
 }
 
 fn data_request(re: Regex, request: String) -> Box<dyn Task + Send> {
-    todo!()
+    let Some(capture) = re.captures(&request);
+    let Some(hash) = capture.get(2);
+    let Some(hashdata) = capture.get(3);
+    let mut map: HashMap<u32, Vec<u8>> = input
+        .split(' ')
+        .map(|pair| {
+            let (key, value) = pair.split_once(':').unwrap();
+            let key: u32 = key.parse().unwrap();
+            let value: Vec<u8> = value
+                .chars()
+                .filter_map(|c| u8::from_str_radix(&c.to_string(), 16).ok())
+                .collect();
+            (key, value)
+        })
+        .collect();
+    let ret = Data {
+        key: hash.as_str().to_string(),
+        pieces: map,
+        stream: None,
+    };
+    Box::new(ret)
 }
 fn have_request(re: Regex, request: String) -> Box<dyn Task + Send> {
     let Some(capture) = re.captures(&request);
