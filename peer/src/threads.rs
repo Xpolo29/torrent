@@ -3,10 +3,13 @@ use std::time::Duration;
 use std::sync::{Arc, Mutex};
 use crate::tasks::Task; 
 use std::collections::VecDeque;
-use crate::com::{send, update, connect, handle_client};
+use crate::com::{send, update, connect};
 use crate::data::{TrackerConfig, PeerConfig};
 use std::net::TcpListener;
 use log::*;
+use std::net::TcpStream;
+use crate::parser::parse_request;
+use std::io::{BufRead, BufReader};
 
 //gloval var, used to stop threads
 static mut RUNNING: bool = true;
@@ -72,7 +75,7 @@ impl Pool {
                         match con {
                             Ok(stream) => {
                                 debug!("incoming from {}", stream.peer_addr().unwrap());
-                                handle_client(stream);
+                                self.handle_client(stream);
                             }
                             Err(e) => {
                                 error!("{}", e);
@@ -104,13 +107,22 @@ impl Pool {
         self.thread_pool.push(upthread);
     }
 
-    //add task to pool
-    /*
-    pub fn add_task(&mut self, t : Box<dyn Task + Send>) -> () {
-            let mut data = self.tasklist.lock().unwrap();
-            data.push_back(t);
+    /// used by listening thread
+    pub fn handle_client(&mut self, mut stream: TcpStream){
+        let mut reader = BufReader::new(&mut stream);
+        let mut buff : Vec<u8>  = Vec::new();
+        let bytes_read = reader.read_until(b'\n', &mut buff).unwrap();
+
+        if bytes_read > 0 {
+            let msg: String = String::from_utf8_lossy(&buff).into_owned();
+            info!("Received msg {}", msg);
+            let mut task: Box<dyn Task + Send> = parse_request(msg, stream);
+
+
+        } else {
+            error!("Connection close by {:?}", stream.peer_addr());
+        }
     }
-    */
 
     pub fn add_task<T: Task + Send + 'static>(&mut self, t: T) {
         let mut data = self.tasklist.lock().unwrap();
