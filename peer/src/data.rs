@@ -27,6 +27,11 @@ pub struct PeerConfig {
     pub address: String,
     pub port: u16,
 }
+impl PeerConfig {
+    pub fn new(address: String, port: u16) -> Self {
+        PeerConfig { address, port }
+    }
+}
 pub struct TrackerConfig {
     pub address: String,
     pub port: u16,

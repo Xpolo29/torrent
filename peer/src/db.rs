@@ -1,7 +1,7 @@
 use crate::data::*;
 use hashbrown::HashMap;
 use lazy_static::lazy_static;
-use log::{debug, error, info};
+//use log::{debug, error, info};
 use std::sync::Mutex;
 // use log{info};
 
@@ -400,7 +400,7 @@ mod tests {
     }
 
     #[test]
-    fn test__get_buffermap() {
+    fn test_get_buffermap() {
         clear_db();
         let peer = "1.1.1.1:1234";
         let file = "hash";
