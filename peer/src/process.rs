@@ -1,14 +1,11 @@
+//use crate::back::get_peer_and_piece_indices;
 use crate::com::send;
 use crate::data::PeerConfig;
 use crate::db::get_buffermap;
 use crate::tasks::{Data, Getpieces, Have, Interested, Task};
 use hex;
 use log::{error, trace};
-impl Task for Interested {
-    fn process(&mut self) {
-        println!("This is an interested request");
-    }
-}
+
 /// write a data to TCP
 impl Task for Getpieces {
     fn process(&mut self) {
@@ -68,13 +65,53 @@ impl Task for Getpieces {
 
     // send the data to the clien
 }
-
+/// get data and write it to file
 impl Task for Data {
     fn process(&mut self) {}
 }
 
+/// send a getpieces message to TCP
 impl Task for Have {
     fn process(&mut self) {}
+}
+// send a have message to TCP
+impl Task for Interested {
+    fn process(&mut self) {
+        // receive interessed key
+        let key = &self.key;
+        // create peerconfig to pass to get_buffermap
+        let port = self.stream.as_ref().unwrap().peer_addr().unwrap().port();
+        let ip = self.stream.as_ref().unwrap().peer_addr().unwrap().ip();
+        let peerconfig = PeerConfig {
+            address: ip.to_string(),
+            port,
+        };
+        // get buffermap from the database
+        let stream = &mut self.stream;
+        match stream {
+            Some(stream) => {
+                let buffermap = get_buffermap(peerconfig, key);
+
+                match buffermap {
+                    Some(buffermap) => {
+                        let formated_buffermap = buffermap
+                            .iter()
+                            .map(|byte| format!("{:02x}", byte))
+                            .collect::<String>();
+                        let data = format!("have {} {}", key, formated_buffermap);
+                        trace!("Sending this data to the client: {:?}", data);
+                        send(self.stream.as_mut().unwrap(), data);
+                    }
+                    None => {
+                        error!("No buffermap found");
+                    }
+                }
+            }
+            None => {
+                error!("No stream found");
+            }
+        }
+    }
 }
 #[cfg(test)]
 mod tests {

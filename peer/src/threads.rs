@@ -1,6 +1,7 @@
 use crate::com::{connect, send, update};
 use crate::data::{PeerConfig, TrackerConfig};
 use crate::parser::parse_request;
+use crate::parser::Stream;
 use crate::tasks::Task;
 use log::*;
 use std::collections::VecDeque;
@@ -10,7 +11,6 @@ use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-
 //gloval var, used to stop threads
 static mut RUNNING: bool = true;
 
@@ -110,17 +110,30 @@ impl Pool {
     }
 
     /// used by listening thread
-    pub fn handle_client(&mut self, mut stream: TcpStream) {
-        let mut reader = BufReader::new(&mut stream);
-        let mut buff: Vec<u8> = Vec::new();
-        let bytes_read = reader.read_until(b'\n', &mut buff).unwrap();
+    pub fn handle_client(&mut self, stream: Stream) {
+        match stream {
+            Stream::Single(Some(mut single_stream)) => {
+                let mut reader = BufReader::new(&mut single_stream);
+                let mut buff: Vec<u8> = Vec::new();
+                let bytes_read = reader.read_until(b'\n', &mut buff).unwrap();
 
-        if bytes_read > 0 {
-            let msg: String = String::from_utf8_lossy(&buff).into_owned();
-            info!("Received msg {}", msg);
-            let mut task: Box<dyn Task + Send> = parse_request(msg, Some(stream));
-        } else {
-            error!("Connection close by {:?}", stream.peer_addr());
+                if bytes_read > 0 {
+                    let msg: String = String::from_utf8_lossy(&buff).into_owned();
+                    info!("Received msg {}", msg);
+                    let mut task: Box<dyn Task + Send> =
+                        parse_request(msg, Stream::Single(Some(single_stream)));
+                } else {
+                    error!("Connection close by {:?}", single_stream.peer_addr());
+                }
+            }
+            Stream::Multiple(_) => {
+                // Handle the case where stream is a Vec<TcpStream>
+                // This will depend on your specific use case
+            }
+            _ => {
+                // Handle the case where stream is None or any other variant
+                // This will depend on your specific use case
+            }
         }
     }
 
