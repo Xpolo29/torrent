@@ -3,21 +3,18 @@ use std::net::TcpStream;
 
 /// task struct, which is the parent class
 pub trait Task: Send {
-
-    fn process(&self);
+    fn process(&mut self);
 }
 
 /// empty task
-pub struct EmptyTask{
+pub struct EmptyTask {
     pub stream: Option<TcpStream>,
 }
 
 impl Task for EmptyTask {
-
-    fn process(&self){
+    fn process(&mut self) {
         println!("This is an empty task");
     }
-
 }
 
 /// receieved via TCP getpieces and return a data request to be send

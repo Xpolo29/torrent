@@ -47,7 +47,7 @@ impl Pool {
                         }
                         if len > 0 {
                             match option {
-                                Some(task) => task.process(),
+                                Some(mut task) => task.process(),
                                 None => {}
                             }
                         } else {
@@ -66,7 +66,7 @@ impl Pool {
             thread_pool,
         }
     }
-
+    /*
     pub fn start_listening(&mut self, pc: PeerConfig) {
         let add = format!("{}:{}", pc.address, pc.port);
         let door = TcpListener::bind(add).unwrap();
@@ -75,21 +75,22 @@ impl Pool {
                 while RUNNING {
                     for con in door.incoming() {
                         match con {
-                            Ok(stream) => {
-                                debug!("incoming from {}", stream.peer_addr().unwrap());
-                                self.handle_client(stream);
-                            }
-                            Err(e) => {
-                                error!("{}", e);
+                                Ok(stream) => {
+                                    debug!("incoming from {}", stream.peer_addr().unwrap());
+                                    self.handle_client(stream);
+                                }
+                                Err(e) => {
+                                    error!("{}", e);
+                                }
                             }
                         }
                     }
                 }
-            }
-            0
-        });
-        self.thread_pool.push(lithread);
-    }
+                0
+            });
+            self.thread_pool.push(lithread);
+        }
+        */
 
     //start update thread
     pub fn start_update(&mut self, tc: TrackerConfig, period: i32) {
@@ -117,7 +118,7 @@ impl Pool {
         if bytes_read > 0 {
             let msg: String = String::from_utf8_lossy(&buff).into_owned();
             info!("Received msg {}", msg);
-            let mut task: Box<dyn Task + Send> = parse_request(msg, stream);
+            let mut task: Box<dyn Task + Send> = parse_request(msg, Some(stream));
         } else {
             error!("Connection close by {:?}", stream.peer_addr());
         }
