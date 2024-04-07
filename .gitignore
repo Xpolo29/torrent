@@ -6,3 +6,14 @@ peer/rust-client/target/
 peer/rust-client/test
 peer/client/client.log
 
+.vscode/settings.json
+tracker/tracker
+tracker/src/args.o
+tracker/src/logging.o
+tracker/src/database.o
+tracker/src/main.o
+tracker/src/network.o
+tracker/src/parameters.o
+tracker/src/parser.o
+tracker/src/threads.o
+tracker/src/tracker.o

@@ -1,8 +1,7 @@
 use crate::tasks::*;
 use hashbrown::HashMap;
-use log::{error, info, trace};
+use log::error;
 use regex::Regex;
-use std::io;
 use std::net::TcpStream;
 
 //Enum for request types
@@ -23,18 +22,34 @@ fn cast_to_request_type(number: u8) -> Option<RequestType> {
         _ => None,
     }
 }
-
+pub enum Stream {
+    Single(Option<TcpStream>),
+    Multiple(Vec<Option<TcpStream>>),
+}
+use Stream::*;
 fn organize_request(
     re: Regex,
     request: String,
     req_type: RequestType,
-    stream: Option<TcpStream>,
+    stream: Stream,
 ) -> Box<dyn Task + Send> {
     match req_type {
-        RequestType::Data => data_request(re, request, stream),
-        RequestType::Have => have_request(re, request, stream),
-        RequestType::GetPieces => getpieces_request(re, request, stream),
-        RequestType::Interested => interested_request(re, request, stream),
+        RequestType::Data => match stream {
+            Single(s) => data_request(re, request, s),
+            Multiple(_) => panic!("Unexpected stream type"),
+        },
+        RequestType::Have => match stream {
+            Single(_) => panic!("Unexpected stream type"),
+            Multiple(s) => have_request(re, request, s),
+        },
+        RequestType::GetPieces => match stream {
+            Single(s) => getpieces_request(re, request, s),
+            Multiple(_) => panic!("Unexpected stream type"),
+        },
+        RequestType::Interested => match stream {
+            Single(s) => interested_request(re, request, s),
+            Multiple(_) => panic!("Unexpected stream type"),
+        },
     }
 }
 
@@ -63,7 +78,11 @@ fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
     println!("hash : {}, HashMap : {:?}", hash.as_str().to_string(), map);
     Box::new(ret)
 }
-fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
+fn have_request(
+    re: Regex,
+    request: String,
+    stream: Vec<Option<TcpStream>>,
+) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let buffermap = capture.get(3).unwrap();
@@ -115,7 +134,7 @@ fn interested_request(
     let b: Box<dyn Task + Send> = Box::new(ret);
     b
 }
-pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
+pub fn parse_request(request: String, stream: Stream) -> Box<dyn Task + Send> {
     // let empty = EmptyTask {
     //     stream: Some(stream),
     // };
@@ -145,31 +164,38 @@ pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task
         }
         count += 1;
     }
-    let empty = EmptyTask { stream: stream };
-    return Box::new(empty);
-}
-
-fn create_dummy_tcp_stream() -> Option<TcpStream> {
-    // Connect to the localhost
-    let stream = match TcpStream::connect("127.0.0.1:0") {
-        Ok(s) => s,
-        Err(_) => return None,
-    };
-
-    // Close the connection
-    if let Err(_) = stream.shutdown(std::net::Shutdown::Both) {
-        return None;
+    match stream {
+        Single(s) => {
+            let empty = EmptyTask { stream: s };
+            return Box::new(empty);
+        }
+        Multiple(_) => {
+            let empty = EmptyTask { stream: None };
+            return Box::new(empty);
+        }
     }
-
-    Some(stream)
 }
+
+// Connect to the localhost
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use env_logger::Builder;
     use std::io::Write;
+    fn create_dummy_tcp_stream() -> Option<TcpStream> {
+        let stream = match TcpStream::connect("127.0.0.1:8000") {
+            Ok(s) => s,
+            Err(_) => return None,
+        };
 
+        // Close the connection
+        if let Err(_) = stream.shutdown(std::net::Shutdown::Both) {
+            return None;
+        }
+
+        Some(stream)
+    }
     #[test]
     fn init_logger() {
         Builder::new()
@@ -179,7 +205,11 @@ mod tests {
     #[test]
     fn test_data_request() {
         let req = "data av12 [3:110011]";
-        let stream = create_dummy_tcp_stream();
+        let stream_option = create_dummy_tcp_stream();
+        let stream = match stream_option {
+            Some(tcp_stream) => Stream::Single(Some(tcp_stream)),
+            None => panic!("Failed to create dummy TCP stream"),
+        };
         parse_request(req.to_string(), stream);
     }
 }
