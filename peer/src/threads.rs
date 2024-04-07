@@ -77,7 +77,7 @@ impl Pool {
                         match con {
                             Ok(stream) => {
                                 debug!("incoming from {}", stream.peer_addr().unwrap());
-                                self.handle_client(stream);
+                                //self.handle_client(stream);
                             }
                             Err(e) => {
                                 error!("{}", e);
@@ -117,7 +117,8 @@ impl Pool {
         if bytes_read > 0 {
             let msg: String = String::from_utf8_lossy(&buff).into_owned();
             info!("Received msg {}", msg);
-            let mut task: Box<dyn Task + Send> = parse_request(msg, stream);
+            let mut task = parse_request(msg, Some(stream));
+            self.add_task(task);
         } else {
             error!("Connection close by {:?}", stream.peer_addr());
         }
