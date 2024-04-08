@@ -1,10 +1,12 @@
 //use crate::back::get_peer_and_piece_indices;
-use crate::back::{get_chunk_from_file, get_wanted_piece_from_peer};
+use crate::back::{get_chunks_from_file, get_wanted_piece_from_peer, FileAssembler};
 use crate::com::send;
 use crate::data::PeerConfig;
-use crate::db::get_buffermap;
+use crate::db::{get_buffermap, get_file};
 use crate::tasks::{Data, Getpieces, Have, Interested, Task};
-use log::{error, trace};
+use hashbrown::HashMap;
+use log::error;
+
 /// write a data to TCP
 impl Task for Getpieces {
     /// a file key and a list of index of pieces
@@ -18,11 +20,22 @@ impl Task for Getpieces {
                 let key = &self.key;
                 // get the indexes of each piece
                 let piece_indexes = &self.pieces;
-                let data: Vec<(u32, String)> = todo!("chunk_size");
+                let data: HashMap<u32, Vec<u8>> =
+                    get_chunks_from_file(key.clone(), chunk_size, piece_indexes.clone());
                 // piece are already in the form of a byte sequence wrapped in a string
                 let piece_array: Vec<String> = data
                     .iter()
-                    .map(|(index, piece)| format!("{}:{}", index, piece))
+                    .map(|(index, piece)| {
+                        format!(
+                            "{}:{}",
+                            index,
+                            piece
+                                .iter()
+                                .map(|x| x.to_string())
+                                .collect::<Vec<String>>()
+                                .join(" ")
+                        )
+                    })
                     .collect();
                 let message = format!("data {} [{}]", key, piece_array.join(" "));
                 send(stream, message);
@@ -39,10 +52,27 @@ impl Task for Getpieces {
 
 /// get data and write it to file
 impl Task for Data {
-    fn process(&mut self) {}
+    fn process(&mut self) {
+        let stream = &mut self.stream;
+        match stream {
+            Some(stream) => {
+                let key = &self.key;
+                let pieces = &self.pieces;
+                let file_path = get_file(key).unwrap().file_name;
+                let mut file_assembler = FileAssembler::new(&file_path, 1024 * 8).unwrap();
+                for (index, piece) in pieces.iter() {
+                    file_assembler.add_chunk(*index, piece.clone()).unwrap();
+                }
+            }
+            None => {
+                error!("No stream found");
+            }
+        }
+    }
 }
 
 /// send a getpieces message to TCP
+// getpieces $Key [$Index1 $Index2 $Index3 …]
 impl Task for Have {
     fn process(&mut self) {
         // create a peer_config from ip, and port taken by the stream
@@ -71,6 +101,7 @@ impl Task for Have {
     }
 }
 // send a have message to TCP
+// have $Key $BufferMap
 impl Task for Interested {
     fn process(&mut self) {
         let stream = &mut self.stream;
