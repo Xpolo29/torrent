@@ -1,7 +1,6 @@
-use crate::data::MetaFile;
 use crate::respons_handler::Answer;
 use log::{info, warn};
-use std::io::{self, BufRead, BufReader, Read, Result, Write};
+use std::io::{self, BufRead, BufReader, Read, Write};
 use std::path::Path;
 
 pub fn get_file_names<R: Read>(reader: R) -> Vec<String> {
