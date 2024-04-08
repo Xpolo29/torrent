@@ -1,5 +1,5 @@
 //use crate::back::get_peer_and_piece_indices;
-use crate::back::get_chunk_from_file;
+use crate::back::{get_chunk_from_file, get_wanted_piece_from_peer};
 use crate::com::send;
 use crate::data::PeerConfig;
 use crate::db::get_buffermap;
@@ -44,7 +44,31 @@ impl Task for Data {
 
 /// send a getpieces message to TCP
 impl Task for Have {
-    fn process(&mut self) {}
+    fn process(&mut self) {
+        // create a peer_config from ip, and port taken by the stream
+        let stream = &mut self.stream;
+        match stream {
+            Some(stream) => {
+                let key = &self.key;
+                let peer_addr = stream.peer_addr().unwrap();
+                let port = peer_addr.port();
+                let ip = peer_addr.ip();
+                let peerconfig = PeerConfig {
+                    address: ip.to_string(),
+                    port,
+                };
+                let wanted_indexes: Vec<u32> = get_wanted_piece_from_peer(peerconfig);
+                let wanted_indexes_str: Vec<String> =
+                    wanted_indexes.iter().map(|i| i.to_string()).collect();
+                let message = format!("getpieces {} [{}]", key, wanted_indexes_str.join(" "));
+                send(stream, message);
+            }
+            None => {
+                error!("No stream found");
+            }
+        }
+        // get the index that current peer wants from the peer that sent the have message specificcly
+    }
 }
 // send a have message to TCP
 impl Task for Interested {
@@ -52,11 +76,12 @@ impl Task for Interested {
         let stream = &mut self.stream;
         match stream {
             Some(stream) => {
-                // receive interessed key
+                // receive interested key
                 let key = &self.key;
+                let peer_addr = stream.peer_addr().unwrap();
                 // create peerconfig to pass to get_buffermap
-                let port = self.stream.as_ref().unwrap().peer_addr().unwrap().port();
-                let ip = self.stream.as_ref().unwrap().peer_addr().unwrap().ip();
+                let port = peer_addr.port();
+                let ip = peer_addr.ip();
                 let peerconfig = PeerConfig {
                     address: ip.to_string(),
                     port,
@@ -66,7 +91,12 @@ impl Task for Interested {
 
                 match buffermap {
                     Some(buffermap) => {
-                        todo!();
+                        // buffermap = [0,1,0,1,0]
+                        let buffermap = buffermap
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<String>>()
+                            .join(" ");
                         let message = format!("data {} {}", key, buffermap);
                         send(stream, message);
                     }

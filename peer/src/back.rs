@@ -36,7 +36,10 @@ fn get_chunk(file_path: &str, chunk_size: usize, chunk_index: usize) -> std::io:
     buffer.truncate(bytes_read);
     Ok(buffer)
 }
-
+/// analyze the buffermap and return the rarest piece to be asked for peer
+pub fn get_wanted_piece_from_peer(peer: PeerConfig) -> Vec<u32> {
+    todo!();
+}
 #[cfg(test)]
 mod tests {
     use super::*;
