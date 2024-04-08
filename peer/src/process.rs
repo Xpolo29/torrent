@@ -53,8 +53,7 @@ impl Task for Getpieces {
 /// get data and write it to file
 impl Task for Data {
     fn process(&mut self) {
-        let stream = &mut self.stream;
-        match stream {
+        match &mut self.stream {
             Some(stream) => {
                 let key = &self.key;
                 let pieces = &self.pieces;
@@ -63,6 +62,7 @@ impl Task for Data {
                 for (index, piece) in pieces.iter() {
                     file_assembler.add_chunk(*index, piece.clone()).unwrap();
                 }
+                send(stream, "ok\n".to_string());
             }
             None => {
                 error!("No stream found");

@@ -1,4 +1,3 @@
-use crate::com::{connect, getfile_request, receive, send};
 use crate::data::PeerConfig;
 use crate::db::get_file;
 use hashbrown::HashMap;
@@ -6,13 +5,6 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::{Seek, SeekFrom, Write};
-
-/// takes a file and help know which peer to ask for what piece
-fn get_peer_and_piece_indices(key: String) -> Vec<(PeerConfig, Vec<u32>)> {
-    // fetch buffermap from all leechers/seeders that have it
-    // push the rarest piece to the beginning of the vector
-    todo!();
-}
 
 pub fn get_chunks_from_file(
     key: String,

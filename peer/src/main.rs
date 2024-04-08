@@ -9,11 +9,11 @@ mod respons_handler;
 mod tasks;
 //mod threads;
 mod userinput;
-use data::{PeerConfig, TrackerConfig};
+use data::TrackerConfig;
 use menu::display_menu;
 use simplelog::*;
 use std::fs::File;
-use tasks::EmptyTask;
+//use tasks::EmptyTask;
 //use threads::Pool;
 
 fn main() {
