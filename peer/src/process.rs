@@ -1,11 +1,10 @@
 //use crate::back::get_peer_and_piece_indices;
+use crate::back::get_chunk_from_file;
 use crate::com::send;
 use crate::data::PeerConfig;
 use crate::db::get_buffermap;
 use crate::tasks::{Data, Getpieces, Have, Interested, Task};
-use hex;
 use log::{error, trace};
-
 /// write a data to TCP
 impl Task for Getpieces {
     /// a file key and a list of index of pieces
@@ -48,26 +47,29 @@ impl Task for Have {
     fn process(&mut self) {}
 }
 // send a have message to TCP
-// PRECOND : buffermap is already a byte sequence
 impl Task for Interested {
     fn process(&mut self) {
-        // receive interessed key
-        let key = &self.key;
-        // create peerconfig to pass to get_buffermap
-        let port = self.stream.as_ref().unwrap().peer_addr().unwrap().port();
-        let ip = self.stream.as_ref().unwrap().peer_addr().unwrap().ip();
-        let peerconfig = PeerConfig {
-            address: ip.to_string(),
-            port,
-        };
-        // get buffermap from the database
         let stream = &mut self.stream;
         match stream {
             Some(stream) => {
+                // receive interessed key
+                let key = &self.key;
+                // create peerconfig to pass to get_buffermap
+                let port = self.stream.as_ref().unwrap().peer_addr().unwrap().port();
+                let ip = self.stream.as_ref().unwrap().peer_addr().unwrap().ip();
+                let peerconfig = PeerConfig {
+                    address: ip.to_string(),
+                    port,
+                };
+                // get buffermap from the database
                 let buffermap = get_buffermap(peerconfig, key);
 
                 match buffermap {
-                    Some(buffermap) => {}
+                    Some(buffermap) => {
+                        todo!();
+                        let message = format!("data {} {}", key, buffermap);
+                        send(stream, message);
+                    }
                     None => {
                         error!("No buffermap found");
                     }
