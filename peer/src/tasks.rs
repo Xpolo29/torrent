@@ -32,7 +32,7 @@ pub struct Interested {
 pub struct Have {
     pub key: String,
     pub buffermap: Vec<u8>,
-    pub stream: Vec<Option<TcpStream>>,
+    pub stream: Option<TcpStream>,
 }
 pub struct Data {
     pub key: String,
