@@ -1,10 +1,58 @@
+use crate::com::{connect, getfile_request, receive, send};
 use crate::data::PeerConfig;
 use crate::db::get_file;
+use crate::respons_handler::ExpectPeers;
+use crate::respons_handler::ExpectedAnswer;
+use crate::tasks::{Peers, Task};
 use hashbrown::HashMap;
+use log::error;
+use md5::digest::block_buffer::Error;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::{Seek, SeekFrom, Write};
+pub fn start_download(
+    key: String,
+    tracker_port: u16,
+    tracker_adress: &str,
+) -> Result<Vec<Box<dyn Task + Send>>, Error> {
+    // extract the meta data from the file
+    let meta_file = get_file(&key).unwrap();
+    let chunk_size = meta_file.piece_size;
+    // get the peers thare hold buffermap for the file
+    if let Some(mut stream) = connect(tracker_port, &tracker_adress) {
+        let getfile_message = getfile_request(key);
+        send(&mut stream, getfile_message);
+        let response = receive(&mut stream);
+        match ExpectPeers.check_answer(&response) {
+            Ok(valeur) => {
+                // peers that hold each buffermap
+                let peers = ExpectPeers.retrieve_data(response);
+                // now we should ask each peer for their buffermap that is a task
+                // create the peer task
+                match peers {
+                    ExpectedAnswer::Peers(peers) => {
+                        let mut tasks = Vec::new();
+                        for peer in peers {
+                            tasks.push(Box::new(Peers {
+                                key: key.clone(),
+                                peers: peer,
+                            }));
+                        }
+                        tasks
+                    }
+                    _ => {
+                        error!("couldn't retrieve peers from tracker");
+                        Err(Box::new(Error))
+                    }
+                }
+            }
+            Err(valeur) => {
+                error!("Tracker bad peers answer {}", valeur);
+            }
+        }
+    }
+}
 
 pub fn get_chunks_from_file(
     key: String,

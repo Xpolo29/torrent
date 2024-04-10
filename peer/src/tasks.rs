@@ -1,5 +1,8 @@
 use hashbrown::HashMap;
+use num_traits::Saturating;
 use std::net::TcpStream;
+
+use crate::data::PeerConfig;
 
 /// task struct, which is the parent class
 pub trait Task: Send {
@@ -38,4 +41,9 @@ pub struct Data {
     pub key: String,
     pub pieces: HashMap<u32, Vec<u8>>,
     pub stream: Option<TcpStream>,
+}
+
+pub struct Peers {
+    pub key: String,
+    pub peers: PeerConfig,
 }

@@ -68,12 +68,14 @@ impl ExpectedAnswer for ExpectList {
             }
         }
     }
-// precond : answer is a valid list answer
+    // precond : answer is a valid list answer
     fn retrieve_data(&self, answer: String) -> Answer {
         let answer = answer.trim().to_string();
         trace!("Answer to be retrieved: {}", answer);
-        let answer = &answer[6..answer.len()-1]; // Remove "list [" and "]"
-        let re_file = Regex::new(r"(?P<file_name>\S+) (?P<length>\d+) (?P<piece_size>\d+) (?P<hash>\w+)").unwrap();
+        let answer = &answer[6..answer.len() - 1]; // Remove "list [" and "]"
+        let re_file =
+            Regex::new(r"(?P<file_name>\S+) (?P<length>\d+) (?P<piece_size>\d+) (?P<hash>\w+)")
+                .unwrap();
         let mut files = Vec::new();
         for caps in re_file.captures_iter(answer) {
             let file = MetaFile {
@@ -86,23 +88,29 @@ impl ExpectedAnswer for ExpectList {
         }
         Answer::List(files)
     }
-        
+
     fn shutdown(&self, stream: &mut TcpStream) {
         stream.shutdown(std::net::Shutdown::Both).unwrap();
     }
 }
 
 impl ExpectedAnswer for ExpectPeers {
-    fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {todo!()}
-    fn retrieve_data(&self, answer: String) -> Answer {todo!()}
-    fn shutdown(&self, stream: &mut TcpStream) {todo!()}
-
+    fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {
+        todo!()
+    }
+    fn retrieve_data(&self, answer: String) -> Answer {
+        todo!()
+    }
+    fn shutdown(&self, stream: &mut TcpStream) {
+        todo!()
+    }
 }
+
 #[derive(Debug)]
 pub enum Answer {
     Ok,
     List(Vec<MetaFile>),
-    Peers(Vec<PeerConfig>)
+    Peers(Vec<PeerConfig>),
 }
 pub struct ExpectOk;
 pub struct ExpectList;
