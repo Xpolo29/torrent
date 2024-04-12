@@ -1,11 +1,11 @@
+use crate::back::start_download;
 use crate::com::{connect, look, receive, seed, send};
-use crate::data::{MetaFile, TrackerConfig, PeerConfig};
-use crate::respons_handler::{ExpectList, ExpectOk, ExpectedAnswer, Answer};
+use crate::data::{MetaFile, PeerConfig, TrackerConfig};
+use crate::db::add_seed_file_to_db;
+use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
 use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
 use std::io;
-use crate::db::add_seed_file_to_db;
-
 
 pub fn display_menu(tracker_config: TrackerConfig) {
     loop {
@@ -65,9 +65,8 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         .map(|file| MetaFile::new(file.to_string()))
         .collect(); // Create vector of Metafiles out of the files name
 
-
     let seeded_files2 = seeded_files.clone();
-    for seed in seeded_files2{
+    for seed in seeded_files2 {
         add_seed_file_to_db(seed);
     }
 
@@ -90,16 +89,19 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         ExpectOk.shutdown(&mut stream);
     }
 }
-fn download_section(tracker_port: u16, tracker_adress: &str) {
-    // The list of downloadable files should be the result of search section 
+fn download_section(
+    tracker_port: u16,
+    tracker_adress: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // The list of downloadable files should be the result of search section
     // todo!();
     println!("You're in download");
     // display files along with their size
     // if two files are name the same user should be able to choose which one to download
-let file_key = match choose_file(io::stdin(), &search_section(tracker_port, tracker_adress)) {
-    Some(hash) => hash.to_string(),
-    None => String::new(),
-};    println!("You chose to download: {}", file_key);
-    // download the file
-    // todo!();
+    let file_key = match choose_file(io::stdin(), &search_section(tracker_port, tracker_adress)) {
+        Some(hash) => hash.to_string(),
+        None => String::new(),
+    };
+    println!("You chose to download: {}", file_key);
+    start_download(file_key, tracker_port, tracker_adress)
 }

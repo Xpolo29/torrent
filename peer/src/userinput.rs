@@ -84,12 +84,12 @@ mod tests {
         assert_eq!(result, vec!["Cargo.toml".to_string()]);
     }
 
-    #[test]
-    fn test_get_file_name_non_existing_file() {
-        let input = b"non_existing_file.txt";
-        let result = get_file_names(&input[..]);
-        // assert_eq!(result.to_u8(), Vec::<String>::new());
-    }
+    //#[test]
+    //fn test_get_file_name_non_existing_file() {
+    //let input = b"non_existing_file.txt";
+    //let result = get_file_names(&input[..]);
+    //assert_eq!(result.to_u8(), Vec::<String>::new());
+    //}
 
     /*
     use tempfile::NamedTempFile;

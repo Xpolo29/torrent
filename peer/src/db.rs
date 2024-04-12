@@ -21,7 +21,7 @@ lazy_static! {
         Mutex::new(HashMap::new());
 }
 
-fn get_peer_key(peer: PeerConfig) -> String {
+pub fn get_peer_key(peer: PeerConfig) -> String {
     format!("{}:{}", peer.address, peer.port.to_string())
 }
 
@@ -38,7 +38,7 @@ fn set_peer(key: &str, peer: PeerConfig) {
     // drop(db);
 }
 
-fn get_file(key: &str) -> Option<MetaFile> {
+pub fn get_file(key: &str) -> Option<MetaFile> {
     let db = FILEDB.lock().unwrap();
     let ret = db.get(&key.to_string()).cloned();
     // drop(db);
@@ -51,7 +51,7 @@ fn set_file(key: &str, file: MetaFile) {
     // drop(db);
 }
 
-fn set_buffermap(file_key: String, peer_key: String, buffermap: Vec<u8>) {
+pub fn set_buffermap(file_key: String, peer_key: String, buffermap: Vec<u8>) {
     let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
     let file_buffermaps = buffermap_db
         .entry(file_key.clone())
