@@ -43,7 +43,8 @@ pub struct Data {
     pub stream: Option<TcpStream>,
 }
 
-pub struct Peers {
-    pub key: String,
-    pub peers: PeerConfig,
+#[derive(Debug)]
+pub struct Peer {
+    pub hash: String,
+    pub config: PeerConfig,
 }

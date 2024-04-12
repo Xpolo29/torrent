@@ -1,6 +1,6 @@
 use crate::data::{MetaFile, PeerConfig};
+use crate::tasks::Peer;
 use log::{error, trace};
-
 use regex::Regex;
 use std::error::Error;
 use std::io;
@@ -110,7 +110,7 @@ impl ExpectedAnswer for ExpectPeers {
 pub enum Answer {
     Ok,
     List(Vec<MetaFile>),
-    Peers(Vec<PeerConfig>),
+    Peers(Vec<Peer>),
 }
 pub struct ExpectOk;
 pub struct ExpectList;
