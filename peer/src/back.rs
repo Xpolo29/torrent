@@ -20,7 +20,12 @@ pub fn start_download(
     let chunk_size = meta_file.piece_size;
     // get the peers thare hold buffermap for the file
     if let Some(mut stream) = connect(tracker_port, &tracker_adress) {
+
+
+        let key_clone = key.clone();
         let getfile_message = getfile_request(key);
+
+
         send(&mut stream, getfile_message);
         let response = receive(&mut stream);
         match ExpectPeers.check_answer(&response) {
@@ -29,12 +34,14 @@ pub fn start_download(
                 let peers = ExpectPeers.retrieve_data(response);
                 // now we should ask each peer for their buffermap that is a task
                 // create the peer task
+                let key_clone_clone = key_clone.clone();
+
                 match peers {
                     Answer::Peers(peers) => {
                         let mut tasks = Vec::new();
                         for peer in peers {
                             tasks.push(Box::new(Peer {
-                                hash: key.clone(),
+                                hash: key_clone_clone.clone(),
                                 config: peer.config,
                             }) as Box<dyn Task + Send>);
                         }

@@ -6,8 +6,9 @@ use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
 use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
 use std::io;
+use crate::threads::Pool;
 
-pub fn display_menu(tracker_config: TrackerConfig) {
+pub fn display_menu(tracker_config: TrackerConfig, pool: Pool) {
     loop {
         println!("Main Menu");
         println!("1. Upload");
@@ -22,11 +23,11 @@ pub fn display_menu(tracker_config: TrackerConfig) {
             Ok(num) => num,
             Err(_) => continue,
         };
-
+        let pool_clone = pool.clone();
         match input {
             // Escape should get back to menu from search, upload and download
             1 => upload_section(tracker_config.port, &tracker_config.address),
-            2 => download_section(tracker_config.port, &tracker_config.address),
+            2 => download_section(tracker_config.port, &tracker_config.address, pool_clone),
             _ => println!("Invalid input, please enter 1 or 2"),
         }
     }
@@ -92,7 +93,8 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
 fn download_section(
     tracker_port: u16,
     tracker_adress: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+    mut pool: Pool,
+){// -> Result<(), Box<dyn std::error::Error>> {
     // The list of downloadable files should be the result of search section
     // todo!();
     println!("You're in download");
@@ -103,5 +105,18 @@ fn download_section(
         None => String::new(),
     };
     println!("You chose to download: {}", file_key);
-    start_download(file_key, tracker_port, tracker_adress)
+    let result = start_download(file_key, tracker_port, tracker_adress);
+
+    match result {
+        Ok(task_list) => {
+            for task in task_list{
+                pool.add_task(task);
+            }
+        }
+        Err(errors) => {
+            println!("Operation failed because reasons");
+        }
+    }
+
+
 }
