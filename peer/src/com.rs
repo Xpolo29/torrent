@@ -35,9 +35,7 @@ use crate::db::{get_seeding_files, get_leeching_files};
 /// ```
 
 
-
-
-pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
+pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String { // why is seeded different from leached (type) ?
     /*
     into_iter() : transform the vector into an iterator
     map() : apply a function to each element of the iterator
@@ -62,6 +60,7 @@ pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String
     );
     msg
 }
+
 /// takes a filename and a filesize as String and format them into a look message
 pub fn look(filename: String, filesize: String) -> String {
     let mut res: String = "look [".to_string();
@@ -74,7 +73,7 @@ pub fn look(filename: String, filesize: String) -> String {
         if b {
             res = format!("{} filesize{}", res, filesize);
         } else {
-            res = format!("{}filesize{}", res, filesize);
+            res = format!("{}filesize{}", res, filesize); // why do we add filesize if its empty ?
         }
     }
     format!("{}]\n", res)
@@ -84,6 +83,7 @@ pub fn look(filename: String, filesize: String) -> String {
 pub fn getfile_request(key: String) -> String {
     format!("getfile [{}]\n", key)
 }
+
 /// connects to a given adress and port
 pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
     let stream = TcpStream::connect(format!("{}:{}", adress, port));
@@ -98,11 +98,13 @@ pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
         }
     }
 }
+
 /// Sends a message to a given adress and port
 pub fn send(stream: &mut TcpStream, message: String) {
     stream.write(message.as_bytes()).unwrap();
     info!("Sending to tracker: {}", message);
 }
+
 /// Receives a message from a given adress and port
 pub fn receive(stream: &mut TcpStream) -> String {
     let mut buffer = [0; 1024];
