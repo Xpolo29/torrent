@@ -11,6 +11,24 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::{Seek, SeekFrom, Write};
+
+
+
+/// Starts the download process for a file.
+///
+/// This function connects to a tracker, sends a request for the file, and receives a response.
+/// It then checks the response and retrieves the peers that hold the file.
+/// For each peer, it creates a new task and adds it to a vector of tasks.
+///
+/// # Arguments
+/// * `key` - A string that holds the key of the file to be downloaded.
+/// * `tracker_port` - A u16 that represents the port of the tracker.
+/// * `tracker_adress` - A string slice that holds the address of the tracker.
+///
+/// # Returns
+/// * `Result<Vec<Box<dyn Task + Send>>, Error>` - A Result which is either:
+///     * `Ok(Vec<Box<dyn Task + Send>>)` - A vector of boxed tasks if the operation is successful.
+///     * `Err(Error)` - An error if the operation fails.
 pub fn start_download(
     key: String,
     tracker_port: u16,
@@ -19,7 +37,7 @@ pub fn start_download(
     // extract the meta data from the file
     let meta_file = get_file(&key).unwrap();
     let chunk_size = meta_file.piece_size;
-    // get the peers thare hold buffermap for the file
+    // get the peers that hold buffermap for the file
     if let Some(mut stream) = connect(tracker_port, &tracker_adress) {
         let getfile_message = getfile_request(key);
         send(&mut stream, getfile_message);
@@ -42,7 +60,7 @@ pub fn start_download(
                         tasks
                     }
                     _ => {
-                        error!("couldn't retrieve peers from tracker");
+                        error!("Couldn't retrieve peers from tracker");
                         Err(Box::new(Error))
                     }
                 }
@@ -54,6 +72,18 @@ pub fn start_download(
     }
 }
 
+/// Retrieves the specified chunks from a file.
+///
+/// This function iterates over a vector of chunk indices, retrieves each chunk from the file,
+/// and stores it in a HashMap where the key is the chunk index and the value is the chunk data.
+///
+/// # Arguments
+/// * `key` - A string that holds the key of the file.
+/// * `chunk_size` - A u32 that represents the size of each chunk.
+/// * `chunk_array` - A vector of u32s that represents the indices of the chunks to be retrieved.
+///
+/// # Returns
+/// * `HashMap<u32, Vec<u8>>` - A HashMap where the key is the chunk index and the value is the chunk data.
 pub fn get_chunks_from_file(
     key: String,
     chunk_size: u32,
@@ -66,6 +96,20 @@ pub fn get_chunks_from_file(
     }
     chunks
 }
+
+/// Retrieves a specific chunk from a file.
+///
+/// This function gets the metadata of the file, constructs the file path, and retrieves the specified chunk.
+///
+/// # Arguments
+/// * `key` - A string that holds the key of the file.
+/// * `chunk_size` - A u32 that represents the size of each chunk.
+/// * `chunk_index` - A u32 that represents the index of the chunk to be retrieved.
+///
+/// # Returns
+/// * `std::io::Result<Vec<u8>>` - A Result which is either:
+///     * `Ok(Vec<u8>)` - A vector of bytes representing the chunk if the operation is successful.
+///     * `Err(std::io::Error)` - An error if the operation fails.
 fn get_chunk_from_file(key: String, chunk_size: u32, chunk_index: u32) -> std::io::Result<Vec<u8>> {
     let meta_file = get_file(&key).ok_or(std::io::Error::new(
         std::io::ErrorKind::NotFound,
@@ -75,6 +119,19 @@ fn get_chunk_from_file(key: String, chunk_size: u32, chunk_index: u32) -> std::i
     get_chunk(file_path, chunk_size, chunk_index)
 }
 
+/// Retrieves a specific chunk from a file.
+///
+/// This function opens the file, seeks to the start of the specified chunk, reads the chunk into a buffer, and returns the buffer.
+///
+/// # Arguments
+/// * `file_path` - A string slice that holds the path of the file.
+/// * `chunk_size` - A u32 that represents the size of each chunk.
+/// * `chunk_index` - A u32 that represents the index of the chunk to be retrieved.
+///
+/// # Returns
+/// * `std::io::Result<Vec<u8>>` - A Result which is either:
+///     * `Ok(Vec<u8>)` - A vector of bytes representing the chunk if the operation is successful.
+///     * `Err(std::io::Error)` - An error if the operation fails.
 fn get_chunk(file_path: &str, chunk_size: u32, chunk_index: u32) -> std::io::Result<Vec<u8>> {
     let mut file = File::open(file_path)?;
     let start = chunk_size * chunk_index;
@@ -84,10 +141,13 @@ fn get_chunk(file_path: &str, chunk_size: u32, chunk_index: u32) -> std::io::Res
     buffer.truncate(bytes_read);
     Ok(buffer)
 }
-///
+
+
+/// Not implemented yet
 pub fn get_wanted_piece_from_peer(peer: PeerConfig) -> Vec<u32> {
     todo!();
 }
+
 pub struct FileAssembler {
     file: std::fs::File,
     chunk_size: u32,
