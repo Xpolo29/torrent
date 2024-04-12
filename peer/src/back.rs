@@ -1,9 +1,8 @@
 use crate::com::{connect, getfile_request, receive, send};
 use crate::data::PeerConfig;
 use crate::db::get_file;
-use crate::respons_handler::ExpectPeers;
-use crate::respons_handler::ExpectedAnswer;
-use crate::tasks::{Peers, Task};
+use crate::respons_handler::{Answer, ExpectPeers, ExpectedAnswer};
+use crate::tasks::{Peer, Task};
 use hashbrown::HashMap;
 use log::error;
 use md5::digest::block_buffer::Error;
@@ -31,26 +30,29 @@ pub fn start_download(
                 // now we should ask each peer for their buffermap that is a task
                 // create the peer task
                 match peers {
-                    ExpectedAnswer::Peers(peers) => {
+                    Answer::Peers(peers) => {
                         let mut tasks = Vec::new();
                         for peer in peers {
-                            tasks.push(Box::new(Peers {
-                                key: key.clone(),
-                                peers: peer,
-                            }));
+                            tasks.push(Box::new(Peer {
+                                hash: key.clone(),
+                                config: peer.config,
+                            }) as Box<dyn Task + Send>);
                         }
-                        tasks
+                        Ok(tasks)
                     }
                     _ => {
                         error!("couldn't retrieve peers from tracker");
-                        Err(Box::new(Error))
+                        Err(Error)
                     }
                 }
             }
             Err(valeur) => {
                 error!("Tracker bad peers answer {}", valeur);
+                Err(Error)
             }
         }
+    } else {
+        Err(Error)
     }
 }
 

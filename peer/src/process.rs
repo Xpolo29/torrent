@@ -3,7 +3,7 @@ use crate::back::{get_chunks_from_file, get_wanted_piece_from_peer, FileAssemble
 use crate::com::send;
 use crate::data::PeerConfig;
 use crate::db::{get_buffermap, get_file};
-use crate::tasks::{Data, Getpieces, Have, Interested, Task};
+use crate::tasks::{Data, Getpieces, Have, Interested, Peer, Task};
 use hashbrown::HashMap;
 use log::error;
 
@@ -143,6 +143,11 @@ impl Task for Interested {
     }
 }
 
+impl Task for Peer {
+    fn process(&mut self) {
+        println!("Peers task");
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
