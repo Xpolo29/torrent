@@ -11,8 +11,6 @@ use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::{Seek, SeekFrom, Write};
 
-
-
 /// Starts the download process for a file.
 ///
 /// This function connects to a tracker, sends a request for the file, and receives a response.
@@ -36,9 +34,14 @@ pub fn start_download(
     // extract the meta data from the file
     let meta_file = get_file(&key).unwrap();
     let chunk_size = meta_file.piece_size;
-    // get the peers that hold buffermap for the file
+    // get the peers thare hold buffermap for the file
     if let Some(mut stream) = connect(tracker_port, &tracker_adress) {
+
+
+        let key_clone = key.clone();
         let getfile_message = getfile_request(key);
+
+
         send(&mut stream, getfile_message);
         let response = receive(&mut stream);
         match ExpectPeers.check_answer(&response) {
@@ -47,19 +50,21 @@ pub fn start_download(
                 let peers = ExpectPeers.retrieve_data(response);
                 // now we should ask each peer for their buffermap that is a task
                 // create the peer task
+                let key_clone_clone = key_clone.clone();
+
                 match peers {
                     Answer::Peers(peers) => {
                         let mut tasks = Vec::new();
                         for peer in peers {
                             tasks.push(Box::new(Peer {
-                                hash: key.clone(),
+                                hash: key_clone_clone.clone(),
                                 config: peer.config,
                             }) as Box<dyn Task + Send>);
                         }
                         Ok(tasks)
                     }
                     _ => {
-                        error!("Couldn't retrieve peers from tracker");
+                        error!("couldn't retrieve peers from tracker");
                         Err(Error)
                     }
                 }
@@ -121,6 +126,7 @@ fn get_chunk_from_file(key: String, chunk_size: u32, chunk_index: u32) -> std::i
     get_chunk(file_path, chunk_size, chunk_index)
 }
 
+
 /// Retrieves a specific chunk from a file.
 ///
 /// This function opens the file, seeks to the start of the specified chunk, reads the chunk into a buffer, and returns the buffer.
@@ -143,13 +149,10 @@ fn get_chunk(file_path: &str, chunk_size: u32, chunk_index: u32) -> std::io::Res
     buffer.truncate(bytes_read);
     Ok(buffer)
 }
-
-
-/// Not implemented yet
+///
 pub fn get_wanted_piece_from_peer(peer: PeerConfig) -> Vec<u32> {
     todo!();
 }
-
 pub struct FileAssembler {
     file: std::fs::File,
     chunk_size: u32,

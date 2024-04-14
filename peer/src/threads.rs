@@ -10,6 +10,7 @@ use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+
 //gloval var, used to stop threads
 static mut RUNNING: bool = true;
 
@@ -17,13 +18,22 @@ static mut RUNNING: bool = true;
 pub struct Pool {
     //tasklist : Arc<Mutex<Vec<Task>>>,
     tasklist: Arc<Mutex<VecDeque<Box<dyn Task + Send>>>>,
-    thread_pool: Vec<std::thread::JoinHandle<i32>>,
+    thread_pool: Arc<Mutex<VecDeque<std::thread::JoinHandle<i32>>>>,
+}
+
+impl Clone for Pool {
+    fn clone(&self) -> Self {
+        Pool {
+            tasklist: self.tasklist.clone(),
+            thread_pool: self.thread_pool.clone(),
+        }
+    }
 }
 
 impl Pool {
     //Pool::pool.new(NB_THREADS)
     pub fn new(size: i32) -> Pool {
-        let mut thread_pool = Vec::new();
+        let thread_pool = Arc::new(Mutex::new(VecDeque::new()));
         let tasklist: Arc<Mutex<VecDeque<Box<dyn Task + Send>>>> =
             Arc::new(Mutex::new(VecDeque::new()));
 
@@ -57,7 +67,7 @@ impl Pool {
 
                 res
             });
-            thread_pool.push(handle);
+            {thread_pool.lock().unwrap().push_front(handle);}
         }
 
         Pool {
@@ -66,39 +76,16 @@ impl Pool {
         }
     }
 
-    /*
     pub fn start_listening(&mut self, pc: PeerConfig) {
         let add = format!("{}:{}", pc.address, pc.port);
         let door = TcpListener::bind(add).unwrap();
+        let tp_copy1 = self.thread_pool.clone();
+        let tp_copy2 = self.thread_pool.clone();
+
+        let tasklist_clone = self.tasklist.clone();
+
         let lithread = thread::spawn(move || {
-            unsafe {
-                while RUNNING {
-                    for con in door.incoming() {
-                        match con {
-                                Ok(stream) => {
-                                    debug!("incoming from {}", stream.peer_addr().unwrap());
-                                    self.handle_client(stream);
-                                }
-                                Err(e) => {
-                                    error!("{}", e);
-                                }
-                            }
-                        }
-                    }
-                }
-                0
-            });
-            self.thread_pool.push(lithread);
-        }
-        */
 
-
-    pub fn start_listening(&mut self, pc: PeerConfig) {
-        let add = format!("{}:{}", pc.address, pc.port);
-        let door = TcpListener::bind(add).unwrap();
-
-        let thread_pool = Arc::clone(&self.thread_pool);
-        let lithread = thread::spawn(move || {
             while unsafe { RUNNING } {
                 for con in door.incoming() {
                     match con {
@@ -106,11 +93,16 @@ impl Pool {
                             debug!("incoming from {}", stream.peer_addr().unwrap());
 
                             let stream_clone = stream.try_clone().unwrap();
-                            let thread_pool_clone = Arc::clone(&thread_pool);
+
+                            let tasklist_clone_clone = tasklist_clone.clone();
                             let handle = thread::spawn(move || {
-                                self.handle_client(stream_clone);
+
+                                handle_client(tasklist_clone_clone, stream_clone);
+                                0
                             });
-                            thread_pool_clone.lock().unwrap().push(handle);
+                            {
+                                tp_copy1.lock().unwrap().push_front(handle);
+                            }
                         }
                         Err(e) => {
                             error!("{}", e);
@@ -118,9 +110,12 @@ impl Pool {
                     }
                 }
             }
+            0
         });
 
-        self.thread_pool.push(lithread);
+        {
+        tp_copy2.lock().unwrap().push_front(lithread);
+        }
     }
 
     /// start update thread
@@ -137,31 +132,10 @@ impl Pool {
             }
             0
         });
-        self.thread_pool.push(upthread);
-    }
-
-    /// used by listening thread
-    pub fn handle_client(&mut self, mut stream: TcpStream) {
-        let mut reader = BufReader::new(&mut stream);
-        let mut buff: Vec<u8> = Vec::new();
-        let bytes_read = reader.read_until(b'\n', &mut buff).unwrap();
-
-        if bytes_read > 0 {
-            let msg: String = String::from_utf8_lossy(&buff).into_owned();
-            info!("Received msg {}", msg);
-            let task : Box<(dyn Task + Send + 'static)> = parse_request(msg, Some(stream));
-            self.add_task(task);
-        } else {
-            error!("Connection close by {:?}", stream.peer_addr());
+        {
+        self.thread_pool.lock().unwrap().push_front(upthread);
         }
     }
-
-    /*
-    pub fn add_task<T: Task + Send + 'static>(&mut self, t: T) {
-        let mut data = self.tasklist.lock().unwrap();
-        data.push_back(Box::new(t));
-    }
-    */
 
     pub fn add_task(&mut self, task: Box<dyn Task + Send + 'static>) {
         let mut data = self.tasklist.lock().unwrap();
@@ -170,7 +144,15 @@ impl Pool {
 
     //join threads (wait for them to die)
     fn join(self) {
-        for thread in self.thread_pool {
+        let mut len: usize = 1;
+        let mut thread: std::thread::JoinHandle<i32>;
+
+        while len > 0 {
+            {
+                let mut data = self.thread_pool.lock().unwrap();
+                thread = data.pop_front().unwrap();
+                len = data.len();
+            }
             thread.join().unwrap();
         }
     }
@@ -199,3 +181,22 @@ impl Pool {
         info!("All threads have been stopped");
     }
 }
+
+/// used by listening thread
+    pub fn handle_client(tasklist: Arc<Mutex<VecDeque<Box<dyn Task + Send>>>>, mut stream: TcpStream) {
+        let mut reader = BufReader::new(&mut stream);
+        let mut buff: Vec<u8> = Vec::new();
+        let bytes_read = reader.read_until(b'\n', &mut buff).unwrap();
+
+        if bytes_read > 0 {
+            let msg: String = String::from_utf8_lossy(&buff).into_owned();
+            info!("Received msg {}", msg);
+            let task : Box<(dyn Task + Send + 'static)> = parse_request(msg, Some(stream));
+            let mut data = tasklist.lock().unwrap();
+            data.push_back(task);
+        } else {
+            error!("Connection close by {:?}", stream.peer_addr());
+        }
+    }
+
+

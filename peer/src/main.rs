@@ -7,26 +7,27 @@ mod parser;
 mod process;
 mod respons_handler;
 mod tasks;
-//mod threads;
 mod userinput;
-use data::TrackerConfig;
+mod threads;
+use data::{TrackerConfig, PeerConfig};
 use menu::display_menu;
 use simplelog::*;
 use std::fs::File;
 //use tasks::EmptyTask;
-//use threads::Pool;
+use threads::Pool;
 
 fn main() {
-    /*
     //multi thread part
     //create pool
     let mut pool: Pool = Pool::new(2);
 
+    /*
     //add task
     for _ in 0..2 {
         let task: tasks::EmptyTask = EmptyTask { stream: None };
         pool.add_task(Box::new(task));
     }
+    */
 
     //start update thread
     let tracker_config = TrackerConfig::new();
@@ -36,9 +37,6 @@ fn main() {
     let peer_config = PeerConfig::from_config();
     pool.start_listening(peer_config);
 
-    //delete pool
-    //pool.drop();
-    */
 
     let log_file = File::create("client.log").unwrap();
 
@@ -53,6 +51,11 @@ fn main() {
     ])
     .unwrap();
 
+    let pool_clone = pool.clone();
+
     let tracker_config = TrackerConfig::new();
-    display_menu(tracker_config);
+    display_menu(tracker_config, pool_clone);
+
+    //delete pool
+    pool.drop();
 }
