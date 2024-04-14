@@ -1,5 +1,4 @@
 use hashbrown::HashMap;
-use num_traits::Saturating;
 use std::net::TcpStream;
 
 use crate::data::PeerConfig;

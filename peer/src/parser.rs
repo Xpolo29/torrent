@@ -34,18 +34,10 @@ fn organize_request(
     stream: Option<TcpStream>,
 ) -> Box<dyn Task + Send> {
     match req_type {
-        RequestType::Data => {
-            data_request(re, request, stream)
-        },
-        RequestType::Have => {
-            have_request(re, request, stream)
-        },
-        RequestType::GetPieces => {
-            getpieces_request(re, request, stream)
-        },
-        RequestType::Interested => {
-            interested_request(re, request, stream)
-        },
+        RequestType::Data => data_request(re, request, stream),
+        RequestType::Have => have_request(re, request, stream),
+        RequestType::GetPieces => getpieces_request(re, request, stream),
+        RequestType::Interested => interested_request(re, request, stream),
     }
 }
 
@@ -71,14 +63,10 @@ fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
         pieces: map.clone(),
         stream: stream,
     };
-    println!("hash : {}, HashMap : {:?}", hash.as_str().to_string(), map);
+    println!("hash : {}, HashMap : {:?}", hash.as_str(), map);
     Box::new(ret)
 }
-fn have_request(
-    re: Regex,
-    request: String,
-    stream: Option<TcpStream>,
-) -> Box<dyn Task + Send> {
+fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let buffermap = capture.get(3).unwrap();
@@ -161,7 +149,7 @@ pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task
         count += 1;
     }
     let empty = EmptyTask { stream: stream };
-    return Box::new(empty);
+    Box::new(empty)
 }
 
 // Connect to the localhost

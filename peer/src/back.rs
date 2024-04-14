@@ -4,7 +4,7 @@ use crate::db::get_file;
 use crate::respons_handler::{Answer, ExpectPeers, ExpectedAnswer};
 use crate::tasks::{Peer, Task};
 use hashbrown::HashMap;
-use log::error;
+use log::{error, trace};
 use md5::digest::block_buffer::Error;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -36,16 +36,14 @@ pub fn start_download(
     let chunk_size = meta_file.piece_size;
     // get the peers thare hold buffermap for the file
     if let Some(mut stream) = connect(tracker_port, &tracker_adress) {
-
-
         let key_clone = key.clone();
         let getfile_message = getfile_request(key);
-
 
         send(&mut stream, getfile_message);
         let response = receive(&mut stream);
         match ExpectPeers.check_answer(&response) {
             Ok(valeur) => {
+                trace!("{}", valeur);
                 // peers that hold each buffermap
                 let peers = ExpectPeers.retrieve_data(response);
                 // now we should ask each peer for their buffermap that is a task
@@ -70,7 +68,7 @@ pub fn start_download(
                 }
             }
             Err(valeur) => {
-                error!("Tracker bad peers answer {}", valeur);
+                error!("{}", valeur);
                 Err(Error)
             }
         }
@@ -125,7 +123,6 @@ fn get_chunk_from_file(key: String, chunk_size: u32, chunk_index: u32) -> std::i
     let file_path = &meta_file.file_name; // Assuming file_name is a field in meta_file
     get_chunk(file_path, chunk_size, chunk_index)
 }
-
 
 /// Retrieves a specific chunk from a file.
 ///

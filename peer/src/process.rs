@@ -1,5 +1,5 @@
 //use crate::back::get_peer_and_piece_indices;
-use crate::back::{get_chunks_from_file, get_wanted_piece_from_peer, FileAssembler};
+use crate::back::{get_chunks_from_file, FileAssembler};
 use crate::com::send;
 use crate::data::PeerConfig;
 use crate::db::{get_buffermap, get_file};
@@ -72,25 +72,21 @@ impl Task for Data {
 }
 
 /// send a getpieces message to TCP
-// getpieces $Key [$Index1 $Index2 $Index3 …]
+/// recieve a key and a buffermap and sens his key and his buffermap
 impl Task for Have {
     fn process(&mut self) {
         // create a peer_config from ip, and port taken by the stream
         let stream = &mut self.stream;
         match stream {
             Some(stream) => {
-                let key = &self.key;
-                let peer_addr = stream.peer_addr().unwrap();
-                let port = peer_addr.port();
-                let ip = peer_addr.ip();
-                let peerconfig = PeerConfig {
-                    address: ip.to_string(),
-                    port,
-                };
-                let wanted_indexes: Vec<u32> = get_wanted_piece_from_peer(peerconfig);
-                let wanted_indexes_str: Vec<String> =
-                    wanted_indexes.iter().map(|i| i.to_string()).collect();
-                let message = format!("getpieces {} [{}]", key, wanted_indexes_str.join(" "));
+                let key = self.key.clone();
+                let config = PeerConfig::from_config();
+                let buffermap = get_buffermap(config, &key);
+                let message = format!(
+                    "have {} {}",
+                    key,
+                    String::from_utf8(buffermap.unwrap()).expect("Found invalid UTF-8")
+                );
                 send(stream, message);
             }
             None => {
