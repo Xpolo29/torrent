@@ -8,6 +8,15 @@ use log::{error, info, trace};
 use std::io;
 use crate::threads::Pool;
 
+/// Displays a menu to the user and performs actions based on the user's input.
+///
+/// This function continuously displays a menu to the user with two options: Upload and Download.
+/// It reads the user's input and performs the corresponding action.
+/// If the user enters an invalid input, it prints an error message and displays the menu again.
+/// 
+/// # Arguments
+/// * `tracker_config` - A TrackerConfig object containing the tracker's configuration.
+/// * `pool` - A Pool object for managing tasks.
 pub fn display_menu(tracker_config: TrackerConfig, pool: Pool) {
     loop {
         println!("Main Menu");
@@ -32,6 +41,19 @@ pub fn display_menu(tracker_config: TrackerConfig, pool: Pool) {
         }
     }
 }
+
+/// Searches for a file on the tracker.
+///
+/// This function prompts the user for a filename and optional filesize, then sends a LOOK message to the tracker.
+/// It then waits for a response from the tracker and checks the response.
+/// If the response is valid, it retrieves the data from the response and returns it.
+///
+/// # Arguments
+/// * `tracker_port` - The port number of the tracker.
+/// * `tracker_address` - The address of the tracker.
+///
+/// # Returns
+/// * `Answer` - An Answer object containing the search results.
 fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
     println!("You're in Search");
     let filename = get_filename(io::stdin());
@@ -57,6 +79,17 @@ fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
     info!("files retrieved {:?}", present_files);
     present_files
 }
+
+/// Uploads a file to the tracker.
+///
+/// This function prompts the user for the names of the files they wish to seed.
+/// It then creates a MetaFile object for each file and adds them to the database.
+/// It then sends a HAVE message to the tracker for each file.
+/// If the tracker responds with an OK message, it logs the response and shuts down the connection.
+///
+/// # Arguments
+/// * `tracker_port` - The port number of the tracker.
+/// * `tracker_address` - The address of the tracker.
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
     let peer_config = PeerConfig::from_config();
     println!("You're in upload");
@@ -90,6 +123,18 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         ExpectOk.shutdown(&mut stream);
     }
 }
+
+/// Downloads a file from the tracker.
+///
+/// This function prompts the user to choose a file to download from the list of available files.
+/// It then starts the download process for the chosen file.
+/// If the download process returns a list of tasks, it adds each task to the pool.
+/// If the download process fails, it prints an error message.
+///
+/// # Arguments
+/// * `tracker_port` - The port number of the tracker.
+/// * `tracker_address` - The address of the tracker.
+/// * `pool` - A Pool object for managing tasks.
 fn download_section(
     tracker_port: u16,
     tracker_adress: &str,
@@ -117,6 +162,4 @@ fn download_section(
             println!("Operation failed because reasons");
         }
     }
-
-
 }

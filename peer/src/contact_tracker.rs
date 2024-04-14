@@ -87,7 +87,18 @@ fn getpieces(key: String, indices: Vec<String>) -> String {
     format!("< getpieces {} [{}]\n> data", key, indices_str)
 }
 
-// Function that takes a string and an ip address and a port, and send a tcp message with the string to the address and port
+/// Sends a TCP message to a given IP address and port.
+///
+/// This function takes a message, an IP address, and a port number.
+/// It establishes a TCP connection to the given IP address and port, and sends the message over this connection.
+///
+/// # Arguments
+/// * `message` - A string representing the message to be sent.
+/// * `ip` - A string representing the IP address to connect to.
+/// * `port` - A u16 representing the port number to connect to.
+///
+/// # Returns
+/// * `std::io::Result<()>` - A Result type indicating the success or failure of the operation.
 fn send_tcp_message(message: String, ip: String, port: u16) -> std::io::Result<()> {
     let mut stream = TcpStream::connect(format!("{}:{}", ip, port))?;
     stream.write_all(message.as_bytes())?;

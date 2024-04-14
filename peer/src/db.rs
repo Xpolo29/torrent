@@ -21,10 +21,32 @@ lazy_static! {
         Mutex::new(HashMap::new());
 }
 
+/// Generates a unique key for a peer.
+///
+/// This function takes a PeerConfig struct.
+/// It formats the peer's address and port into a string, separated by a colon.
+/// It then returns this string.
+///
+/// # Arguments
+/// * `peer` - A PeerConfig struct.
+///
+/// # Returns
+/// * `String` - The unique key for the peer.
 pub fn get_peer_key(peer: PeerConfig) -> String {
     format!("{}:{}", peer.address, peer.port.to_string())
 }
 
+/// Retrieves a peer from the database.
+///
+/// This function takes a key as a string slice.
+/// It locks the database, retrieves the peer associated with the key, and clones it.
+/// It then returns the cloned peer, or None if no peer was found for the key.
+///
+/// # Arguments
+/// * `key` - A string slice representing the key.
+///
+/// # Returns
+/// * `Option<PeerConfig>` - The peer associated with the key, or None if no peer was found.
 fn get_peer(key: &str) -> Option<PeerConfig> {
     let db = PEERSDB.lock().unwrap();
     let ret = db.get(&key.to_string()).cloned();
@@ -32,12 +54,31 @@ fn get_peer(key: &str) -> Option<PeerConfig> {
     ret
 }
 
+/// Inserts a peer into the database.
+///
+/// This function takes a key as a string slice and a PeerConfig struct.
+/// It locks the database and inserts the peer into the database with the key.
+///
+/// # Arguments
+/// * `key` - A string slice representing the key.
+/// * `peer` - A PeerConfig struct.
 fn set_peer(key: &str, peer: PeerConfig) {
     let mut db = PEERSDB.lock().unwrap();
     db.insert(key.to_string(), peer);
     // drop(db);
 }
 
+/// Retrieves a file from the database.
+///
+/// This function takes a key as a string slice.
+/// It locks the database, retrieves the file associated with the key, and clones it.
+/// It then returns the cloned file, or None if no file was found for the key.
+///
+/// # Arguments
+/// * `key` - A string slice representing the key.
+///
+/// # Returns
+/// * `Option<MetaFile>` - The file associated with the key, or None if no file was found.
 pub fn get_file(key: &str) -> Option<MetaFile> {
     let db = FILEDB.lock().unwrap();
     let ret = db.get(&key.to_string()).cloned();
@@ -45,12 +86,29 @@ pub fn get_file(key: &str) -> Option<MetaFile> {
     ret
 }
 
+/// Inserts a file into the database.
+///
+/// This function takes a key as a string slice and a MetaFile struct.
+/// It locks the database and inserts the file into the database with the key.
+///
+/// # Arguments
+/// * `key` - A string slice representing the key.
+/// * `file` - A MetaFile struct.
 fn set_file(key: &str, file: MetaFile) {
     let mut db = FILEDB.lock().unwrap();
     db.insert(key.to_string(), file);
     // drop(db);
 }
 
+/// Inserts a buffermap into the database.
+///
+/// This function takes a file key, a peer key, and a buffermap.
+/// It locks the database and inserts the buffermap into the database with the file key and peer key.
+///
+/// # Arguments
+/// * `file_key` - A String representing the file key.
+/// * `peer_key` - A String representing the peer key.
+/// * `buffermap` - A Vec<u8> representing the buffermap.
 pub fn set_buffermap(file_key: String, peer_key: String, buffermap: Vec<u8>) {
     let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
     let file_buffermaps = buffermap_db
@@ -60,6 +118,18 @@ pub fn set_buffermap(file_key: String, peer_key: String, buffermap: Vec<u8>) {
     drop(buffermap_db);
 }
 
+/// Retrieves a buffermap from the database.
+///
+/// This function takes a file key and a peer key.
+/// It locks the database, retrieves the buffermap associated with the file key and peer key, and clones it.
+/// It then returns the cloned buffermap, or None if no buffermap was found for the file key and peer key.
+///
+/// # Arguments
+/// * `file_key` - A string slice representing the file key.
+/// * `peer_key` - A string slice representing the peer key.
+///
+/// # Returns
+/// * `Option<Vec<u8>>` - The buffermap associated with the file key and peer key, or None if no buffermap was found.
 fn __get_buffermap(file_key: &str, peer_key: &str) -> Option<Vec<u8>> {
     let buffermap_db = BUFFERMAPDB.lock().unwrap();
     let file_buffermaps = buffermap_db.get(file_key)?;
@@ -67,7 +137,14 @@ fn __get_buffermap(file_key: &str, peer_key: &str) -> Option<Vec<u8>> {
     Some(buffermap.clone())
 }
 
-/// Add a file to the database and asign a bufermap with 1 used in upload
+/// Adds a seed file to the database.
+///
+/// This function takes a MetaFile struct.
+/// It computes the file's hash and uses it as a key to store the file in the database.
+/// It also creates a buffermap filled with 1s and stores it in the database with the file key and the peer key.
+///
+/// # Arguments
+/// * `file` - A MetaFile struct representing the file to be added.
 pub fn add_seed_file_to_db(file: MetaFile) {
     let file_key = get_file_hash(&file);
     set_file(&file_key, file.clone());
@@ -78,7 +155,15 @@ pub fn add_seed_file_to_db(file: MetaFile) {
     set_file(file_key.as_str(), file);
     set_buffermap(file_key, peer_key, buffermap)
 }
-/// Add a file to the database and asign a bufermap with 0 used in download
+
+/// Adds a leeched file to the database.
+///
+/// This function takes a MetaFile struct.
+/// It computes the file's hash and uses it as a key to store the file in the database.
+/// It also creates a buffermap filled with 0s and stores it in the database with the file key and the peer key.
+///
+/// # Arguments
+/// * `file` - A MetaFile struct representing the file to be added.
 pub fn add_leeched_file_to_db(file: MetaFile) {
     let file_key = get_file_hash(&file);
     set_file(&file_key, file.clone());
@@ -89,7 +174,15 @@ pub fn add_leeched_file_to_db(file: MetaFile) {
     set_file(file_key.as_str(), file);
     set_buffermap(file_key, peer_key, buffermap)
 }
-/// Associate a peer with a key in the database with a buffermap, can be used to update the buffermap
+
+/// Associates a peer with a file in the database and sets a buffermap for the file.
+///
+/// This function can also be used to update the buffermap for a file.
+///
+/// # Arguments
+/// * `config` - A PeerConfig struct representing the peer.
+/// * `file` - A MetaFile struct representing the file.
+/// * `buffermap` - A Vec<u8> representing the buffermap.
 pub fn set_peer_to_file(config: PeerConfig, file: MetaFile, buffermap: Vec<u8>) {
     let peer_key = get_peer_key(config.clone());
     set_peer(&file.hash, config);
@@ -97,11 +190,27 @@ pub fn set_peer_to_file(config: PeerConfig, file: MetaFile, buffermap: Vec<u8>) 
     set_buffermap(file.hash, peer_key, buffermap);
 }
 
-/// get buffermap to share it among other peers
+/// Retrieves a buffermap for a file from the database.
+///
+/// This function can be used to share the buffermap among other peers.
+///
+/// # Arguments
+/// * `config` - A PeerConfig struct representing the peer.
+/// * `key` - A string slice representing the key for the file.
+///
+/// # Returns
+/// * `Option<Vec<u8>>` - The buffermap for the file, or None if no buffermap was found.
 pub fn get_buffermap(config: PeerConfig, key: &str) -> Option<Vec<u8>> {
     __get_buffermap(key, &get_peer_key(config))
 }
 
+/// Retrieves all peers associated with a file from the database.
+///
+/// # Arguments
+/// * `key` - A String representing the key for the file.
+///
+/// # Returns
+/// * `Vec<PeerConfig>` - A vector of PeerConfig structs representing the peers.
 pub fn get_peer_from_file(key: String) -> Vec<PeerConfig> {
     let buffermap_db = BUFFERMAPDB.lock().unwrap();
     let file_buffermaps = buffermap_db.get(&key);
@@ -117,7 +226,14 @@ pub fn get_peer_from_file(key: String) -> Vec<PeerConfig> {
     peers
 }
 
-/// Add a file to the database and asign a bufermap with 1 used in upload
+/// Removes a file from the database and its associated buffermap.
+///
+/// This function takes a MetaFile struct.
+/// It locks the file database and the buffermap database, finds the file in the file database using its hash, and removes it.
+/// It also removes the associated buffermap from the buffermap database.
+///
+/// # Arguments
+/// * `file` - A MetaFile struct representing the file to be removed.
 pub fn remove_file_from_db(file: MetaFile) {
     let mut file_db = FILEDB.lock().unwrap();
     let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
@@ -131,7 +247,15 @@ pub fn remove_file_from_db(file: MetaFile) {
     }
 }
 
-/// Associate a peer with a key in the database
+/// Disassociates a peer from a file in the database.
+///
+/// This function takes a PeerConfig struct and a key.
+/// It locks the buffermap database, finds the buffermap for the file using the key,
+/// and removes the peer from the buffermap.
+///
+/// # Arguments
+/// * `config` - A PeerConfig struct representing the peer.
+/// * `key` - A String representing the key for the file.
 pub fn remove_peer_to_file(config: PeerConfig, key: String) {
     let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
     let peer_key = get_peer_key(config);
@@ -140,6 +264,13 @@ pub fn remove_peer_to_file(config: PeerConfig, key: String) {
     }
 }
 
+/// Removes a peer from the database.
+///
+/// This function takes a PeerConfig struct.
+/// It locks the peer database and the buffermap database, and removes the peer from both databases.
+///
+/// # Arguments
+/// * `config` - A PeerConfig struct representing the peer.
 pub fn remove_peer_from_db(config: PeerConfig) {
     let key = get_peer_key(config);
 
@@ -156,6 +287,9 @@ pub fn remove_peer_from_db(config: PeerConfig) {
     drop(db);
 }
 
+/// Clears all entries from the buffermap, file, and peer databases.
+///
+/// This function locks each database and replaces its contents with a new, empty HashMap.
 fn clear_db() {
     let mut buffermap_db = BUFFERMAPDB.lock().unwrap();
     let mut file_db = FILEDB.lock().unwrap();
@@ -165,6 +299,17 @@ fn clear_db() {
     *peer_db = HashMap::new();
 }
 
+/// Retrieves all files that a specific peer has a non-empty buffermap for.
+///
+/// This function takes a PeerConfig struct, locks the buffermap database, and iterates over all file buffermaps.
+/// If the peer has a non-empty buffermap for a file,
+/// the function retrieves the MetaFile struct for the file from the file database and adds it to the result vector.
+///
+/// # Arguments
+/// * `config` - A PeerConfig struct representing the peer.
+///
+/// # Returns
+/// * `Vec<MetaFile>` - A vector of MetaFile structs representing the files.
 pub fn get_file_from_peer(config: PeerConfig) -> Vec<MetaFile> {
     let key = get_peer_key(config);
     let mut result = vec![];
@@ -187,6 +332,9 @@ pub fn get_file_from_peer(config: PeerConfig) -> Vec<MetaFile> {
     result
 }
 
+/// Logs the contents of the buffermap database.
+///
+/// This function locks the buffermap database and prints its contents to the console.
 pub fn log_db() {
     let buffermap_db = BUFFERMAPDB.lock().unwrap();
     println!("BUFFERMAPDB:");
@@ -198,7 +346,13 @@ pub fn log_db() {
     }
 }
 
-//get all files
+/// Retrieves all files that the local peer is seeding.
+///
+/// This function locks the buffermap database and iterates over all file buffermaps.
+/// If the local peer has a buffermap filled with 1 for a file, the function retrieves the MetaFile struct for the file from the file database and adds it to the result vector.
+///
+/// # Returns
+/// * `Vec<MetaFile>` - A vector of MetaFile structs representing the files.
 pub fn get_seeding_files() -> Vec<MetaFile> {
     let me = PeerConfig::from_config();
     let mut result = vec![];
@@ -221,6 +375,13 @@ pub fn get_seeding_files() -> Vec<MetaFile> {
     result
 }
 
+/// Retrieves all files that the local peer is leeching.
+///
+/// This function locks the buffermap database and iterates over all file buffermaps.
+/// If the local peer has a buffermap with at least one 0 for a file, the function retrieves the MetaFile struct for the file from the file database and adds it to the result vector.
+///
+/// # Returns
+/// * `Vec<MetaFile>` - A vector of MetaFile structs representing the files.
 pub fn get_leeching_files() -> Vec<MetaFile> {
     let me = PeerConfig::from_config();
     let mut result = vec![];
