@@ -1,9 +1,9 @@
 //! communication between the peer and the tracker
 use crate::data::MetaFile;
+use crate::db::{get_leeching_files, get_seeding_files};
 use log::{debug, error, info};
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
-use crate::db::{get_seeding_files, get_leeching_files};
 
 // # Examples
 //
@@ -34,7 +34,6 @@ use crate::db::{get_seeding_files, get_leeching_files};
 // announce listen 8000 seed [file1.txt 100 10 abc123 file2.txt 200 20 def456] leech [file3.txt]
 // ```
 
-
 /// Formats a seeding announcement message.
 ///
 /// This function takes a vector of MetaFile objects seeded, a peer port, and a string leeched.
@@ -48,7 +47,8 @@ use crate::db::{get_seeding_files, get_leeching_files};
 ///
 /// # Returns
 /// * `String` - The formatted seeding announcement message.
-pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String { // why is seeded different from leached (type) ?
+pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
+    // why is seeded different from leached (type) ?
     /*
     into_iter() : transform the vector into an iterator
     map() : apply a function to each element of the iterator
@@ -112,7 +112,7 @@ pub fn look(filename: String, filesize: String) -> String {
 /// # Returns
 /// * `String` - The formatted "getfile" request message.
 pub fn getfile_request(key: String) -> String {
-    format!("getfile [{}]\n", key)
+    format!("getfile {}\n", key)
 }
 
 /// Establishes a TCP connection to a given address and port.
@@ -145,7 +145,7 @@ pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
 /// Sends a message to a given address and port.
 ///
 /// This function takes a mutable reference to a `TcpStream` and a message as a string.
-/// It sends the message to the address and port associated with the `TcpStream`. 
+/// It sends the message to the address and port associated with the `TcpStream`.
 /// If the message is successfully sent, it logs an informational message.
 ///
 /// # Arguments
@@ -202,15 +202,14 @@ pub fn receive(stream: &mut TcpStream) -> String {
 ///
 /// # Returns
 /// * `String` - The update message containing the formatted lists of seeding and leeching files.
-pub fn update() -> String{
-    
-    let seeds : Vec<MetaFile> = get_seeding_files();
-    let leeches : Vec<MetaFile> = get_leeching_files();
-    
-    let mut formated_seeds : String = String::new();
-    let mut formated_leeches : String = String::new();
+pub fn update() -> String {
+    let seeds: Vec<MetaFile> = get_seeding_files();
+    let leeches: Vec<MetaFile> = get_leeching_files();
 
-    let mut i : bool = false;
+    let mut formated_seeds: String = String::new();
+    let mut formated_leeches: String = String::new();
+
+    let mut i: bool = false;
 
     for seed in seeds {
         let hash = seed.hash;
@@ -232,9 +231,11 @@ pub fn update() -> String{
         i = true;
     }
 
-    format!("update seed [{}] leech [{}]\n", formated_seeds, formated_leeches)
+    format!(
+        "update seed [{}] leech [{}]\n",
+        formated_seeds, formated_leeches
+    )
 }
 
 #[cfg(test)]
 mod tests {}
-
