@@ -33,16 +33,16 @@ int process(int connection) {
 
 	logging(LOG, "< %s", buff);
 
-	// Get the local address of the socket
+	// Get the remote address of the socket
 	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	socklen_t addr_len = sizeof(addr);
-	if (getsockname(connection, (struct sockaddr *)&addr, &addr_len) == -1) {
-		logging(WARNING, "Could not fetch ip from socket\n");
+	if (getpeername(connection, (struct sockaddr *)&addr, &addr_len) == -1) {
+		logging(WARNING, "Could not fetch remote ip from socket\n");
 	}
 
 	char ip_address[INET_ADDRSTRLEN];
-	int port = ntohs(addr.sin_port);
+	int port = addr.sin_port;
 	inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
 
 	logging(DEBUG, "Task %d is from %s:%d\n", connection, ip_address, port);
