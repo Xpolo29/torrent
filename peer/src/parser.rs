@@ -134,7 +134,7 @@ pub fn parse_data(request: String) -> Option<HashMap<u32, Vec<u8>>> {
     }
 }
 
-pub fn parse_have_from_have(request: String, stream: Option<TcpStream>) -> Option<Have> {
+pub fn parse_have_from_have(request: String) -> Option<Have> {
     let regex_have = r"^(have) ([[:alnum:]]*) ([01]*)$";
     match Regex::new(regex_have) {
         Ok(re) => {
@@ -153,7 +153,7 @@ pub fn parse_have_from_have(request: String, stream: Option<TcpStream>) -> Optio
                 let ret = Have {
                     key: hash.as_str().to_string(),
                     buffermap: buf,
-                    stream: stream,
+                    stream: None,
                 };
                 Some(ret)
             } else {
