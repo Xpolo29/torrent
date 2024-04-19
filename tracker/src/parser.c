@@ -196,7 +196,7 @@ int handle_regex(int index[MATCH_SIZE][2], char *request) {
     }
   }
   // DEBUG purpose
-  /*
+/*  
   for (int i = 0; i < nb_matches; i++) {
     int start = index[i][0];
     int size = index[i][1] - index[i][0];
@@ -316,7 +316,7 @@ void parse_announce(char *buf, int index[MATCH_SIZE][2], char *request,
   logging(DEBUG, "Parser : announce request\n");
 
   int start = index[1][0];
-  int size = index[1][1];
+  int size = index[1][1] - index[1][0];
 
   char portchar[6];
   memcpy(portchar, request + start, size);
