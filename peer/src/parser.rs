@@ -13,6 +13,8 @@ enum RequestType {
     Interested = 3,
 }
 
+/// This function takes a number and returns the corresponding RequestType.
+/// If the number does not correspond to any RequestType, it returns None.
 fn cast_to_request_type(number: u8) -> Option<RequestType> {
     match number {
         0 => Some(RequestType::Data),
@@ -22,11 +24,22 @@ fn cast_to_request_type(number: u8) -> Option<RequestType> {
         _ => None,
     }
 }
+
 pub enum Stream {
     Single(Option<TcpStream>),
     Multiple(Vec<Option<TcpStream>>),
 }
 
+/// Organizes a request based on its type.
+///
+/// # Arguments
+/// * `re` - A Regex object used to parse the request.
+/// * `request` - A String containing the request.
+/// * `req_type` - The type of the request.
+/// * `stream` - An optional TcpStream.
+///
+/// # Returns
+/// * `Box<dyn Task + Send>` - A boxed Task object.
 fn organize_request(
     re: Regex,
     request: String,
@@ -41,6 +54,7 @@ fn organize_request(
     }
 }
 
+/// This function takes a data request and returns a Task object that handles the request.
 fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
@@ -66,6 +80,8 @@ fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
     println!("hash : {}, HashMap : {:?}", hash.as_str(), map);
     Box::new(ret)
 }
+
+/// This function takes a data request and returns a Task object that handles the request.
 fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
@@ -83,11 +99,82 @@ fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
     };
     Box::new(ret)
 }
+
+pub fn parse_data(request: String) -> Option<HashMap<u32, Vec<u8>>> {
+    let regex_data = r"^(data) ([[:alnum:]]*) \\[((?:[[:digit:]]*:[01]* ?)*)\\]$";
+    match Regex::new(regex_data) {
+        Ok(re) => {
+            let request_trimmed = request.trim().to_string();
+            if re.is_match(&request_trimmed) {
+                let capture = re.captures(&request).unwrap();
+                let hashdata = capture.get(3).unwrap();
+                let map: HashMap<u32, Vec<u8>> = hashdata
+                    .as_str()
+                    .split(' ')
+                    .map(|pair| {
+                        let (key, value) = pair.split_once(':').unwrap();
+                        let key: u32 = key.parse().unwrap();
+                        let value: Vec<u8> = value
+                            .chars()
+                            .filter_map(|c| u8::from_str_radix(&c.to_string(), 16).ok())
+                            .collect();
+                        (key, value)
+                    })
+                    .collect();
+                Some(map)
+            } else {
+                error!("Not a Have request");
+                None
+            }
+        }
+        Err(e) => {
+            error!("Regex error: {}", e);
+            None
+        }
+    }
+}
+
+pub fn parse_have_from_have(request: String) -> Option<Have> {
+    let regex_have = r"^(have) ([[:alnum:]]*) ([01]*)$";
+    match Regex::new(regex_have) {
+        Ok(re) => {
+            let request_trimmed = request.trim().to_string();
+            if re.is_match(&request_trimmed) {
+                let capture = re.captures(&request).unwrap();
+
+                let hash = capture.get(2).unwrap();
+                let buffermap = capture.get(3).unwrap();
+                let buf: Vec<u8> = buffermap
+                    .as_str()
+                    .chars()
+                    .map(|c| c.to_string())
+                    .map(|s| u8::from_str_radix(&s, 2).unwrap())
+                    .collect();
+                let ret = Have {
+                    key: hash.as_str().to_string(),
+                    buffermap: buf,
+                    stream: None,
+                };
+                Some(ret)
+            } else {
+                error!("Not a Have request");
+                None
+            }
+        }
+        Err(e) => {
+            error!("Regex error: {}", e);
+            None
+        }
+    }
+}
+
+/// This function takes a data request and returns a Task object that handles the request.
 fn getpieces_request(
     re: Regex,
     request: String,
     stream: Option<TcpStream>,
 ) -> Box<dyn Task + Send> {
+    let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let indexes = capture.get(3).unwrap();
@@ -101,9 +188,10 @@ fn getpieces_request(
         pieces: numbers,
         stream: stream,
     };
-
     Box::new(ret)
 }
+
+/// This function takes a data request and returns a Task object that handles the request.
 fn interested_request(
     re: Regex,
     request: String,
@@ -118,6 +206,8 @@ fn interested_request(
     let b: Box<dyn Task + Send> = Box::new(ret);
     b
 }
+
+/// This function takes a data request and returns a Task object that handles the request.
 pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     // let empty = EmptyTask {
     //     stream: Some(stream),
@@ -153,7 +243,27 @@ pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task
 }
 
 // Connect to the localhost
-
+// pub fn parse_interested(request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
+//     let regex_interested = r"^(interested) ([[:alnum:]]*)$";
+//     let reg: Regex;
+//     match Regex::new(regex_interested) {
+//         Ok(re) => {
+//             let request_trimmed = request.trim().to_string();
+//             if re.is_match(&request_trimmed) {
+//                 interested_request(re, request, stream)
+//             } else {
+//                 error!("Not an interested request");
+//                 let empty = EmptyTask { stream: stream };
+//                 Box::new(empty)
+//             }
+//         }
+//         Err(e) => {
+//             error!("Regex error : {}", e);
+//             let empty = EmptyTask { stream: stream };
+//             Box::new(empty)
+//         }
+//     }
+// }
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,16 +1,31 @@
 //use crate::back::get_peer_and_piece_indices;
-use crate::back::{get_chunks_from_file, FileAssembler};
-use crate::com::send;
+use crate::back::{get_chunks_from_file, get_wanted_piece_from_peer, FileAssembler};
+use crate::com::{connect, receive, send};
 use crate::data::PeerConfig;
-use crate::db::{get_buffermap, get_file};
-use crate::tasks::{Data, Getpieces, Have, Interested, Peer, Task};
+use crate::db::{get_buffermap, get_file, get_peer_key, set_buffermap};
+use crate::parser::parse_have_from_have;
+use crate::tasks::{Data, DataWrite, Getpieces, Have, Interested, Peer, Task};
 use hashbrown::HashMap;
 use log::error;
-
-/// write a data to TCP
+/// `Getpieces` is a struct that implements the `Task` trait. It is used to send pieces of a file over a TCP stream.
+///
+/// # Process Method
+/// The `process` method is responsible for sending the pieces of a file over a TCP stream.
+///
+/// It first checks if a stream is available. If not, it logs an error message.
+/// If a stream is available, it retrieves the key and piece indices from the `Getpieces` struct.
+/// It then uses the `get_chunks_from_file` function to retrieve the pieces of the file corresponding to the piece indices.
+/// The pieces are then formatted into a string, with each piece represented as "index:piece".
+/// A message is then constructed with the format "data key [index1:piece1 index2:piece2 ...]" and sent over the stream.
+///
+/// # Arguments
+/// * `stream` - A mutable reference to an Option wrapping a TcpStream. This is the stream over which the data will be sent.
+/// * `key` - A string representing the key of the file.
+/// * `pieces` - A vector of u32s representing the indices of the pieces to be sent.
+// write a data to TCP and update db
 impl Task for Getpieces {
-    /// a file key and a list of index of pieces
-    /// send data key [index1:piece1 index2:piece2 ...]
+    // a file key and a list of index of pieces
+    // send data key [index1:piece1 index2:piece2 ...]
     fn process(&mut self) {
         let stream = &mut self.stream;
         let chunk_size = 1024 * 8;
@@ -48,9 +63,23 @@ impl Task for Getpieces {
 }
 // format the data to be sent to the client
 
+/// `Data` is a struct that implements the `Task` trait. It is used to write received pieces of a file to the local file system.
+///
+/// # Process Method
+/// The `process` method is responsible for writing the received pieces of a file to the local file system.
+///
+/// It first checks if a stream is available. If not, it logs an error message.
+/// If a stream is available, it retrieves the key and pieces from the `Data` struct.
+/// It then uses the `get_file` function to retrieve the file path for the key.
+/// A `FileAssembler` is then created for the file path, and each piece is added to the `FileAssembler`.
+/// After all pieces have been added, an "ok\n" message is sent over the stream.
+///
+/// # Arguments
+/// * `stream` - A mutable reference to an Option wrapping a TcpStream. This is the stream over which the data was received.
+/// * `key` - A string representing the key of the file.
+/// * `pieces` - A HashMap where the keys are u32s representing the indices of the pieces and the values are the pieces themselves.
 // send the data to the clien
-
-/// get data and write it to file
+// get data and write it to file
 impl Task for Data {
     fn process(&mut self) {
         match &mut self.stream {
@@ -71,8 +100,20 @@ impl Task for Data {
     }
 }
 
-/// send a getpieces message to TCP
-/// recieve a key and a buffermap and sens his key and his buffermap
+/// `Have` is a struct that implements the `Task` trait. It is used to send a "have" message over a TCP stream.
+///
+/// # Process Method
+/// The `process` method is responsible for sending a "have" message over a TCP stream.
+/// It first checks if a stream is available. If not, it logs an error message.
+/// If a stream is available, it retrieves the key from the `Have` struct and creates a `PeerConfig` from the current configuration.
+/// It then uses the `get_buffermap` function to retrieve the buffer map for the key.
+/// A message is then constructed with the format "have key buffermap" and sent over the stream.
+///
+/// # Arguments
+/// * `stream` - A mutable reference to an Option wrapping a TcpStream. This is the stream over which the message will be sent.
+/// * `key` - A string representing the key of the file.
+// send a getpieces message to TCP
+// recieve a key and a buffermap and sens his key and his buffermap
 impl Task for Have {
     fn process(&mut self) {
         // create a peer_config from ip, and port taken by the stream
@@ -96,6 +137,20 @@ impl Task for Have {
         // get the index that current peer wants from the peer that sent the have message specificcly
     }
 }
+
+/// `Interested` is a struct that implements the `Task` trait. It is used to send a "have" message over a TCP stream.
+///
+/// # Process Method
+/// The `process` method is responsible for sending a "have" message over a TCP stream.
+/// It first checks if a stream is available. If not, it logs an error message.
+/// If a stream is available, it retrieves the key from the `Interested` struct and the peer address from the stream.
+/// A `PeerConfig` is then created from the peer address, and the `get_buffermap` function is used to retrieve the buffer map for the key.
+/// If a buffer map is found, it is formatted into a string and a message is constructed with the format "data key buffermap" and sent over the stream.
+/// If no buffer map is found, an error message is logged.
+///
+/// # Arguments
+/// * `stream` - A mutable reference to an Option wrapping a TcpStream. This is the stream over which the message will be sent.
+/// * `key` - A string representing the key of the file.
 // send a have message to TCP
 // have $Key $BufferMap
 impl Task for Interested {
@@ -138,10 +193,36 @@ impl Task for Interested {
         }
     }
 }
-
+/// send a interested message to TCP
+/// retrieve the buffermap update db
+/// compute pieces to be taken relatvly to others and in function of the adressed peer
+/// yield a task that send a getpiecce and recieve a data and write if (DataWrite)
 impl Task for Peer {
     fn process(&mut self) {
-        println!("Peers task");
+        let adress = self.config.address.clone();
+        let port = self.config.port;
+        let file_key = &self.hash;
+        let stream = &mut connect(port, &adress);
+        match stream {
+            Some(stream) => {
+                let key = &self.hash;
+                let message = format!("interested {}", key);
+                send(stream, message);
+                let response = receive(stream);
+                // update db
+                if let Some(have_struct) = parse_have_from_have(response) {
+                    let buffermap = have_struct.buffermap;
+                    let peer_key = get_peer_key(self.config.clone());
+                    set_buffermap(file_key.clone(), peer_key.clone(), buffermap);
+                    // get the pieces that the peer wants relativly to the other buffermap but included into the peers buffermap
+                    let pieces = get_wanted_piece_from_peer(&peer_key, &file_key);
+                }
+                // return the DataWrite task
+            }
+            None => {
+                error!("No stream found");
+            }
+        }
     }
 }
 #[cfg(test)]
