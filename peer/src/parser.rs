@@ -56,7 +56,6 @@ fn organize_request(
 
 /// This function takes a data request and returns a Task object that handles the request.
 fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
-    let regex_data = r"^(data) ([[:alnum:]]*) \\[((?:[[:digit:]]*:[01]* ?)*)\\]$";
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let hashdata = capture.get(3).unwrap();
@@ -102,7 +101,37 @@ fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
 }
 
 pub fn parse_data(request: String) -> Option<HashMap<u32, Vec<u8>>> {
-    todo!();
+    let regex_data = r"^(data) ([[:alnum:]]*) \\[((?:[[:digit:]]*:[01]* ?)*)\\]$";
+    match Regex::new(regex_data) {
+        Ok(re) => {
+            let request_trimmed = request.trim().to_string();
+            if re.is_match(&request_trimmed) {
+                let capture = re.captures(&request).unwrap();
+                let hashdata = capture.get(3).unwrap();
+                let map: HashMap<u32, Vec<u8>> = hashdata
+                    .as_str()
+                    .split(' ')
+                    .map(|pair| {
+                        let (key, value) = pair.split_once(':').unwrap();
+                        let key: u32 = key.parse().unwrap();
+                        let value: Vec<u8> = value
+                            .chars()
+                            .filter_map(|c| u8::from_str_radix(&c.to_string(), 16).ok())
+                            .collect();
+                        (key, value)
+                    })
+                    .collect();
+                Some(map)
+            } else {
+                error!("Not a Have request");
+                None
+            }
+        }
+        Err(e) => {
+            error!("Regex error: {}", e);
+            None
+        }
+    }
 }
 
 pub fn parse_have_from_have(request: String, stream: Option<TcpStream>) -> Option<Have> {
