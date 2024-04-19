@@ -41,13 +41,21 @@ int process(int connection) {
 		logging(WARNING, "Could not fetch remote ip from socket\n");
 	}
 
+	// retrieve connection ip and port
 	char ip_address[INET_ADDRSTRLEN];
-	int port = addr.sin_port;
-	inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
 
-	logging(DEBUG, "Task %d is from %s:%d\n", connection, ip_address, port);
+	inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+	uint16_t port = ntohs(addr.sin_port);
+	
+	// get port from db is exists
+	struct host hosts[BDD_SIZE]; 
+	int len = load_ip(hosts, ip_address);
+	if(len == 1)port = hosts[0].port;
+
 	struct host h = {"", port, time(NULL)};
-	strncpy(h.ip, ip_address, 16);
+	strncpy(h.ip, ip_address, INET_ADDRSTRLEN);
+
+	logging(DEBUG, "Task %d is from %s:%hu\n", connection, h.ip, h.port);
 
 	/*
 	mimic worload
