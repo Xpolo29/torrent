@@ -13,6 +13,9 @@ enum RequestType {
     Interested = 3,
 }
 
+
+/// This function takes a number and returns the corresponding RequestType.
+/// If the number does not correspond to any RequestType, it returns None.
 fn cast_to_request_type(number: u8) -> Option<RequestType> {
     match number {
         0 => Some(RequestType::Data),
@@ -22,11 +25,23 @@ fn cast_to_request_type(number: u8) -> Option<RequestType> {
         _ => None,
     }
 }
+
 pub enum Stream {
     Single(Option<TcpStream>),
     Multiple(Vec<Option<TcpStream>>),
 }
 
+
+/// Organizes a request based on its type.
+///
+/// # Arguments
+/// * `re` - A Regex object used to parse the request.
+/// * `request` - A String containing the request.
+/// * `req_type` - The type of the request.
+/// * `stream` - An optional TcpStream.
+///
+/// # Returns
+/// * `Box<dyn Task + Send>` - A boxed Task object.
 fn organize_request(
     re: Regex,
     request: String,
@@ -41,6 +56,9 @@ fn organize_request(
     }
 }
 
+
+
+/// This function takes a data request and returns a Task object that handles the request.
 fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
@@ -66,6 +84,9 @@ fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
     println!("hash : {}, HashMap : {:?}", hash.as_str(), map);
     Box::new(ret)
 }
+
+
+/// This function takes a data request and returns a Task object that handles the request.
 fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
@@ -83,6 +104,9 @@ fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
     };
     Box::new(ret)
 }
+
+
+/// This function takes a data request and returns a Task object that handles the request.
 fn getpieces_request(
     re: Regex,
     request: String,
@@ -101,9 +125,11 @@ fn getpieces_request(
         pieces: numbers,
         stream: stream,
     };
-
     Box::new(ret)
 }
+
+
+/// This function takes a data request and returns a Task object that handles the request.
 fn interested_request(
     re: Regex,
     request: String,
@@ -118,6 +144,9 @@ fn interested_request(
     let b: Box<dyn Task + Send> = Box::new(ret);
     b
 }
+
+
+/// This function takes a data request and returns a Task object that handles the request.
 pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
     // let empty = EmptyTask {
     //     stream: Some(stream),
