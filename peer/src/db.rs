@@ -13,7 +13,6 @@ use std::sync::Mutex;
 //
 // static db: Vec<Data> = Vec::new();
 //
-//FILEDB and PEERSDB might be useless
 lazy_static! {
     static ref PEERSDB: Mutex<HashMap<String, PeerConfig>> = Mutex::new(HashMap::new());
     static ref FILEDB: Mutex<HashMap<String, MetaFile>> = Mutex::new(HashMap::new());
@@ -114,8 +113,18 @@ pub fn set_buffermap(file_key: String, peer_key: String, buffermap: Vec<u8>) {
     let file_buffermaps = buffermap_db
         .entry(file_key.clone())
         .or_insert_with(HashMap::new);
-    file_buffermaps.insert(peer_key, buffermap);
+    if let Some(buf) = file_buffermaps.get_mut(&peer_key) {
+        modify_buffer(buf, buffermap);
+    } else {
+        file_buffermaps.insert(peer_key, buffermap);
+    }
     drop(buffermap_db);
+}
+
+fn modify_buffer(bufdest: &mut Vec<u8>, bufsrc: Vec<u8>) {
+    for (i, &src_byte) in bufsrc.iter().enumerate() {
+        bufdest[i] = src_byte;
+    }
 }
 
 /// Retrieves a buffermap from the database.
