@@ -56,7 +56,7 @@ int load_hash(struct data *d, char hash[64]);
 int load_host(struct data *d, struct host h);
 
 // copy bdd elements matching host into <struct data*>, return len
-int load_ip(struct data *d, char ip[INET_ADDRSTRLEN]);
+int load_ip(struct host *d, char ip[INET_ADDRSTRLEN]);
 
 // remove all elements of bdd matching <host>, 0 on success
 int remove_host(struct host);

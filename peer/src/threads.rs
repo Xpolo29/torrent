@@ -10,6 +10,7 @@ use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use crate::tasks::EmptyTask;
 
 //gloval var, used to stop threads
 static mut RUNNING: bool = true;
@@ -199,4 +200,60 @@ impl Pool {
         }
     }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn test_threads_empty() {
+        // Set up the test
+        let mut pool: Pool = Pool::new(0);
+        let mut len: i32;
+        {
+            let pool_clone = pool.clone();
+            let tasklist_clone = pool_clone.tasklist.clone(); 
+            let data = tasklist_clone.lock().unwrap();
+            len = data.len() as i32;
+        }
+        assert_eq!(len, 0);
+        let t1: EmptyTask = EmptyTask { stream: None}; 
+        let t2: EmptyTask = EmptyTask { stream: None}; 
+        pool.add_task(Box::new(t1));
+        pool.add_task(Box::new(t2));
+        {
+            let pool_clone = pool.clone();
+            let tasklist_clone = pool_clone.tasklist.clone(); 
+            let data = tasklist_clone.lock().unwrap();
+            len = data.len() as i32;
+        }
+        assert_eq!(len, 2);
+    }
+    #[test]
+    fn test_threads() {
+        // Set up the test
+        let mut pool: Pool = Pool::new(2);
+        let mut len: i32;
+        {
+            let pool_clone = pool.clone();
+            let tasklist_clone = pool_clone.tasklist.clone(); 
+            let data = tasklist_clone.lock().unwrap();
+            len = data.len() as i32;
+        }
+        assert_eq!(len, 0);
+
+        let t1: EmptyTask = EmptyTask { stream: None}; 
+        let t2: EmptyTask = EmptyTask { stream: None}; 
+        pool.add_task(Box::new(t1));
+        pool.add_task(Box::new(t2));
+        std::thread::sleep(Duration::from_millis(200));
+        {
+            let pool_clone = pool.clone();
+            let tasklist_clone = pool_clone.tasklist.clone(); 
+            let data = tasklist_clone.lock().unwrap();
+            len = data.len() as i32;
+        }
+        assert_eq!(len, 0);
+        pool.drop();
+    }
+
+}
