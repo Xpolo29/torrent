@@ -16,3 +16,7 @@ num-traits = "0.2.18"
 regex = "1.10.4"
 rust-ini = "0.21.0"
 simplelog = "0.12.2"
+
+[[bin]]
+name = "testo"
+path = "src/testo.rs"
