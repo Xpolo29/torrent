@@ -43,7 +43,11 @@ pub struct Data {
     pub pieces: HashMap<u32, Vec<u8>>,
     pub stream: Option<TcpStream>,
 }
-
+/// send a get_piece, recieve  the data and write it
+pub struct DataWrite {
+    pub choosen_pieces: Vec<u32>,
+    pub key: String,
+}
 #[derive(Debug)]
 pub struct Peer {
     pub hash: String,

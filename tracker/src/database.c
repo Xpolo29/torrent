@@ -164,6 +164,18 @@ int load_host(struct data *d, struct host h){
 	return c;
 }
 
+int load_ip(struct host *d, char ip[INET_ADDRSTRLEN]){
+	int c = 0;
+	for (int i = 0; i < BDD_SIZE; ++i) {
+		struct host temp = bdd[i].host;
+		if(!strcmp(temp.ip, ip)){
+			d[c++] = bdd[i].host;
+		}
+	}
+	d[c] = EMPTY.host;
+	return c;
+}
+
 int remove_doublon_hash(struct data* arr, int len){
 	struct data copy[BDD_SIZE] ;
 	memcpy(copy, arr, len* sizeof(struct data));

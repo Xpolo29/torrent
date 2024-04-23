@@ -147,7 +147,7 @@ fn get_chunk(file_path: &str, chunk_size: u32, chunk_index: u32) -> std::io::Res
     Ok(buffer)
 }
 ///
-pub fn get_wanted_piece_from_peer(peer: PeerConfig) -> Vec<u32> {
+pub fn get_wanted_piece_from_peer(peer_key: &str, file_key: &str) -> Vec<u32> {
     todo!();
 }
 pub struct FileAssembler {

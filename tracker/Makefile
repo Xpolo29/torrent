@@ -1,5 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g#-Werror
+RCFLAGS = -O3
 TARGET = tracker
 
 SRCS = $(wildcard src/*.c)
@@ -13,7 +14,7 @@ TST_OBJS = $(TST_SRCS:.c=.o)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 %.or: %.c
-	$(CC) -O3 -c $< -o $@
+	$(CC) $(RCFLAGS) -c $< -o $@
 
 all: $(TARGET)
 
@@ -36,4 +37,4 @@ help:
 	grep '^[a-zA-Z0-9_\-]*:' Makefile | sed 's/://'
 
 release: $(ROBJS) 
-	$(CC) -O3 -o $(TARGET) $^
+	$(CC) $(RCFLAGS) -o $(TARGET) $^
