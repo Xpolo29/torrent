@@ -86,8 +86,6 @@ mod tests {
 
         assert_eq!(buffer, "ok\n");
     }
-}
-
 
     #[test]
     fn init_logger() {
