@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Peer2Peer File Sharing Application</title>
+  <script type="module" src="/main.js" defer></script>
+  <style>
+    .logo.vanilla:hover {
+      filter: drop-shadow(0 0 2em #ffe21c);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Peer2Peer File Sharing Application</h1>
+
+    <div id="connection">
+      <button id="connectButton">Connect</button>
+      <button id="disconnectButton">Disconnect</button>
+    </div>
+
+    <div style="height: 20px;"></div>
+
+
+    <div id="screen">
+      <!-- This is where the list of files will be displayed -->
+    </div>
+
+    <div id="actions">
+      <input type="text" id="filesNames" placeholder="Enter files names">
+      <button id="uploadButton">Upload Files</button>
+      <button id="downloadButton">Download Files</button>
+    </div>
+
+  </div>
+</body>
+
+</html>
