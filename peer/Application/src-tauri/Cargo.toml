@@ -1,6 +1,6 @@
 [package]
-name = "Application"
-version = "0.0.0"
+name = "client"
+version = "0.1.0"
 description = "Peer2Peer File Sharing Application"
 authors = ["you"]
 edition = "2021"
