@@ -73,3 +73,14 @@ il trouve les paquets les plus rares (les moins présents dans les buffermap) et
     envoie **update seed [clef clef clef] leech [clef13 clef14 clef15]**
 
 search section list de fichiers -> download si download prend void il affiche le resultat de look (tout les fichiers disponibles)
+
+
+TODO :
+1 Un formulaire pour rechercher des fichiers avec des conditions
+Submit -> affiche resultat lignes -> click droit pour commencer le telechargement
+
+2 Upload fichiers a partir du navigateur fichiers
+
+3 Remove connect disconnect buttons
+
+4 change user input functions from rust -> js
