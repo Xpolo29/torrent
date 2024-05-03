@@ -46,7 +46,9 @@ int process(int connection) {
 
 	inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
 	uint16_t port = ntohs(addr.sin_port);
-	
+
+
+
 	// get port from db is exists
 	struct host hosts[BDD_SIZE]; 
 	int len = load_ip(hosts, ip_address);

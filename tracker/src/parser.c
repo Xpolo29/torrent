@@ -1,8 +1,4 @@
 #include "parser.h"
-#include "database.h"
-#include "logging.h"
-#include <string.h>
-#include <strings.h>
 
 enum request_t char_to_req(char *request) {
   if (strcmp(request, "announce") == 0) {
@@ -38,22 +34,30 @@ enum op_t char_to_op(char *request) {
   }
 }
 
-void process_getfile(char *buf, char *hash) {
-  struct data d[BDD_SIZE];
-  load_hash(d, hash);
-  strcat(buf, "peers ");
-  strcat(buf, hash);
-  strcat(buf, " [");
-  char host[23];
-  // TODO : Pour plusieurs peers, changer load_hash
-  for (int i = 0; d[i].size != 0; i++) {
-    if (i > 0)
-      strcat(buf, " ");
-    // printf("d[%d].ip = %s", i, d[i].host.ip);
-    snprintf(host, 23, "%.15s:%hu", d[i].host.ip, d[i].host.port);
-    strcat(buf, host);
-  }
-  strcat(buf, "]\n");
+void process_getfile(char *buf, char *hash, struct host h) {
+	struct data d[BDD_SIZE];
+	load_hash(d, hash);
+	strcat(buf, "peers ");
+	strcat(buf, hash);
+	strcat(buf, " [");
+	char host[23];
+	int is_local_trafic = is_local_ip(h.ip);
+	const char* public_ip = public_ip;
+	for (int i = 0; d[i].size != 0; i++) {
+		if (i > 0)strcat(buf, " ");
+
+		char relative_ip[INET_ADDRSTRLEN];
+		memcpy(relative_ip, d[i].host.ip, strlen(d[i].host.ip));
+
+		if(is_local_ip(relative_ip) && !is_local_trafic){
+			memcpy(relative_ip, public_ip, strlen(public_ip));
+		}
+
+		logging(WARNING, "Getfile request is from local to public network, converting ip to public\n");
+		snprintf(host, 23, "%.15s:%hu", relative_ip, d[i].host.port);
+		strcat(buf, host);
+	}
+	strcat(buf, "]\n");
 }
 
 void process_look(char *buf, char *filename, enum op_t op, long filesize) {
@@ -209,7 +213,7 @@ int handle_regex(int index[MATCH_SIZE][2], char *request) {
   return 0;
 }
 
-void parse_getfile(char *buf, int index[MATCH_SIZE][2], char *request) {
+void parse_getfile(char *buf, int index[MATCH_SIZE][2], char *request, struct host h) {
   logging(DEBUG, "Parser : Processing getfile request\n");
   int start = index[1][0];
   int size = index[1][1] - index[1][0];
@@ -217,7 +221,7 @@ void parse_getfile(char *buf, int index[MATCH_SIZE][2], char *request) {
   memcpy(hash, request + start, size);
   hash[size] = 0;
   // printf("hash : %s\n", hash);
-  process_getfile(buf, hash);
+  process_getfile(buf, hash, h);
 }
 
 void parse_look(char *buf, int index[MATCH_SIZE][2], char *request) {
@@ -423,7 +427,7 @@ int parse_request(char *buf, char *request, struct host h) {
 
   switch (reqt) {
   case getfile: {
-    parse_getfile(buf, index, request);
+    parse_getfile(buf, index, request, h);
     break;
   }
   case look: {

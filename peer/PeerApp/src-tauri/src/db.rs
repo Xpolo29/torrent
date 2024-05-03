@@ -93,7 +93,8 @@ pub fn get_file(key: &str) -> Option<MetaFile> {
 /// # Arguments
 /// * `key` - A string slice representing the key.
 /// * `file` - A MetaFile struct.
-fn set_file(key: &str, file: MetaFile) {
+fn set_file(file: MetaFile) {
+    let key: &str = &file.hash;
     let mut db = FILEDB.lock().unwrap();
     db.insert(key.to_string(), file);
     // drop(db);
@@ -155,13 +156,19 @@ fn __get_buffermap(file_key: &str, peer_key: &str) -> Option<Vec<u8>> {
 /// # Arguments
 /// * `file` - A MetaFile struct representing the file to be added.
 pub fn add_seed_file_to_db(file: MetaFile) {
+    // add file to db
     let file_key = get_file_hash(&file);
-    set_file(&file_key, file.clone());
+    set_file(file.clone());
+
+    // add peer to db
     let me = PeerConfig::from_config();
+    let me2 = me.clone();
     let peer_key = get_peer_key(me);
     let buffersize = get_buffer_size(&file) as usize;
+    set_peer(&peer_key, me2);
+
+    // add buffermap to db
     let buffermap = vec![1u8; buffersize];
-    set_file(file_key.as_str(), file);
     set_buffermap(file_key, peer_key, buffermap)
 }
 
@@ -175,12 +182,12 @@ pub fn add_seed_file_to_db(file: MetaFile) {
 /// * `file` - A MetaFile struct representing the file to be added.
 pub fn add_leeched_file_to_db(file: MetaFile) {
     let file_key = get_file_hash(&file);
-    set_file(&file_key, file.clone());
+    set_file(file.clone());
     let me = PeerConfig::from_config();
     let peer_key = get_peer_key(me);
     let buffersize = get_buffer_size(&file) as usize;
     let buffermap = vec![0u8; buffersize];
-    set_file(file_key.as_str(), file);
+    //set_file(file);
     set_buffermap(file_key, peer_key, buffermap)
 }
 
@@ -195,7 +202,7 @@ pub fn add_leeched_file_to_db(file: MetaFile) {
 pub fn set_peer_to_file(config: PeerConfig, file: MetaFile, buffermap: Vec<u8>) {
     let peer_key = get_peer_key(config.clone());
     set_peer(&file.hash, config);
-    set_file(&file.hash, file.clone());
+    set_file(file.clone());
     set_buffermap(file.hash, peer_key, buffermap);
 }
 

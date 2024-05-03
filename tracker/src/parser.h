@@ -2,10 +2,18 @@
 #define PARSER
 
 #include "database.h"
+#include "network.h"
+#include "parameters.h"
+#include "database.h"
+#include "logging.h"
+
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string.h>
+#include <strings.h>
+
 #define MATCH_SIZE 10
 #define MAX_SEED 32
 #define HASH_SIZE 64

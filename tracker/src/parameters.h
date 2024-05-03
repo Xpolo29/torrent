@@ -6,6 +6,7 @@
 #include "threads.h"
 
 #include <stdint.h>
+#include <arpa/inet.h>
 
 //here are all the global vars
 extern char* config_path;
@@ -20,5 +21,7 @@ extern int time_to_live;
 
 extern pthread_mutex_t len_mutex;
 extern int task_len;
+
+extern char* public_ip;
 
 #endif

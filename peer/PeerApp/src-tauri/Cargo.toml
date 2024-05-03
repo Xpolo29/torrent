@@ -1,20 +1,47 @@
 [package]
-name = "peerapp"
-version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
+name = "client"
+version = "0.1.0"
+description = "Peer2Peer File Sharing Application"
+authors = ["easteregg"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[build-dependencies]
-tauri-build = { version = "1", features = [] }
-
+# General dependencies
 [dependencies]
-tauri = { version = "1", features = ["shell-open"] }
+env_logger = "0.11.3"
+log = "0.4.21"
+simplelog = "0.12.2"
+
+# Serialization dependencies
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# Tauri dependencies
+tauri = { version = "1", features = ["shell-open"] }
+
+# Other dependencies
+easy-upnp = "0.2.0"
+hashbrown = "0.14.3"
+hex = "0.4.3"
+lazy_static = "1.4.0"
+md-5 = "0.10.6"
+num-traits = "0.2.18"
+regex = "1.10.4"
+rust-ini = "0.21.0"
+
+# Binary targets
+[[bin]]
+name = "client"
+path = "src/main.rs"
+
+[[bin]]
+name = "testo"
+path = "src/testo.rs"
+
+# Build dependencies
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+# Features
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]

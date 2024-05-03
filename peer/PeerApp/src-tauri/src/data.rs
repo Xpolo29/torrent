@@ -6,15 +6,15 @@ use std::path::Path;
 #[derive(Debug, Clone)]
 pub struct MetaFile {
     pub file_name: String,
-    pub length: u64,
-    pub piece_size: u64,
+    pub length: usize,
+    pub piece_size: usize,
     pub hash: String,
 }
 
 impl MetaFile {
     pub fn new(file_name: String) -> Self {
         let path = Path::new(&file_name);
-        let length = path.metadata().unwrap().len();
+        let length = path.metadata().unwrap().len() as usize;
         MetaFile {
             hash: get_file_key(&file_name),
             file_name,
@@ -35,7 +35,7 @@ impl PeerConfig {
         PeerConfig { address, port }
     }
 }
-
+#[derive(Clone)]
 pub struct TrackerConfig {
     pub address: String,
     pub port: u16,
@@ -45,7 +45,6 @@ impl TrackerConfig {
     pub fn new() -> Self {
         let conf = Ini::load_from_file("config.ini").unwrap();
         let tracker_section = conf.section(Some("Tracker")).unwrap();
-        let peer_section = conf.section(Some("Peer")).unwrap();
 
         let tracker_address = tracker_section.get("tracker-address").unwrap().to_string();
         let tracker_port = tracker_section
@@ -54,13 +53,14 @@ impl TrackerConfig {
             .parse::<u16>()
             .unwrap();
 
-        let _peer_address = peer_section.get("peer-address").unwrap().to_string();
-        let _peer_port = peer_section
-            .get("peer-port")
-            .unwrap()
-            .parse::<u16>()
-            .unwrap();
-
+        TrackerConfig {
+            address: tracker_address,
+            port: tracker_port,
+        }
+    }
+    pub fn new_with_args(args: &Vec<String>) -> Self {
+        let tracker_address = args[1].clone();
+        let tracker_port = args[2].parse::<u16>().unwrap();
         TrackerConfig {
             address: tracker_address,
             port: tracker_port,
@@ -112,8 +112,8 @@ pub fn get_file_key(path: &str) -> String {
 /// * `file` - A reference to a MetaFile struct.
 ///
 /// # Returns
-/// * `u64` - The buffer size for the file.
-pub fn get_buffer_size(file: &MetaFile) -> u64 {
+/// * `usize` - The buffer size for the file.
+pub fn get_buffer_size(file: &MetaFile) -> usize {
     file.length / file.piece_size + 1
 }
 
@@ -136,7 +136,7 @@ mod tests {
     fn test_peer_config_from_config() {
         // Set up the test
         let peer_config = PeerConfig::from_config();
-        assert_eq!(peer_config.address, "127.0.0.1");
+        assert_eq!(peer_config.address, "0.0.0.0");
         assert_eq!(peer_config.port, 54321);
     }
 }

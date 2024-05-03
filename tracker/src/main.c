@@ -24,6 +24,10 @@ int main(int argc, char** argv){
 	int main_sock = create_master_sock(port);
 	if(main_sock < 0)return 3;
 
+	//ip var
+	char public_ip[INET_ADDRSTRLEN];
+	get_public_ip(public_ip);
+
 	//connection var
 	struct sockaddr_in server_addr;
 	struct sockaddr* addr = (struct sockaddr*)(&server_addr);
@@ -36,7 +40,7 @@ int main(int argc, char** argv){
 	logging(LOG, "--------------------------------------------------------\n");
 	logging(LOG, "Starting on %s at %s:%d\n",
 		       	get_timestamp(),
-			"127.0.0.1",
+			public_ip,
 			port
 	);
 	logging(LOG, "--------------------------------------------------------\n");

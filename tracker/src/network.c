@@ -64,3 +64,41 @@ int send_msg(int sock, char* msg){
 	}
 	return 0;
 }
+
+
+// get public ip using curl
+void get_public_ip(char* ip) {
+	FILE *fp;
+	char path[1024];
+	char temp[1024];
+	for(int i = 0; i < INET_ADDRSTRLEN; i++)ip[i] = 0;
+
+	// Open the command for reading.
+	fp = popen("curl -s icanhazip.com", "r");
+	if (fp == NULL) {
+	    logging(WARNING, "Failed to fetch public ip from the internet\n");
+	    return;
+	}
+	while (fgets(path, sizeof(path), fp) != NULL) {
+		strcpy(temp, path);
+	}
+
+	for(int i = 0; i < INET_ADDRSTRLEN; i++){
+		if(temp[i] != '\n')
+			ip[i] = temp[i];
+	}
+
+	// close
+	pclose(fp);
+	logging(DEBUG, "Public ip is %s\n", ip);
+}
+
+// check if ip is local
+int is_local_ip(char ip_address[INET_ADDRSTRLEN]){
+	char beginning[8];
+	memcpy(beginning, ip_address, 7);
+	beginning[7] = 0;
+
+
+	return !strcmp(beginning, "192.168");
+}

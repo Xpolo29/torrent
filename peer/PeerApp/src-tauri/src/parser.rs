@@ -1,6 +1,6 @@
 use crate::tasks::*;
 use hashbrown::HashMap;
-use log::error;
+use log::{error, trace};
 use regex::Regex;
 use std::net::TcpStream;
 
@@ -56,33 +56,47 @@ fn organize_request(
 
 /// This function takes a data request and returns a Task object that handles the request.
 fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
+    trace!("Regex data matched");
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
-    let hashdata = capture.get(3).unwrap();
-    let map: HashMap<u32, Vec<u8>> = hashdata
-        .as_str()
-        .split(' ')
-        .map(|pair| {
-            let (key, value) = pair.split_once(':').unwrap();
-            let key: u32 = key.parse().unwrap();
-            let value: Vec<u8> = value
-                .chars()
-                .filter_map(|c| u8::from_str_radix(&c.to_string(), 16).ok())
-                .collect();
-            (key, value)
-        })
-        .collect();
+    let datas = capture.get(3).unwrap();
+
+    let mut map: Vec<(usize, Vec<u8>)> = Vec::new();
+
+    let datas_iter = datas.as_str().split(' ');
+
+    for data in datas_iter{
+        let splitted: Vec<&str> = data.split(':').collect();
+        let key: usize = splitted[0].parse().unwrap();
+        let data_str: String = splitted[1].to_string();
+
+        // trace!("Key : {}, Value : {}", key, data_str);
+
+        // convert data string into u8, using 8 bits chunks
+        let mut pieces: Vec<u8> = Vec::new();
+        for chunk in data_str.as_bytes().chunks(8) {
+            let chunk_str = std::str::from_utf8(chunk).unwrap();
+            let num = u8::from_str_radix(chunk_str, 2).unwrap(); //2 means base 2 binary to u8
+            pieces.push(num);
+        }
+
+        map.push((key, pieces));
+    }
+
     let ret = Data {
         key: hash.as_str().to_string(),
         pieces: map.clone(),
         stream: stream,
     };
-    println!("hash : {}, HashMap : {:?}", hash.as_str(), map);
+    // let ret = EmptyTask {stream : None};
+    // trace!("hash : {}, data : {:?}", hash.as_str(), map);
     Box::new(ret)
+
 }
 
 /// This function takes a data request and returns a Task object that handles the request.
 fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
+    trace!("Regex have matched");
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let buffermap = capture.get(3).unwrap();
@@ -104,7 +118,7 @@ pub fn parse_data(request: String) -> Option<HashMap<u32, Vec<u8>>> {
     let regex_data = r"^(data) ([[:alnum:]]*) \\[((?:[[:digit:]]*:[01]* ?)*)\\]$";
     match Regex::new(regex_data) {
         Ok(re) => {
-            let request_trimmed = request.trim().to_string();
+            let request_trimmed = request.trim().trim_matches(&['\0', '\n', ' '] as &[_]).to_string();
             if re.is_match(&request_trimmed) {
                 let capture = re.captures(&request).unwrap();
                 let hashdata = capture.get(3).unwrap();
@@ -134,13 +148,14 @@ pub fn parse_data(request: String) -> Option<HashMap<u32, Vec<u8>>> {
     }
 }
 
+
 pub fn parse_have_from_have(request: String) -> Option<Have> {
     let regex_have = r"^(have) ([[:alnum:]]*) ([01]*)$";
     match Regex::new(regex_have) {
         Ok(re) => {
-            let request_trimmed = request.trim().to_string();
+            let request_trimmed = request.trim().trim_matches(&['\0', '\n', ' '] as &[_]).to_string();
             if re.is_match(&request_trimmed) {
-                let capture = re.captures(&request).unwrap();
+                let capture = re.captures(&request_trimmed).unwrap();
 
                 let hash = capture.get(2).unwrap();
                 let buffermap = capture.get(3).unwrap();
@@ -174,15 +189,17 @@ fn getpieces_request(
     request: String,
     stream: Option<TcpStream>,
 ) -> Box<dyn Task + Send> {
-    let _regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
+    trace!("Regex getpiece matched");
+    //let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let indexes = capture.get(3).unwrap();
-    let numbers: Vec<u32> = indexes
+    let numbers: Vec<usize> = indexes
         .as_str()
         .split_whitespace()
-        .map(|s| s.parse::<u32>().unwrap())
+        .map(|s| s.parse::<usize>().unwrap())
         .collect();
+    // trace!("Getpiece parser caught these : {:?}", numbers);
     let ret = Getpieces {
         key: hash.as_str().to_string(),
         pieces: numbers,
@@ -197,6 +214,7 @@ fn interested_request(
     request: String,
     stream: Option<TcpStream>,
 ) -> Box<dyn Task + Send> {
+    trace!("Regex interest matched");
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let ret = Interested {
@@ -213,22 +231,30 @@ pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task
     //     stream: Some(stream),
     // };
     // return Box::new(empty);
-    let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
+    // let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
+    let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \[((?:[[:digit:]]* ?)*)\]$";
+    // let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \[\s*(\d+\s*)*\s*\]$";
     let regex_interested = r"^(interested) ([[:alnum:]]*)$";
     let regex_have = r"^(have) ([[:alnum:]]*) ([01]*)$";
-    let regex_data = r"^(data) ([[:alnum:]]*) \\[((?:[[:digit:]]*:[01]* ?)*)\\]$";
+    let regex_data = r"^(data) ([[:alnum:]]*) \[((?:[[:digit:]]*:[01]* ?)*)\]$";
     let regex = [regex_data, regex_have, regex_getpieces, regex_interested];
     let mut count = 0;
     // let mut reqtype = RequestType::Data;
-    /* */
     for r in regex {
         match Regex::new(r) {
             Ok(re) => {
-                let request_trimmed = request.trim().to_string();
+                let request_trimmed = request.trim().trim_matches(&['\0', '\n', ' '] as &[_]).to_string();
+                /*
+                trace!("request trimmed look like this : {}", request_trimmed);
+                for c in request_trimmed.chars(){
+                    println!("-> {} : {}", c, c as u32);
+                }
+                */
                 if re.is_match(&request_trimmed) {
                     let reqtype = cast_to_request_type(count).unwrap();
                     return organize_request(re, request_trimmed, reqtype, stream);
                 } else {
+                    count += 1;
                     continue;
                 };
             }
@@ -236,8 +262,9 @@ pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task
                 error!("Regex Error: {}", e);
             }
         }
-        count += 1;
+
     }
+    error!("Request error, could not match: {}", request);
     let empty = EmptyTask { stream: stream };
     Box::new(empty)
 }

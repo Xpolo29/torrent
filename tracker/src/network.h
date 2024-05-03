@@ -13,4 +13,8 @@ int create_master_sock(int);
 //send <msg> to <socket> return 0 on success, 1 otherwise
 int send_msg(int socket, char* msg);
 
+void get_public_ip(char*);
+
+int is_local_ip(char[INET_ADDRSTRLEN]);
+
 #endif

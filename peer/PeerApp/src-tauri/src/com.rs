@@ -2,8 +2,21 @@
 use crate::data::MetaFile;
 use crate::db::{get_leeching_files, get_seeding_files};
 use log::{debug, error, info};
-use std::io::{BufReader, Read, Write};
+use std::io::{BufReader, Write, BufRead};
 use std::net::TcpStream;
+
+
+
+// format the getpieces msg
+pub fn getpieces(key: String, pieces: Vec<usize>) -> String {
+    let indexes_str = pieces
+        .iter()
+        .map(|&index| index.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    format!("getpieces {} [{}]\n", key.trim(), indexes_str)
+}
 
 // # Examples
 //
@@ -153,7 +166,7 @@ pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
 /// * `message` - A string representing the message to be sent.
 pub fn send(stream: &mut TcpStream, message: String) {
     stream.write(message.as_bytes()).unwrap();
-    info!("Sending to tracker: {}", message);
+    info!("Sending to {} : {}", stream.peer_addr().unwrap(), message);
 }
 
 /// Receives a message from a given address and port.
@@ -169,12 +182,12 @@ pub fn send(stream: &mut TcpStream, message: String) {
 /// # Returns
 /// * `String` - The message received from the `TcpStream`, or an empty string if the message could not be read.
 pub fn receive(stream: &mut TcpStream) -> String {
-    let mut buffer = [0; 1024];
+    let mut buffer: Vec<u8> = Vec::new();
     let port = stream.peer_addr().unwrap().port();
     let ip = stream.peer_addr().unwrap().ip();
     let mut reader = BufReader::new(stream);
     debug!("About to read from {}:{}", ip, port);
-    match reader.read(&mut buffer) {
+    match reader.read_until(b'\n', &mut buffer) {
         Ok(_) => {
             info!(
                 "Received from {}:{} {}",

@@ -44,8 +44,8 @@ Il recoit ```> data clef [3:%piece3 5:%piece5] ``` où piece3 est la donné au f
 
 
 TO USE TAURI
-npm install -g @tauri-apps/cli
-cd Application then npx tauri dev
+```npm install -g @tauri-apps/cli```
+cd Application then ```npm run tauri dev``` or ```npx tauri dev```
 export PATH="$PATH:/path/to/tauri/cli"
 
 
