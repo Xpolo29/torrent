@@ -43,4 +43,14 @@ Il recoit ```> data clef [3:%piece3 5:%piece5] ``` où piece3 est la donné au f
 7. Avoir une config
 
 
->> cd Application then npx tauri dev
+TO USE TAURI
+npm install -g @tauri-apps/cli
+cd Application then npx tauri dev
+export PATH="$PATH:/path/to/tauri/cli"
+
+
+recherche fichiers avec un formulaire et des conditions
+submit -> affiche resultat lignes -> click droit pour commencer le telechargement
+
+upload fichiers a partir du navigateur fichiers
+

@@ -174,7 +174,7 @@ fn getpieces_request(
     request: String,
     stream: Option<TcpStream>,
 ) -> Box<dyn Task + Send> {
-    let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
+    let _regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let indexes = capture.get(3).unwrap();

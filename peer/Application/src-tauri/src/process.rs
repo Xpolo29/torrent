@@ -4,7 +4,7 @@ use crate::com::{connect, receive, send};
 use crate::data::PeerConfig;
 use crate::db::{get_buffermap, get_file, get_peer_key, set_buffermap};
 use crate::parser::parse_have_from_have;
-use crate::tasks::{Data, DataWrite, Getpieces, Have, Interested, Peer, Task};
+use crate::tasks::{Data, Getpieces, Have, Interested, Peer, Task};
 use hashbrown::HashMap;
 use log::error;
 /// `Getpieces` is a struct that implements the `Task` trait. It is used to send pieces of a file over a TCP stream.
@@ -215,7 +215,7 @@ impl Task for Peer {
                     let peer_key = get_peer_key(self.config.clone());
                     set_buffermap(file_key.clone(), peer_key.clone(), buffermap);
                     // get the pieces that the peer wants relativly to the other buffermap but included into the peers buffermap
-                    let pieces = get_wanted_piece_from_peer(&peer_key, &file_key);
+                    let _pieces = get_wanted_piece_from_peer(&peer_key, &file_key);
                 }
                 // return the DataWrite task
             }

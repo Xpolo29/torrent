@@ -1,4 +1,4 @@
-use crate::data::{MetaFile, PeerConfig};
+use crate::data::{MetaFile};
 use crate::tasks::Peer;
 use log::{error, trace};
 use regex::Regex;
@@ -95,13 +95,13 @@ impl ExpectedAnswer for ExpectList {
 }
 
 impl ExpectedAnswer for ExpectPeers {
-    fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {
+    fn check_answer(&self, _answer: &str) -> Result<String, Box<dyn Error>> {
         todo!()
     }
-    fn retrieve_data(&self, answer: String) -> Answer {
+    fn retrieve_data(&self, _answer: String) -> Answer {
         todo!()
     }
-    fn shutdown(&self, stream: &mut TcpStream) {
+    fn shutdown(&self, _stream: &mut TcpStream) {
         todo!()
     }
 }

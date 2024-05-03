@@ -1,5 +1,5 @@
 use crate::com::{connect, getfile_request, receive, send};
-use crate::data::PeerConfig;
+
 use crate::db::get_file;
 use crate::respons_handler::{Answer, ExpectPeers, ExpectedAnswer};
 use crate::tasks::{Peer, Task};
@@ -33,7 +33,7 @@ pub fn start_download(
 ) -> Result<Vec<Box<dyn Task + Send>>, Error> {
     // extract the meta data from the file
     let meta_file = get_file(&key).unwrap();
-    let chunk_size = meta_file.piece_size;
+    let _chunk_size = meta_file.piece_size;
     // get the peers thare hold buffermap for the file
     if let Some(mut stream) = connect(tracker_port, &tracker_adress) {
         let key_clone = key.clone();
@@ -147,7 +147,7 @@ fn get_chunk(file_path: &str, chunk_size: u32, chunk_index: u32) -> std::io::Res
     Ok(buffer)
 }
 ///
-pub fn get_wanted_piece_from_peer(peer_key: &str, file_key: &str) -> Vec<u32> {
+pub fn get_wanted_piece_from_peer(_peer_key: &str, _file_key: &str) -> Vec<u32> {
     todo!();
 }
 pub struct FileAssembler {

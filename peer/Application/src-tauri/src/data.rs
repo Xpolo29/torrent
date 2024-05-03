@@ -54,8 +54,8 @@ impl TrackerConfig {
             .parse::<u16>()
             .unwrap();
 
-        let peer_address = peer_section.get("peer-address").unwrap().to_string();
-        let peer_port = peer_section
+        let _peer_address = peer_section.get("peer-address").unwrap().to_string();
+        let _peer_port = peer_section
             .get("peer-port")
             .unwrap()
             .parse::<u16>()

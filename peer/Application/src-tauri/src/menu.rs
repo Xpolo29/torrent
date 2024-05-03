@@ -158,7 +158,7 @@ fn download_section(
                 pool.add_task(task);
             }
         }
-        Err(errors) => {
+        Err(_errors) => {
             println!("Operation failed because reasons");
         }
     }
