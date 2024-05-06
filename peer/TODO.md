@@ -77,10 +77,10 @@ search section list de fichiers -> download si download prend void il affiche le
 
 TODO :
 1 Un formulaire pour rechercher des fichiers avec des conditions
-Submit -> affiche resultat lignes -> click droit pour commencer le telechargement
+Submit -> affiche resultat lignes -> click droit pour commencer le telechargement DONE
 
-2 Upload fichiers a partir du navigateur fichiers
+2 Upload fichiers a partir du navigateur fichiers DONE
 
-3 Remove connect disconnect buttons
+3 Remove connect disconnect buttons DONE
 
 4 change user input functions from rust -> js
