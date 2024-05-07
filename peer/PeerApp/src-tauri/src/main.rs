@@ -30,7 +30,7 @@ use std::{env, thread};
 use threads::Pool;
 
 fn main() {
-    let interface = "tauri" // "terminal" or "tauri" or string (-> tauri by default)
+    let interface = "tauri"; // "terminal" or "tauri" or string (-> tauri by default)
 
     if interface == "terminal"{
         let log_file = File::create("client.log").unwrap();
