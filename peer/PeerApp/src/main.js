@@ -1,5 +1,5 @@
 //https://tauri.app/v1/guides/features/command/
-//import { invoke } from '@tauri-apps/api/tauri'
+// import { invoke } from '@tauri-apps/api/tauri'
 const { invoke } = window.__TAURI__.tauri;
 
 // #####################
@@ -148,13 +148,44 @@ document.getElementById('submitSearchForm').addEventListener('click', function (
 // #####################
 // ##### DASHBOARD #####
 var refreshRate = 1;  // Refresh rate in seconds
-function populateDashboard() {
+async function populateDashboard() {
+
+  function parseDataString(inputString) {
+  const data = [];
+  if (inputString == "") {
+    return []; 
+  }
+  const items = inputString.split('|');
+  for (const item of items) {
+    const values = item.split('#');
+    const obj = {
+      name: values[0],
+      downloadPercentage: `Downloading... ${values[1]}%`,
+      leechingStatus: values[2] === '1' ? 'Leeching...' : 'Not Leeching'
+    };
+    data.push(obj);
+  }
+  return data;
+  }
+
+  async function getData() {
+  var data = [];
+    await invoke("get_files_data").then(result =>{
+      data = parseDataString(result);
+      console.log(data);
+      return data;
+    });
+    return data;
+  }
+
+  var data =  await getData();
+  console.log(data);
   // Example data - real data should be taken from the backend
-  var data = [
-    { name: 'file1.txt', downloadPercentage: 'Downloading... 50%', numberOfPeers: '13', leechingStatus: 'Leeching...' },
-    { name: 'file2.txt', downloadPercentage: 'Downloading... 75%', numberOfPeers: '5', leechingStatus: 'Leeching...' },
-    { name: 'file3.txt', downloadPercentage: 'Downloading... 15%', numberOfPeers: '8', leechingStatus: 'Not Leeching' }
-  ];
+  // var data = [
+  //   { name: 'file1.txt', downloadPercentage: 'Downloading... 50%', numberOfPeers: '13', leechingStatus: 'Leeching...' },
+  //   { name: 'file2.txt', downloadPercentage: 'Downloading... 75%', numberOfPeers: '5', leechingStatus: 'Leeching...' },
+  //   { name: 'file3.txt', downloadPercentage: 'Downloading... 15%', numberOfPeers: '8', leechingStatus: 'Not Leeching' }
+  // ];
 
   // Create a table
   var table = document.createElement('table');
@@ -162,7 +193,7 @@ function populateDashboard() {
   // Add table header
   var thead = document.createElement('thead');
   var headerRow = document.createElement('tr');
-  ['File Name', 'Download Percentage', 'Number of Peers', 'Leeching Status'].forEach(function (header) {
+  ['File Name', 'Download Percentage', 'Leeching Status'].forEach(function (header) {
     var th = document.createElement('th');
     th.textContent = header;
     headerRow.appendChild(th);
@@ -174,7 +205,7 @@ function populateDashboard() {
   var tbody = document.createElement('tbody');
   data.forEach(function (file) {
     var row = document.createElement('tr');
-    [file.name, file.downloadPercentage, file.numberOfPeers, file.leechingStatus].forEach(function (cell) {
+    [file.name, file.downloadPercentage, file.leechingStatus].forEach(function (cell) {
       var td = document.createElement('td');
       td.textContent = cell;
       row.appendChild(td);
