@@ -27,12 +27,16 @@ use regex::Regex;
 use simplelog::*;
 use std::fs::File;
 use threads::Pool;
+use std::thread;
 
 fn main() {
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+    let tauri_thread = thread::spawn(|| {
+        tauri::Builder::default()
+            .invoke_handler(tauri::generate_handler![])
+            .run(tauri::generate_context!())
+            .expect("error while running tauri application");
+    });
+
 
     let log_file = File::create("client.log").unwrap();
 
@@ -130,6 +134,9 @@ fn main() {
             sleep(Duration::from_secs(20));
         }
         */
+
+    // Wait for the Tauri thread to finish
+    tauri_thread.join().unwrap();
 
     //delete pool
     pool.drop();
