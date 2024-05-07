@@ -8,7 +8,7 @@ edition = "2021"
 # General dependencies
 [dependencies]
 env_logger = "0.11.3"
-log = "0.4.21"
+log = { version = "0.4.21", features = ["max_level_trace"] }
 simplelog = "0.12.2"
 
 # Serialization dependencies
@@ -29,12 +29,7 @@ regex = "1.10.4"
 rust-ini = "0.21.0"
 base64 = "0.22.1"
 clap = { version = "4.5.4", features = ["derive"] }
-env_logger = "0.11.3"
-hex = "0.4.3"
-log = { version = "0.4.21", features = ["max_level_trace"] }
-md-5 = "0.10.6"
 rayon = "1.10.0"
-simplelog = "0.12.2"
 
 # Binary targets
 [[bin]]
