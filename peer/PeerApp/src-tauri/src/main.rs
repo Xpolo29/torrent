@@ -18,9 +18,10 @@ mod threads;
 mod userinput;
 use clap::Parser;
 use data::{
-    set_config_path, set_peer_port, set_tracker_address, set_tracker_port, PeerConfig,
+    set_config_path, set_peer_port, set_tracker_address, set_tracker_port, MetaFile, PeerConfig,
     TrackerConfig,
 };
+use db::{add_leeched_file_to_db, add_seed_file_to_db};
 use for_frontend::*;
 use log::{error, info};
 use menu::display_menu;

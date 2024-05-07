@@ -155,13 +155,14 @@ async function populateDashboard() {
   if (inputString == "") {
     return []; 
   }
-  const items = inputString.split('|');
+  const items = inputString.split('|').slice(0,-1);
   for (const item of items) {
     const values = item.split('#');
     const obj = {
       name: values[0],
-      downloadPercentage: `Downloading... ${values[1]}%`,
-      leechingStatus: values[2] === '1' ? 'Leeching...' : 'Not Leeching'
+      downloadPercentage: values[1],
+      peersNumber: values[2],
+      leechingStatus: values[3] === '1' ? 'Seeding' : 'Leeching'
     };
     data.push(obj);
   }
@@ -193,7 +194,7 @@ async function populateDashboard() {
   // Add table header
   var thead = document.createElement('thead');
   var headerRow = document.createElement('tr');
-  ['File Name', 'Download Percentage', 'Leeching Status'].forEach(function (header) {
+  ['File Name', 'Download Percentage (%)',"Connected Peers", 'Status'].forEach(function (header) {
     var th = document.createElement('th');
     th.textContent = header;
     headerRow.appendChild(th);
@@ -205,7 +206,7 @@ async function populateDashboard() {
   var tbody = document.createElement('tbody');
   data.forEach(function (file) {
     var row = document.createElement('tr');
-    [file.name, file.downloadPercentage, file.leechingStatus].forEach(function (cell) {
+    [file.name, file.downloadPercentage, file.peersNumber, file.leechingStatus].forEach(function (cell) {
       var td = document.createElement('td');
       td.textContent = cell;
       row.appendChild(td);
