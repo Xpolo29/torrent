@@ -19,6 +19,7 @@ function addMessage(message, divName, setTimeoutTime = 0, id = message) {
 }
 
 
+ // Call the Rust function getFiles
 // ######################
 // ##### BEGIN HERE #####
 
@@ -95,6 +96,7 @@ document.getElementById('submitSearchForm').addEventListener('click', function (
     { name: 'file2.txt', size: 200 },
     { name: 'file3.txt', size: 300 }
   ];
+
   
 
   

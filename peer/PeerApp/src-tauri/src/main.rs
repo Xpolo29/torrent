@@ -27,46 +27,13 @@ use regex::Regex;
 use simplelog::*;
 use std::fs::File;
 use threads::Pool;
- 
- fn main() {
-     tauri::Builder::default()
-         .invoke_handler(tauri::generate_handler![])
-         .run(tauri::generate_context!())
-         .expect("error while running tauri application");
 
-    
- }
- 
-
-
-
-
- 
- /*
-mod back;
-mod com;
-mod data;
-mod db;
-mod menu;
-mod parser;
-mod process;
-mod respons_handler;
-mod tasks;
-mod threads;
-mod userinput;
-use clap::Parser;
-use data::{
-    set_config_path, set_peer_port, set_tracker_address, set_tracker_port, PeerConfig,
-    TrackerConfig,
-};
-use log::{error, info};
-use menu::display_menu;
-use num_traits::ToPrimitive;
-use regex::Regex;
-use simplelog::*;
-use std::fs::File;
-use threads::Pool;
 fn main() {
+    tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+
     let log_file = File::create("client.log").unwrap();
 
     CombinedLogger::init(vec![
@@ -265,5 +232,3 @@ fn handle_program_const(args: Args) -> ProgramConst {
         number_chunk,
     }
 }
-
- */
