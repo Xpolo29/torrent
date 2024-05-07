@@ -67,7 +67,7 @@ int send_msg(int sock, char* msg){
 
 
 // get public ip using curl
-void get_public_ip(char* ip) {
+void get_public_ip(char ip[INET_ADDRSTRLEN]) {
 	FILE *fp;
 	char path[1024];
 	char temp[1024];
@@ -83,22 +83,30 @@ void get_public_ip(char* ip) {
 		strcpy(temp, path);
 	}
 
-	for(int i = 0; i < INET_ADDRSTRLEN; i++){
+	int i = 0;
+	for(; i < INET_ADDRSTRLEN; i++){
 		if(temp[i] != '\n')
 			ip[i] = temp[i];
 	}
+	ip[i] = 0;
 
 	// close
 	pclose(fp);
+	if(strlen(ip) == 0){
+		strcpy(ip, "");
+		logging(WARNING, "Could not fecth public ip, local mode only\n");
+	}
 	logging(DEBUG, "Public ip is %s\n", ip);
 }
 
 // check if ip is local
 int is_local_ip(char ip_address[INET_ADDRSTRLEN]){
-	char beginning[8];
-	memcpy(beginning, ip_address, 7);
-	beginning[7] = 0;
+	char beginning[4];
+	memcpy(beginning, ip_address, 3);
+	beginning[3] = 0;
+	
+	int b1 = !strcmp(beginning, "192"); 
+	int b2 = !strcmp(beginning, "10."); 
 
-
-	return !strcmp(beginning, "192.168");
+	return b1 || b2;
 }

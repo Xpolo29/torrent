@@ -33,6 +33,21 @@ int process(int connection) {
 
 	logging(LOG, "< %s", buff);
 
+	// Init local address if uninitialised
+	if(strlen(private_ip) == 0){
+		struct sockaddr_in localAddress;
+		socklen_t addressLength = sizeof(localAddress);
+		if (getsockname(connection, (struct sockaddr *)&localAddress, &addressLength) == -1) {
+			logging(ERROR, "Error getting local address\n");
+		}
+
+		char ipStr[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &(localAddress.sin_addr), ipStr, INET_ADDRSTRLEN);
+		logging(LOG, "Initialising local ip to : %s\n", ipStr);
+		strcpy(private_ip, ipStr);
+		if(strlen(public_ip) == 0)strcpy(public_ip, private_ip);
+	}
+
 	// Get the remote address of the socket
 	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
@@ -46,7 +61,6 @@ int process(int connection) {
 
 	inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
 	uint16_t port = ntohs(addr.sin_port);
-
 
 
 	// get port from db is exists

@@ -3,6 +3,7 @@ use hashbrown::HashMap;
 use log::{error, trace};
 use regex::Regex;
 use std::net::TcpStream;
+use crate::threads::Pool;
 
 //Enum for request types
 
@@ -45,11 +46,12 @@ fn organize_request(
     request: String,
     req_type: RequestType,
     stream: Option<TcpStream>,
+    pool: Pool,
 ) -> Box<dyn Task + Send> {
     match req_type {
         RequestType::Data => data_request(re, request, stream),
         RequestType::Have => have_request(re, request, stream),
-        RequestType::GetPieces => getpieces_request(re, request, stream),
+        RequestType::GetPieces => getpieces_request(re, request, stream, pool),
         RequestType::Interested => interested_request(re, request, stream),
     }
 }
@@ -188,6 +190,7 @@ fn getpieces_request(
     re: Regex,
     request: String,
     stream: Option<TcpStream>,
+    pool: Pool,
 ) -> Box<dyn Task + Send> {
     trace!("Regex getpiece matched");
     //let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
@@ -204,6 +207,7 @@ fn getpieces_request(
         key: hash.as_str().to_string(),
         pieces: numbers,
         stream: stream,
+        pool: pool,
     };
     Box::new(ret)
 }
@@ -226,7 +230,7 @@ fn interested_request(
 }
 
 /// This function takes a data request and returns a Task object that handles the request.
-pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
+pub fn parse_request(request: String, stream: Option<TcpStream>, pool: Pool) -> Box<dyn Task + Send> {
     // let empty = EmptyTask {
     //     stream: Some(stream),
     // };
@@ -252,7 +256,7 @@ pub fn parse_request(request: String, stream: Option<TcpStream>) -> Box<dyn Task
                 */
                 if re.is_match(&request_trimmed) {
                     let reqtype = cast_to_request_type(count).unwrap();
-                    return organize_request(re, request_trimmed, reqtype, stream);
+                    return organize_request(re, request_trimmed, reqtype, stream, pool);
                 } else {
                     count += 1;
                     continue;
@@ -319,6 +323,6 @@ mod tests {
     fn test_data_request() {
         let req = "data av12 [3:110011]";
         let stream_option = create_dummy_tcp_stream();
-        parse_request(req.to_string(), stream_option);
+        parse_request(req.to_string(), stream_option, Pool::new(0));
     }
 }

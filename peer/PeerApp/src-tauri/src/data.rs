@@ -1,8 +1,12 @@
+use base64::{engine::general_purpose, Engine as _};
 use ini::Ini;
+use lazy_static::lazy_static;
+use log::info;
 use md5::{Digest, Md5};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::sync::Mutex;
 #[derive(Debug, Clone)]
 pub struct MetaFile {
     pub file_name: String,
@@ -30,11 +34,6 @@ pub struct PeerConfig {
     pub port: u16,
 }
 
-impl PeerConfig {
-    pub fn new(address: String, port: u16) -> Self {
-        PeerConfig { address, port }
-    }
-}
 #[derive(Clone)]
 pub struct TrackerConfig {
     pub address: String,
@@ -43,24 +42,45 @@ pub struct TrackerConfig {
 
 impl TrackerConfig {
     pub fn new() -> Self {
-        let conf = Ini::load_from_file("config.ini").unwrap();
-        let tracker_section = conf.section(Some("Tracker")).unwrap();
+        let tracker_address = {
+            let lock = TRACKER_ADDRESS.lock().unwrap();
+            if let Some(address) = lock.clone() {
+                address
+            } else {
+                drop(lock); // Release the lock before reading the config file
+                let config_path = {
+                    let lock = CONFIG_PATH.lock().unwrap();
+                    lock.clone().unwrap_or_else(|| "config.ini".to_string())
+                };
+                let conf = Ini::load_from_file(&config_path).unwrap();
+                let tracker_section = conf.section(Some("Tracker")).unwrap();
+                tracker_section.get("tracker-address").unwrap().to_string()
+            }
+        };
+        let tracker_port = {
+            let lock = TRACKER_PORT.lock().unwrap();
+            if let Some(port) = lock.clone() {
+                port
+            } else {
+                drop(lock); // Release the lock before reading the config file
+                let config_path = {
+                    let lock = CONFIG_PATH.lock().unwrap();
+                    lock.clone().unwrap_or_else(|| "config.ini".to_string())
+                };
+                let conf = Ini::load_from_file(&config_path).unwrap();
+                let tracker_section = conf.section(Some("Tracker")).unwrap();
+                tracker_section
+                    .get("tracker-port")
+                    .unwrap()
+                    .parse::<u16>()
+                    .unwrap()
+            }
+        };
 
-        let tracker_address = tracker_section.get("tracker-address").unwrap().to_string();
-        let tracker_port = tracker_section
-            .get("tracker-port")
-            .unwrap()
-            .parse::<u16>()
-            .unwrap();
-
-        TrackerConfig {
-            address: tracker_address,
-            port: tracker_port,
-        }
-    }
-    pub fn new_with_args(args: &Vec<String>) -> Self {
-        let tracker_address = args[1].clone();
-        let tracker_port = args[2].parse::<u16>().unwrap();
+        info!(
+            "REGARDE ICI : tracker_adress: {} tracker_port: {} ",
+            tracker_address, tracker_port
+        );
         TrackerConfig {
             address: tracker_address,
             port: tracker_port,
@@ -68,16 +88,46 @@ impl TrackerConfig {
     }
 }
 
+lazy_static! {
+    static ref CONFIG_PATH: Mutex<Option<String>> = Mutex::new(None);
+    static ref TRACKER_PORT: Mutex<Option<u16>> = Mutex::new(None);
+    static ref TRACKER_ADDRESS: Mutex<Option<String>> = Mutex::new(None);
+    static ref PEER_PORT: Mutex<Option<u16>> = Mutex::new(None);
+}
+
+pub fn set_config_path(path: String) {
+    let mut config_path = CONFIG_PATH.lock().unwrap();
+    *config_path = Some(path);
+}
+pub fn set_tracker_port(port: u16) {
+    let mut tracker_port = TRACKER_PORT.lock().unwrap();
+    *tracker_port = Some(port);
+}
+pub fn set_tracker_address(address: String) {
+    let mut tracker_address = TRACKER_ADDRESS.lock().unwrap();
+    *tracker_address = Some(address);
+}
+pub fn set_peer_port(port: u16) {
+    let mut peer_port = PEER_PORT.lock().unwrap();
+    *peer_port = Some(port);
+}
+
 impl PeerConfig {
-    pub fn from_config() -> Self {
-        let conf = Ini::load_from_file("config.ini").unwrap();
+    pub fn new() -> Self {
+        let config_path = {
+            let lock = CONFIG_PATH.lock().unwrap();
+            lock.clone().unwrap_or_else(|| "config.ini".to_string())
+        };
+        let conf = Ini::load_from_file(&config_path).unwrap();
         let peer_section = conf.section(Some("Peer")).unwrap();
+
         let peer_address = peer_section.get("peer-address").unwrap().to_string();
         let peer_port = peer_section
             .get("peer-port")
             .unwrap()
             .parse::<u16>()
             .unwrap();
+
         PeerConfig {
             address: peer_address,
             port: peer_port,
@@ -117,6 +167,16 @@ pub fn get_buffer_size(file: &MetaFile) -> usize {
     file.length / file.piece_size + 1
 }
 
+/// Return the base64 encoded string from bytes array
+pub fn b64_enc(data: Vec<u8>) -> String {
+    general_purpose::STANDARD.encode(data)
+}
+
+/// Return the decoded string from bytes array
+pub fn b64_dec(base64_string: String) -> Vec<u8> {
+    general_purpose::STANDARD.decode(base64_string).unwrap()
+}
+
 /// Gets the hash of a file.
 ///
 /// # Arguments
@@ -133,9 +193,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_peer_config_from_config() {
+    fn test_peer_config_new() {
         // Set up the test
-        let peer_config = PeerConfig::from_config();
+        let peer_config = PeerConfig::new();
         assert_eq!(peer_config.address, "0.0.0.0");
         assert_eq!(peer_config.port, 54321);
     }

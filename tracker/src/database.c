@@ -85,7 +85,7 @@ int store(struct data e) {
 }
 
 void print_data(struct data d){
-	printf("ip : %s, port : %d, last_seen : %ld, size : %ld, chunk_size : %d, hash : %s, filename : %s\n", d.host.ip, d.host.port, d.host.last_update, d.size, d.chunk_size, d.hash, d.filename);
+	printf("ip : %s, port : %u, last_seen : %ld, size : %ld, chunk_size : %d, hash : %s, filename : %s\n", d.host.ip, d.host.port, d.host.last_update, d.size, d.chunk_size, d.hash, d.filename);
 }
 
 void print_db(){
@@ -209,14 +209,14 @@ int remove_doublon_hash(struct data* arr, int len){
 
 // remove e in bdd based on host, return true on success
 int remove_host(struct host host) {
-  int res = 0;
-  for (int i = 0; i < BDD_SIZE; ++i) {
-    if (*(uint32_t *)&host == *(uint32_t *)&bdd[i]) {
-      bdd[i] = EMPTY;
-      res = 1;
-    }
-  }
-  return res;
+	int res = 0;
+	for (int i = 0; i < BDD_SIZE; ++i) {
+		if(host_equals(host, bdd[i].host)){
+			bdd[i] = EMPTY;
+			res = 1;
+		}
+	}
+	return res;
 }
 
 // remove e in bdd based on filename, return true on success

@@ -1,12 +1,12 @@
+use crate::data::b64_dec;
 use crate::data::{MetaFile, PeerConfig};
 use crate::tasks::Peer;
+use crate::threads::Pool;
 use log::{error, trace};
 use regex::Regex;
 use std::error::Error;
 use std::io;
 use std::net::TcpStream;
-use crate::threads::Pool;
-
 
 pub trait ExpectedAnswer {
     // Check if the answer is correctly formatted
@@ -116,7 +116,7 @@ impl ExpectedAnswer for ExpectPeers {
         let reg = Regex::new(r"\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)\]").unwrap();
 
         for peer in reg.captures_iter(answer) {
-            let myself = PeerConfig::from_config();
+            let myself = PeerConfig::new();
             let address = peer[1].to_string();
             let port = peer[2].parse::<u16>().unwrap();
             // trace!("Succefully captured peer : {}:{}", address, port);
@@ -126,7 +126,7 @@ impl ExpectedAnswer for ExpectPeers {
             }
             let hash: String = key.clone();
             // trying to init with an empty pool
-            let pool: Pool = Pool::new(0); 
+            let pool: Pool = Pool::new(0);
             peers.push(Peer { hash, config, pool });
         }
 
@@ -137,14 +137,18 @@ impl ExpectedAnswer for ExpectPeers {
     }
 }
 
-impl ExpectedAnswer for ExpectData{
-    fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>>{
+impl ExpectedAnswer for ExpectData {
+    fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {
         // TODO Correct chech instead of always true
         let res: String = String::from(answer);
-        Ok(res)
+        if res.len() > 0{
+            return Ok(res);
+        }
+        let error = io::Error::new(io::ErrorKind::InvalidInput, "The input string is empty");
+        return Err(Box::new(error));
+
     }
-    fn retrieve_data(&self, answer: String) -> Answer{
-        // TODO use regex instead of string splitting
+    fn retrieve_data(&self, answer: String) -> Answer {
         let mut map: Vec<(usize, Vec<u8>)> = Vec::new();
 
         let answer: String = answer.trim().to_string();
@@ -153,7 +157,7 @@ impl ExpectedAnswer for ExpectData{
         let datas: Vec<&str> = datas[1].split(']').collect();
         let datas: Vec<&str> = datas[0].split(' ').collect();
 
-        for data in datas{
+        for data in datas {
             let splitted: Vec<&str> = data.split(':').collect();
             let key: usize = splitted[0].parse().unwrap();
             let data_str: String = splitted[1].to_string();
@@ -161,30 +165,32 @@ impl ExpectedAnswer for ExpectData{
             // trace!("Key : {}, Value : {}", key, data_str);
 
             // convert data string into u8, using 8 bits chunks
+            /*
             let mut pieces: Vec<u8> = Vec::new();
             for chunk in data_str.as_bytes().chunks(8) {
                 let chunk_str = std::str::from_utf8(chunk).unwrap();
                 let num = u8::from_str_radix(chunk_str, 2).unwrap(); //2 means base 2 binary to u8
-                trace!("Num : {}", num);
+                //trace!("Num : {}", num);
                 pieces.push(num);
             }
+            */
+            let pieces: Vec<u8> = b64_dec(data_str);
 
             map.push((key, pieces));
         }
         Answer::Data(map)
     }
-    fn shutdown(&self, stream: &mut TcpStream){
+    fn shutdown(&self, stream: &mut TcpStream) {
         todo!();
     }
 }
-
 
 #[derive(Debug)]
 pub enum Answer {
     Ok,
     List(Vec<MetaFile>),
     Peers(Vec<Peer>),
-    Data(Vec<(usize, Vec<u8>)>),    
+    Data(Vec<(usize, Vec<u8>)>),
 }
 pub struct ExpectOk;
 pub struct ExpectList;

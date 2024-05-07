@@ -1,27 +1,36 @@
 //use crate::back::get_peer_and_piece_indices;
-use crate::back::{get_chunks_from_file, get_wanted_piece_from_peer, FileAssembler};
-use crate::com::{connect, receive, send, getpieces};
-use crate::data::{PeerConfig, MetaFile};
-use crate::db::{get_buffermap, get_file, get_peer_key, set_buffermap, set_peer_to_file, log_db};
-use crate::parser::parse_have_from_have;
-use crate::tasks::{EmptyTask, Data, DataWrite, Getpieces, Have, Interested, Peer, Task, ToBeProcessed};
-use hashbrown::HashMap;
-use log::{error, trace, debug};
+use crate::back::{
+    get_chunks_from_file, get_wanted_piece_from_peer, is_stream_open, store_have_to_db,
+    FileAssembler,
+};
+use crate::com::{connect, dataf, getpiecesf, havef, interestedf, receive, send};
+use crate::data::{b64_enc, MetaFile, PeerConfig};
+use crate::db::{get_buffermap, get_file, get_peer_key, log_db, set_buffermap, set_peer_to_file};
+use crate::parser::{parse_have_from_have, parse_request};
+use crate::respons_handler::{Answer, ExpectData, ExpectedAnswer};
+use crate::tasks::{
+    Data, DataWrite, EmptyTask, Getpieces, Have, Interested, Peer, Task, ToBeProcessed,
+};
 use crate::threads::{handle_client, Pool};
-use crate::respons_handler::{ExpectedAnswer, ExpectData, Answer};
+use log::{debug, error, trace};
+use rayon::prelude::*;
+use std::cmp::min;
 use std::fs::OpenOptions;
-use std::io::{Seek, SeekFrom, Write};
+use std::io::{Seek, SeekFrom, Write, ErrorKind, Error};
+use std::mem;
+use std::net::{SocketAddr, TcpStream};
+use std::sync::Mutex;
 
 impl Task for EmptyTask {
     fn process(&mut self) {
-        println!("Processing empty task");
+        debug!("Processing empty task");
         let stream = &mut self.stream;
         match stream {
             Some(stream) => {
                 let msg: String = String::from("EMPTY");
                 send(stream, msg);
             }
-            None => return
+            None => return,
         }
     }
 }
@@ -43,10 +52,9 @@ impl Task for EmptyTask {
 /// * `pieces` - A vector of u32s representing the indices of the pieces to be sent.
 // write a data to TCP and update db
 impl Task for Getpieces {
-    // a file key and a list of index of pieces
-    // send data key [index1:piece1 index2:piece2 ...]
     fn process(&mut self) {
         trace!("Processing getpiece task");
+
         let stream = &mut self.stream;
         let chunk_size: usize = 1024;
         match stream {
@@ -57,35 +65,30 @@ impl Task for Getpieces {
                 let piece_indexes = &self.pieces;
                 trace!("Begin to read theses chunk {:?}", piece_indexes);
                 let data: Vec<(usize, Vec<u8>)> =
-                    get_chunks_from_file(key.clone(), chunk_size, piece_indexes.clone());
+                    get_chunks_from_file(key.to_string(), chunk_size, piece_indexes);
 
-                println!("HERE -> chunks {:?}", data);
+                let pieces: Vec<String> = data
+                    .par_iter()
+                    .map(|piece| {
+                        let cur_index: usize = piece.0;
+                        let cur_data: Vec<u8> = piece.1.clone();
+                        let cur_data_str: String = b64_enc(cur_data);
+                        format!("{}:{}", cur_index, cur_data_str)
+                    })
+                    .collect();
 
-                let mut pieces: Vec<String> = Vec::new();
-                for piece in data{
-                    let cur_index: usize = piece.0;
-                    let cur_data: Vec<u8> = piece.1;
-                    /*
-                    let cur_data_str: String = cur_data
-                        .iter()
-                        .map(|c| c.to_string())
-                        .collect::<Vec<String>>()
-                        .join("");
-                    */
-                    let cur_data_str: String = cur_data
-                        .iter()
-                        .map(|byte| format!("{:08b}", byte))
-                        .collect::<Vec<String>>()
-                        .join("");
+                let message: String = dataf(key, pieces);
 
-                    let cur_str: String = format!("{}:{}", cur_index, cur_data_str);
+                send(stream, message);
 
-                    pieces.push(cur_str);
+                let next_pieces: String = receive(&mut self.stream.as_mut().unwrap());
+                if next_pieces.len() == 0 {
+                    return;
                 }
 
-                trace!("data pieces here : {:?}", pieces[0]);
-                let message = format!("data {} [{}]\n", key, pieces.join(" "));
-                send(stream, message);
+                let next = parse_request(next_pieces, self.stream.take(), self.pool.clone());
+
+                self.pool.add_task(next);
             }
             None => {
                 error!("No stream found");
@@ -149,43 +152,48 @@ impl Task for Data {
 /// # Arguments
 /// * `stream` - A mutable reference to an Option wrapping a TcpStream. This is the stream over which the message will be sent.
 /// * `key` - A string representing the key of the file.
-// send a getpieces message to TCP
-// recieve a key and a buffermap and sens his key and his buffermap
 impl Task for Have {
     fn process(&mut self) {
         trace!("Processing have task");
+
+        // update db with new buffermap
+        let have: Have = self.clone();
+        let stream_clone: TcpStream;
+        match self.stream.as_ref().unwrap().try_clone() {
+            Ok(v) => stream_clone = v,
+            Err(e) => {
+                error!("Could not add have to db {}", e);
+                return;
+            }
+        }
+        let addr: SocketAddr = stream_clone.peer_addr().unwrap();
+        let address: String = addr.ip().to_string();
+        let port: u16 = addr.port();
+
+        let config: PeerConfig = PeerConfig { address, port };
+
+        store_have_to_db(config, have);
+
+        // answer with own buffermap
         // create a peer_config from ip, and port taken by the stream
         let stream = &mut self.stream;
         match stream {
             Some(stream) => {
                 let key = self.key.clone();
-                let config = PeerConfig::from_config();
+                let config = PeerConfig::new();
                 let buffermap_option: Option<Vec<u8>> = get_buffermap(config, &key);
                 let buffermap: Vec<u8>;
-                
+
                 match buffermap_option {
                     Some(arr) => buffermap = arr,
                     None => {
-                       let len: usize = self.buffermap.len(); 
-                       // create empty buffermap
-                       buffermap = vec![0; len]; 
-                    },
+                        let len: usize = self.buffermap.len();
+                        // create empty buffermap
+                        buffermap = vec![0; len];
+                    }
                 }
+                let message: String = havef(key, buffermap);
 
-                // convert [0, 0, 1, 0] to 0010
-                let buffermap = buffermap
-                            .iter()
-                            .map(|x| x.to_string())
-                            .collect::<Vec<String>>()
-                            .join("");
-
-                
-                let message = format!(
-                    "have {} {}",
-                    key,
-                    buffermap
-                );
-                
                 send(stream, message);
             }
             None => {
@@ -219,7 +227,7 @@ impl Task for Interested {
             Some(stream) => {
                 // receive interested key
                 let key = &self.key;
-                let peerconfig = PeerConfig::from_config();
+                let peerconfig = PeerConfig::new();
                 // get buffermap from the database
                 let buffermap_option: Option<Vec<u8>> = get_buffermap(peerconfig, key);
                 let buffermap: Vec<u8>;
@@ -236,10 +244,10 @@ impl Task for Interested {
 
                 // convert [0, 0, 1, 0] to 0010
                 let buffermap = buffermap
-                            .iter()
-                            .map(|x| x.to_string())
-                            .collect::<Vec<String>>()
-                            .join("");
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+                    .join("");
 
                 let message = format!("have {} {}", key, buffermap);
                 send(stream, message);
@@ -264,12 +272,13 @@ impl Task for Peer {
         let stream = &mut connect(port, &adress);
         match stream {
             Some(stream) => {
-                let key = &self.hash;
-                let message = format!("interested {}\n", key);
+                let key: String = self.hash.clone();
+                let message = interestedf(key);
                 debug!("Sending {} to {}", message, self.config.address.clone());
                 send(stream, message);
-                let response = receive(stream);
-                debug!("Received {} from {}", response, self.config.address.clone());
+                let response: String = receive(stream);
+                let cut: String = response.chars().take(128).collect::<String>();
+                debug!("Received {} from {}", cut, self.config.address.clone());
                 // update db
                 // retrieve data
                 if let Some(have_struct) = parse_have_from_have(response) {
@@ -284,10 +293,23 @@ impl Task for Peer {
                 let peer: PeerConfig = self.config.clone();
                 let file_key: String = self.hash.clone();
                 let pool: Pool = self.pool.clone();
-                let ret: DataWrite = DataWrite {peer, file_key, pool};
+                let stream = None;
+
+                let ret: DataWrite = DataWrite {
+                    peer,
+                    file_key,
+                    pool,
+                    stream,
+                };
+                //try to add multiple downloading tasks hardcoded
+                //for _ in 0..min(self.pool.len(), 5) {
+                for _ in 0..2 {
+                    let ret_clone = ret.clone();
+                    self.pool.add_task(Box::new(ret_clone));
+                }
 
                 // Add DataWrite task to queue
-                self.pool.add_task(Box::new(ret));
+                //self.pool.add_task(Box::new(ret));
             }
             None => {
                 error!("No stream found");
@@ -297,82 +319,150 @@ impl Task for Peer {
 }
 
 impl Task for DataWrite {
-    fn process(&mut self){
+    fn process(&mut self) {
         trace!("Processing DataWrite task");
-        let peer: String = self.peer.address.clone();
+        let peer: PeerConfig = self.peer.clone();
         let hash: String = self.file_key.clone();
-        let pieces: Vec<usize> = get_wanted_piece_from_peer(&peer, &hash);
+        let pieces: Vec<usize> = get_wanted_piece_from_peer(&get_peer_key(peer), &hash);
 
         // if there is nothing left to download, exit
-        if pieces.len() == 0 {return}
-
-        // sending the getpiece 
-        let mut stream = connect(self.peer.port, &self.peer.address).unwrap();
-        let msg = getpieces(self.file_key.clone(), pieces);
-
-        send(&mut stream, msg);
-        let answer = receive(&mut stream);
-
-        // init future buffermap
-        //log_db();
-        //trace!("peer : {:?}, hash : {}", PeerConfig::from_config(), &self.file_key);
-        let buffmap_option = get_buffermap(PeerConfig::from_config(), &self.file_key.clone());
-        let mut new_buffermap: Vec<u8>;
-        match buffmap_option {
-            Some(arr) => {new_buffermap = arr},
-            None => {error!("Got piece of unknown file");return},
+        if pieces.len() == 0 {
+            return;
         }
 
+        // get ownership of stream back to transmit it
+        //let stream: Option<TcpStream> = mem::replace(&mut self.stream, None);
+
+        match self.stream.as_ref() {
+            Some(_) => (),
+            None => {
+                trace!("Stream is closed, opening new one");
+                self.stream = connect(self.peer.port, &self.peer.address)
+            }
+        }
+
+        let msg = getpiecesf(self.file_key.clone(), pieces.clone());
+
+        let answer: String;
+        match self.stream.as_mut() {
+            Some(mut stream) => {
+                send(&mut stream, msg);
+                answer = receive(&mut stream)
+            }
+            None => {
+                error!("Downloading stream closed prematurarily");
+                return;
+            }
+        }
+
+        // init future buffermap
+        //trace!("peer : {:?}, hash : {}", PeerConfig::new(), &self.file_key);
+        let buffmap_option = get_buffermap(PeerConfig::new(), &self.file_key.clone());
+        //let new_buffermap: Mutex<Vec<u8>>;
+        let mut new_buffermap: Vec<u8>;
+        match buffmap_option {
+            Some(arr) => new_buffermap = arr,
+            None => {
+                error!("Got piece of unknown file");
+                return;
+            }
+        }
+
+        //let received_pieces: Mutex<Vec<usize>> = Mutex::new(pieces.clone());
+        let mut received_pieces: Vec<usize> = pieces.clone();
+
+        // to prevent multiple thread to ask for the same pieces
+        set_buffermap(
+            self.file_key.clone(),
+            get_peer_key(PeerConfig::new()),
+            new_buffermap.clone(),
+        );
+
         // Parse answer
-        let answer = ExpectData.check_answer(&answer).unwrap();
-        let answer: Answer = ExpectData.retrieve_data(answer);
-        match answer {
-            Answer::Data(data) => {
-                //data is Vec<(usize, String)>
+        match ExpectData.check_answer(&answer){
+            Ok(answer) => {
+            let answer: Answer = ExpectData.retrieve_data(answer);
+            match answer {
+                Answer::Data(data) => {
+                    //data is Vec<(usize, String)>
 
-                for entry in data {
-                    let index: usize = entry.0;
-                    let chunk: Vec<u8> = entry.1;
-                    new_buffermap[index] = 1;
-
+                    // open file only once
                     let writer: MetaFile;
-                    match get_file(&self.file_key.clone()){
+                    match get_file(&self.file_key.clone()) {
                         Some(value) => writer = value,
-                        None => {error!("Could not find file metadata in db");return},
+                        None => {
+                            error!("Could not find file metadata in db");
+                            return;
+                        }
                     }
-
                     let filename: String = writer.file_name.clone();
-
-                    // need to write chunk into filename at position index
                     let mut file = OpenOptions::new()
                         .write(true)
                         .create(true)
                         .open(&filename)
                         .expect("Unable to open file");
 
-                    // Calculate the offset based on the index and piece_size
-                    let offset = index * writer.piece_size;
+                    for entry in data {
+                        let index: usize = entry.0;
+                        let chunk: Vec<u8> = entry.clone().1;
+                        //received_pieces.retain(|&x| x != index);
+                        received_pieces = received_pieces
+                            .into_iter()
+                            .filter(|&x| x != index)
+                            .collect();
 
-                    // Seek to the desired position in the file
-                    file.seek(SeekFrom::Start(offset as u64)).expect("Unable to seek");
+                        // Calculate the offset based on the index and piece_size
+                        let offset = index * writer.piece_size;
 
-                    // Write the chunk to the file
-                    let ok = file.write_all(&chunk);
-                    match ok {
-                        Ok(_) => {},
-                        Err(e) => {error!("Error writing to disk : {}", e);return},
+                        // Seek to the desired position in the file
+                        file.seek(SeekFrom::Start(offset as u64))
+                            .expect("Unable to seek");
+
+                        // Write the chunk to the file
+                        let ok = file.write_all(&chunk);
+                        match ok {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("Error writing to disk : {}", e);
+                                return;
+                            }
+                        }
                     }
-
+                }
+                _ => error!("couldn't retrieve data from peer"),
+            }
+            }
+            Err(e) => {
+                if let Some(io_err) = e.downcast_ref::<Error>() {
+                    if io_err.kind() == ErrorKind::InvalidInput {
+                    } else {
+                        error!("Wrong answer from getpiece {}", e);
+                        return;
+                    }
+                } else {
+                    error!("Wrong answer from getpiece {}", e);
+                    return;
                 }
             }
-            _ => error!("couldn't retrieve data from peer")
         }
 
+        // check is there is some control to do
+        {
+            let not_received_pieces = received_pieces.clone();
+            for not_received in not_received_pieces {
+                new_buffermap[not_received] = 0;
+            }
+        }
 
-
-        // update db
-
-        set_buffermap(self.file_key.clone(), get_peer_key(PeerConfig::from_config()), new_buffermap);
+        //let new_buffermap: Vec<u8> = new_buffermap.lock().unwrap().clone();
+        // update db if missing some pieces
+        if received_pieces.len() > 0 {
+            set_buffermap(
+                self.file_key.clone(),
+                get_peer_key(PeerConfig::new()),
+                new_buffermap,
+            );
+        }
 
         // re adding oneself to continue downloading
         let peer: PeerConfig = self.peer.clone();
@@ -380,24 +470,24 @@ impl Task for DataWrite {
         let pool: Pool = self.pool.clone();
 
         let next: DataWrite = DataWrite {
-            peer, file_key, pool
+            peer,
+            file_key,
+            pool,
+            stream: self.stream.take(),
         };
 
         self.pool.add_task(Box::new(next));
     }
 }
 
-
 // incoming connection task waiting to be processed
 impl Task for ToBeProcessed {
-    fn process(&mut self){
+    fn process(&mut self) {
         trace!("Processing ToBeProcessed task");
-        let t_clone = self.tasklist.clone();
-        let s_clone = self.stream.try_clone().unwrap();
-        handle_client(t_clone, s_clone);
+        let stream = self.stream.try_clone().unwrap();
+        handle_client(self.pool.clone(), stream);
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -427,6 +517,7 @@ mod tests {
             key: file_key.clone(),
             pieces: vec![0, 1, 2],
             stream: Some(stream),
+            pool: Pool::new(0),
         };
 
         // Call the process method
@@ -437,5 +528,3 @@ mod tests {
         assert_eq!(result, Some(buffermap));
     }
 }
-
-

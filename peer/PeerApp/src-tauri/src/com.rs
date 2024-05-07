@@ -1,14 +1,21 @@
 //! communication between the peer and the tracker
 use crate::data::MetaFile;
 use crate::db::{get_leeching_files, get_seeding_files};
-use log::{debug, error, info};
-use std::io::{BufReader, Write, BufRead};
+use log::{debug, error, info, warn};
+use std::io::{BufReader, Write, BufRead, ErrorKind};
 use std::net::TcpStream;
+use core::cmp::min;
+use std::time::Duration;
 
 
+// format the data message
+pub fn dataf(key: &String, pieces: Vec<String>) -> String{
+
+    format!("data {} [{}]\n", key, pieces.join(" "))
+}
 
 // format the getpieces msg
-pub fn getpieces(key: String, pieces: Vec<usize>) -> String {
+pub fn getpiecesf(key: String, pieces: Vec<usize>) -> String {
     let indexes_str = pieces
         .iter()
         .map(|&index| index.to_string())
@@ -16,6 +23,30 @@ pub fn getpieces(key: String, pieces: Vec<usize>) -> String {
         .join(" ");
 
     format!("getpieces {} [{}]\n", key.trim(), indexes_str)
+}
+
+// format the interested message
+pub fn interestedf(key: String) -> String{
+    format!("interested {}\n", key)
+}
+
+// format the have msg
+pub fn havef(key: String, buffermap: Vec<u8>) -> String{
+     // convert [0, 0, 1, 0] to 0010
+    let buffermap = buffermap
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join("");
+
+    
+    let message: String= format!(
+        "have {} {}\n",
+        key,
+        buffermap
+    );
+
+    message
 }
 
 // # Examples
@@ -60,7 +91,8 @@ pub fn getpieces(key: String, pieces: Vec<usize>) -> String {
 ///
 /// # Returns
 /// * `String` - The formatted seeding announcement message.
-pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
+// format the seed message
+pub fn seedf(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
     // why is seeded different from leached (type) ?
     /*
     into_iter() : transform the vector into an iterator
@@ -98,7 +130,8 @@ pub fn seed(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String
 ///
 /// # Returns
 /// * `String` - The formatted "look" message.
-pub fn look(filename: String, filesize: String) -> String {
+// format the look message
+pub fn lookf(filename: String, filesize: String) -> String {
     let mut res: String = "look [".to_string();
     let mut b: bool = false;
     if !filename.is_empty() {
@@ -124,7 +157,8 @@ pub fn look(filename: String, filesize: String) -> String {
 ///
 /// # Returns
 /// * `String` - The formatted "getfile" request message.
-pub fn getfile_request(key: String) -> String {
+// format the getfile message
+pub fn getfilef(key: String) -> String {
     format!("getfile {}\n", key)
 }
 
@@ -165,8 +199,8 @@ pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
 /// * `stream` - A mutable reference to a `TcpStream`.
 /// * `message` - A string representing the message to be sent.
 pub fn send(stream: &mut TcpStream, message: String) {
+    debug!("Sending to {} : {}", stream.peer_addr().unwrap(), message.chars().take(128).collect::<String>());
     stream.write(message.as_bytes()).unwrap();
-    info!("Sending to {} : {}", stream.peer_addr().unwrap(), message);
 }
 
 /// Receives a message from a given address and port.
@@ -187,23 +221,52 @@ pub fn receive(stream: &mut TcpStream) -> String {
     let ip = stream.peer_addr().unwrap().ip();
     let mut reader = BufReader::new(stream);
     debug!("About to read from {}:{}", ip, port);
+
+    // implement timeout so that this method doesnt block, 1s timeout
+    reader.get_ref().set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+
+    loop {
     match reader.read_until(b'\n', &mut buffer) {
+        Ok(0) => {
+            // Timeout occurred, check if any data was read
+            if buffer.is_empty() {
+                // No data was read, continue with an empty buffer
+                debug!("Timeout occurred, continuing with empty buffer");
+                return "".to_string();
+            } else {
+                // Data was read, continue processing the buffer
+                debug!("Msg partially read, will continue reading");
+            }
+        }
         Ok(_) => {
-            info!(
+            debug!(
                 "Received from {}:{} {}",
                 ip,
                 port,
-                String::from_utf8_lossy(&buffer)
+                String::from_utf8_lossy(&buffer[0..min(128, buffer.len())]) // only shows the first 128 chars
             );
-            buffer
-                .iter()
-                .map(|&c| char::from_u32(c as u32).unwrap())
-                .collect::<String>()
-        }
+            return buffer
+                    .iter()
+                    .map(|&c| char::from_u32(c as u32).unwrap())
+                    .collect::<String>();
+        }        
         Err(e) => {
-            error!("Could not receive from tracker{}:{} {}", ip, port, e);
-            String::from("")
+            if e.kind() == ErrorKind::WouldBlock {
+                // Timeout occurred, check if any data was read
+                if buffer.is_empty() {
+                    // No data was read, continue with an empty buffer
+                    warn!("Didn't receive any data from {}:{}", ip, port);
+                    return "".to_string();
+                } else {
+                    // Data was read, continue processing the buffer
+                    debug!("Msg partially read, will continue reading");
+                }
+            } else {
+                error!("Could not receive from {}:{} because of {}", ip, port, e);
+                return "".to_string();
+            }
         }
+    }
     }
 }
 
@@ -215,7 +278,8 @@ pub fn receive(stream: &mut TcpStream) -> String {
 ///
 /// # Returns
 /// * `String` - The update message containing the formatted lists of seeding and leeching files.
-pub fn update() -> String {
+// format the update message
+pub fn updatef() -> String {
     let seeds: Vec<MetaFile> = get_seeding_files();
     let leeches: Vec<MetaFile> = get_leeching_files();
 

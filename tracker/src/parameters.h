@@ -22,6 +22,7 @@ extern int time_to_live;
 extern pthread_mutex_t len_mutex;
 extern int task_len;
 
-extern char* public_ip;
+extern char public_ip[INET_ADDRSTRLEN];
+extern char private_ip[INET_ADDRSTRLEN];
 
 #endif

@@ -1,32 +1,34 @@
-use crate::com::{connect, send, update, receive};
-use crate::data::{PeerConfig, TrackerConfig};
-use crate::parser::parse_request;
+use crate::back::store_have_to_db;
+use crate::com::{connect, havef, receive, send, updatef};
+use crate::data::{MetaFile, PeerConfig, TrackerConfig};
+use crate::db::{get_buffermap, get_leeching_files, get_peers_from_file};
+use crate::parser::{parse_have_from_have, parse_request};
 use crate::tasks::Task;
-use log::*;
+use crate::tasks::{EmptyTask, Have, ToBeProcessed};
+use log::{debug, error, info, trace, warn};
+use rayon::prelude::*;
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::{thread, fmt};
 use std::time::Duration;
-use crate::tasks::{EmptyTask, ToBeProcessed};
+use std::{fmt, thread};
 
 // for UPnP
 use easy_upnp::{add_ports, delete_ports, Ipv4Cidr, PortMappingProtocol, UpnpConfig};
 use std::error::Error;
 
-
 // gloval var, used to stop threads
 static mut RUNNING: bool = true;
 
-// clean exit, idk how to do it 
+// clean exit, idk how to do it
 static mut PORT: u16 = 0;
 
 //pool struct
 pub struct Pool {
-    //tasklist : Arc<Mutex<Vec<Task>>>,
     tasklist: Arc<Mutex<VecDeque<Box<dyn Task + Send>>>>,
     thread_pool: Arc<Mutex<VecDeque<std::thread::JoinHandle<i32>>>>,
+    size: usize,
 }
 
 impl Clone for Pool {
@@ -34,14 +36,14 @@ impl Clone for Pool {
         Pool {
             tasklist: self.tasklist.clone(),
             thread_pool: self.thread_pool.clone(),
+            size: self.size,
         }
     }
 }
 
 impl fmt::Debug for Pool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Point")
-            .finish()
+        f.debug_struct("Point").finish()
     }
 }
 
@@ -52,7 +54,7 @@ impl Pool {
         let tasklist: Arc<Mutex<VecDeque<Box<dyn Task + Send>>>> =
             Arc::new(Mutex::new(VecDeque::new()));
 
-        for i in 0..size {
+        (0..size).into_par_iter().for_each(|i| {
             let clone = Arc::clone(&tasklist);
             let handle = thread::spawn(move || {
                 let res: i32 = 0;
@@ -81,7 +83,6 @@ impl Pool {
                             }
                             trace!("Thread {} has finished processing a task", id);
                         } else {
-
                             thread::sleep(Duration::from_millis(10));
                         }
                     }
@@ -89,33 +90,36 @@ impl Pool {
 
                 res
             });
-            {thread_pool.lock().unwrap().push_front(handle);}
-        }
+            {
+                thread_pool.lock().unwrap().push_front(handle);
+            }
+        });
 
         Pool {
             tasklist,
             thread_pool,
+            size: size as usize,
         }
     }
 
-
-
+    pub fn len(&self) -> usize {
+        self.size
+    }
 
     pub fn start_listening(&mut self, pc: PeerConfig) {
-
         // listen to port
         let add = format!("{}:{}", pc.address, pc.port);
         debug!("Listening on {}", add);
         let door = TcpListener::bind(add).unwrap();
         let thread_pool_clone = self.thread_pool.clone();
 
-        let tasklist_clone = self.tasklist.clone();
+        //let tasklist_clone = self.tasklist.clone();
 
         // try to bind router port to us
         // try_upnp(pc.port);
+        let pool_clone: Pool = self.clone();
 
         let lithread = thread::spawn(move || {
-
             while unsafe { RUNNING } {
                 for con in door.incoming() {
                     match con {
@@ -124,11 +128,13 @@ impl Pool {
 
                             let stream = stream.try_clone().unwrap();
 
-                            let tasklist = tasklist_clone.clone();
-
-                            let tbp: ToBeProcessed = ToBeProcessed {tasklist, stream}; 
+                            let tbp: ToBeProcessed = ToBeProcessed {
+                                pool: pool_clone.clone(),
+                                stream,
+                            };
                             {
-                                tasklist_clone.lock().unwrap().push_front(Box::new(tbp));
+                                //tasklist_clone.lock().unwrap().push_front(Box::new(tbp));
+                                pool_clone.clone().add_task(Box::new(tbp));
                             }
                         }
                         Err(e) => {
@@ -141,7 +147,59 @@ impl Pool {
         });
 
         {
-        thread_pool_clone.lock().unwrap().push_front(lithread);
+            thread_pool_clone.lock().unwrap().push_front(lithread);
+        }
+    }
+
+    /// start have thread
+    pub fn start_have(&mut self, period: i32) {
+        let havethread = thread::spawn(move || {
+            unsafe {
+                while RUNNING {
+                    // send them a have request
+
+                    let main_config: PeerConfig = PeerConfig::new();
+                    let leeching_files: Vec<MetaFile> = get_leeching_files();
+
+                    // foreach leeching file
+                    leeching_files.par_iter().for_each(|file| {
+                        //for file in leeching_files {
+                        let peers = get_peers_from_file(file.hash.clone());
+                        let buffmap: Vec<u8> =
+                            get_buffermap(main_config.clone(), &file.hash.clone()).unwrap();
+
+                        // get list of peers
+                        for peer in peers {
+                            if peer.address.clone() == main_config.address.clone()
+                                && peer.port == main_config.port
+                            {
+                                continue;
+                            }
+                            let ip: String = peer.address.clone();
+                            let port: u16 = peer.port;
+                            let stream_option: Option<TcpStream> = connect(port, &ip);
+                            match stream_option {
+                                Some(mut stream) => {
+                                    let msg: String = havef(file.hash.clone(), buffmap.clone());
+                                    send(&mut stream, msg);
+                                    let answer: String = receive(&mut stream);
+
+                                    let have: Have = parse_have_from_have(answer).unwrap();
+
+                                    // and update their buffermap
+                                    store_have_to_db(peer, have);
+                                }
+                                None => warn!("Could not send have to {}:{}", ip, port),
+                            }
+                        }
+                    });
+                    thread::sleep(Duration::from_secs(period as u64));
+                }
+            }
+            0
+        });
+        {
+            self.thread_pool.lock().unwrap().push_front(havethread);
         }
     }
 
@@ -150,7 +208,7 @@ impl Pool {
         let upthread = thread::spawn(move || {
             unsafe {
                 while RUNNING {
-                    let msg: String = update();
+                    let msg: String = updatef();
                     if let Some(mut stream) = connect(tc.port, tc.address.as_str()) {
                         send(&mut stream, msg);
                     }
@@ -160,11 +218,12 @@ impl Pool {
             0
         });
         {
-        self.thread_pool.lock().unwrap().push_front(upthread);
+            self.thread_pool.lock().unwrap().push_front(upthread);
         }
     }
 
-    pub fn add_task(&mut self, task: Box<dyn Task + Send>){// + 'static>) {
+    pub fn add_task(&mut self, task: Box<dyn Task + Send>) {
+        // + 'static>) {
         let mut data = self.tasklist.lock().unwrap();
         data.push_back(task);
     }
@@ -211,25 +270,24 @@ impl Pool {
 }
 
 /// used by listening thread
-    pub fn handle_client(tasklist: Arc<Mutex<VecDeque<Box<dyn Task + Send>>>>, mut stream: TcpStream) {
-        /*
-        let mut reader = BufReader::new(&mut stream);
-        let mut buff: Vec<u8> = Vec::new();
-        let bytes_read = reader.read_until(b'\n', &mut buff).unwrap();
+pub fn handle_client(mut pool: Pool, mut stream: TcpStream) {
+    /*
+    let mut reader = BufReader::new(&mut stream);
+    let mut buff: Vec<u8> = Vec::new();
+    let bytes_read = reader.read_until(b'\n', &mut buff).unwrap();
 
-        if bytes_read > 0 {
-        */
-            //let msg: String = String::from_utf8_lossy(&buff).into_owned();
-            let msg = receive(&mut stream);
-            info!("Received msg {}", msg);
-            let task : Box<(dyn Task + Send + 'static)> = parse_request(msg, Some(stream));
-            let mut data = tasklist.lock().unwrap();
-            data.push_back(task);
-        /*} else {
-            error!("Connection close by {:?}", stream.peer_addr());
-        }
-        */
+    if bytes_read > 0 {
+    */
+    //let msg: String = String::from_utf8_lossy(&buff).into_owned();
+    let msg: String = receive(&mut stream);
+    info!("Received msg {}", msg.chars().take(128).collect::<String>());
+    let task: Box<(dyn Task + Send + 'static)> = parse_request(msg, Some(stream), pool.clone());
+    pool.add_task(task);
+    /*} else {
+        error!("Connection close by {:?}", stream.peer_addr());
     }
+    */
+}
 
 #[cfg(test)]
 mod tests {
@@ -242,18 +300,18 @@ mod tests {
         let mut len: i32;
         {
             let pool_clone = pool.clone();
-            let tasklist_clone = pool_clone.tasklist.clone(); 
+            let tasklist_clone = pool_clone.tasklist.clone();
             let data = tasklist_clone.lock().unwrap();
             len = data.len() as i32;
         }
         assert_eq!(len, 0);
-        let t1: EmptyTask = EmptyTask { stream: None}; 
-        let t2: EmptyTask = EmptyTask { stream: None}; 
+        let t1: EmptyTask = EmptyTask { stream: None };
+        let t2: EmptyTask = EmptyTask { stream: None };
         pool.add_task(Box::new(t1));
         pool.add_task(Box::new(t2));
         {
             let pool_clone = pool.clone();
-            let tasklist_clone = pool_clone.tasklist.clone(); 
+            let tasklist_clone = pool_clone.tasklist.clone();
             let data = tasklist_clone.lock().unwrap();
             len = data.len() as i32;
         }
@@ -266,30 +324,29 @@ mod tests {
         let mut len: i32;
         {
             let pool_clone = pool.clone();
-            let tasklist_clone = pool_clone.tasklist.clone(); 
+            let tasklist_clone = pool_clone.tasklist.clone();
             let data = tasklist_clone.lock().unwrap();
             len = data.len() as i32;
         }
         assert_eq!(len, 0);
 
-        let t1: EmptyTask = EmptyTask { stream: None}; 
-        let t2: EmptyTask = EmptyTask { stream: None}; 
+        let t1: EmptyTask = EmptyTask { stream: None };
+        let t2: EmptyTask = EmptyTask { stream: None };
         pool.add_task(Box::new(t1));
         pool.add_task(Box::new(t2));
         std::thread::sleep(Duration::from_millis(200));
         {
             let pool_clone = pool.clone();
-            let tasklist_clone = pool_clone.tasklist.clone(); 
+            let tasklist_clone = pool_clone.tasklist.clone();
             let data = tasklist_clone.lock().unwrap();
             len = data.len() as i32;
         }
         assert_eq!(len, 0);
         pool.drop();
     }
-
 }
 
-fn get_upnp_config(port: u16) -> [UpnpConfig; 1]{
+fn get_upnp_config(port: u16) -> [UpnpConfig; 1] {
     let config: UpnpConfig = UpnpConfig {
         address: None,
         port: port,
@@ -300,26 +357,25 @@ fn get_upnp_config(port: u16) -> [UpnpConfig; 1]{
     [config]
 }
 
-fn try_upnp(port: u16){
-    unsafe{
+fn try_upnp(port: u16) {
+    unsafe {
         PORT = port;
     }
-    for res in add_ports(get_upnp_config(port)){
+    for res in add_ports(get_upnp_config(port)) {
         if res.is_err() {
             error!("Failed to bind UPnP, outside connection will be refused")
         }
     }
 }
 
-fn close_upnp(){
+fn close_upnp() {
     let port: u16;
-    unsafe{
+    unsafe {
         port = PORT;
     }
-    for res in delete_ports(get_upnp_config(port)){
+    for res in delete_ports(get_upnp_config(port)) {
         if res.is_err() {
             error!("Failed to unbind UPnP")
         }
     }
-
 }

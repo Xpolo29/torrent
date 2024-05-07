@@ -1,4 +1,3 @@
-use hashbrown::HashMap;
 use std::net::TcpStream;
 use crate::data::PeerConfig;
 use std::sync::{Arc, Mutex};
@@ -17,7 +16,8 @@ pub struct EmptyTask {
 
 /// To be processed task, to get listener free
 pub struct ToBeProcessed {
-    pub tasklist: Arc<Mutex<VecDeque<Box<dyn Task + Send>>>>,
+    //pub tasklist: Arc<Mutex<VecDeque<Box<dyn Task + Send>>>>,
+    pub pool: Pool,
     pub stream: TcpStream,
 }
 
@@ -26,6 +26,7 @@ pub struct Getpieces {
     pub key: String,
     pub pieces: Vec<usize>,
     pub stream: Option<TcpStream>,
+    pub pool: Pool,
 }
 
 /// Receieved via TCP interested and return a have request to be send
@@ -41,6 +42,16 @@ pub struct Have {
     pub stream: Option<TcpStream>,
 }
 
+impl Clone for Have {
+    fn clone(&self) -> Self {
+        Have {
+            key: self.key.clone(),
+            buffermap: self.buffermap.clone(),
+            stream: None,
+        }
+    }
+}
+
 pub struct Data {
     pub key: String,
     pub pieces: Vec<(usize, Vec<u8>)>,
@@ -51,7 +62,20 @@ pub struct DataWrite {
     pub peer: PeerConfig,
     pub file_key: String,
     pub pool: Pool, 
+    pub stream: Option<TcpStream>,
 }
+
+impl Clone for DataWrite {
+    fn clone(&self) -> Self {
+        DataWrite {
+            peer: self.peer.clone(),
+            file_key: self.file_key.clone(),
+            pool: self.pool.clone(),
+            stream: None,
+        }
+    }
+}
+
 
 #[derive(Debug)]
 pub struct Peer {

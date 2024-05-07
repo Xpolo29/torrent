@@ -42,7 +42,6 @@ void process_getfile(char *buf, char *hash, struct host h) {
 	strcat(buf, " [");
 	char host[23];
 	int is_local_trafic = is_local_ip(h.ip);
-	const char* public_ip = public_ip;
 	for (int i = 0; d[i].size != 0; i++) {
 		if (i > 0)strcat(buf, " ");
 
@@ -50,10 +49,12 @@ void process_getfile(char *buf, char *hash, struct host h) {
 		memcpy(relative_ip, d[i].host.ip, strlen(d[i].host.ip));
 
 		if(is_local_ip(relative_ip) && !is_local_trafic){
-			memcpy(relative_ip, public_ip, strlen(public_ip));
+			memcpy(relative_ip, public_ip, strlen(public_ip) + 1);
+
+			logging(WARNING, "Getfile request is from local to public network, converting ip to public\n");
 		}
 
-		logging(WARNING, "Getfile request is from local to public network, converting ip to public\n");
+
 		snprintf(host, 23, "%.15s:%hu", relative_ip, d[i].host.port);
 		strcat(buf, host);
 	}
@@ -83,36 +84,34 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
   strcat(buf, "]\n");
 }
 
-void process_update(char *buf, struct data *seeds, int seed_size,
-                    struct data *leeches, int leech_size, struct host h) {
-  // to get rid of warning
-  // (void)leeches;
-  // (void)leech_size;
-  // printf("seed_size : %d, leech_side : %d\n", seed_size, leech_size);
-  struct data dbb_host[BDD_SIZE];
-  struct data new_host[BDD_SIZE];
-  int new_len = 0;
-  int len = get_size();
-  load_all(dbb_host);
-  for (int i = 0; i < len; i++) {
-    for (int j = 0; j < seed_size; j++) {
-      if ((strcmp(dbb_host[i].hash, seeds[j].hash) == 0)) {
-        new_host[new_len++] = dbb_host[i];
-      }
-    }
-    for (int j = 0; j < leech_size; j++) {
-      if (strcmp(dbb_host[i].hash, leeches[j].hash) == 0) {
-        new_host[new_len++] = dbb_host[i];
-      }
-    }
-  }
-  remove_host(h);
-  for (int i = 0; i < new_len; i++) {
-    new_host[i].host = h;
-    if (!db_exists(new_host[i]))
-      store(new_host[i]);
-  }
-  strcpy(buf, "ok\n");
+void process_update(char *buf, struct data *seeds, int seed_size, struct data *leeches, int leech_size, struct host h) {
+	//printf("seed_size : %d, leech_side : %d\n", seed_size, leech_size);
+	struct data dbb_host[BDD_SIZE];
+	struct data new_host[BDD_SIZE];
+	int new_len = 0;
+	int len = get_size();
+	load_all(dbb_host);
+
+	for (int i = 0; i < len; i++) {
+		for (int j = 0; j < seed_size; j++) {
+			if ((strcmp(dbb_host[i].hash, seeds[j].hash) == 0)) {
+				new_host[new_len++] = dbb_host[i];
+			}
+		}
+		for (int j = 0; j < leech_size; j++) {
+			if (strcmp(dbb_host[i].hash, leeches[j].hash) == 0) {
+				new_host[new_len++] = dbb_host[i];
+			}
+		}
+	}
+
+	remove_host(h);
+	for (int i = 0; i < new_len; i++) {
+		new_host[i].host = h;
+		if (!db_exists(new_host[i]))
+			store(new_host[i]);
+	}
+	strcpy(buf, "ok\n");
 }
 
 void process_announce(char *buf, struct data *seeds, int seed_size,

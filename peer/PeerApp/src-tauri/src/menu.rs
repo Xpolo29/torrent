@@ -1,21 +1,20 @@
 use crate::back::start_download;
-use crate::com::{connect, look, receive, seed, send};
-use crate::data::{MetaFile, PeerConfig, TrackerConfig, get_buffer_size};
+use crate::com::{connect, lookf, receive, seedf, send};
+use crate::data::{get_buffer_size, MetaFile, PeerConfig, TrackerConfig};
 use crate::db::{add_seed_file_to_db, log_db, set_peer_to_file};
 use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
+use crate::tasks::EmptyTask;
+use crate::threads::Pool;
 use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
 use log::{error, info, trace};
 use std::io;
-use crate::threads::Pool;
-use crate::tasks::EmptyTask;
-
 
 /// Displays a menu to the user and performs actions based on the user's input.
 ///
 /// This function continuously displays a menu to the user with two options: Upload and Download.
 /// It reads the user's input and performs the corresponding action.
 /// If the user enters an invalid input, it prints an error message and displays the menu again.
-/// 
+///
 /// # Arguments
 /// * `tracker_config` - A TrackerConfig object containing the tracker's configuration.
 /// * `pool` - A Pool object for managing tasks.
@@ -38,7 +37,10 @@ pub fn display_menu(tracker_config: TrackerConfig, pool: Pool) {
         match input {
             // Escape should get back to menu from search, upload and download
             1 => upload_section(tracker_config.port, &tracker_config.address),
-            2 => {let pool_clone: Pool = pool.clone(); download_section(tracker_config.port, &tracker_config.address, pool_clone)},
+            2 => {
+                let pool_clone: Pool = pool.clone();
+                download_section(tracker_config.port, &tracker_config.address, pool_clone)
+            }
             _ => println!("Invalid input, please enter 1 or 2"),
         }
     }
@@ -60,7 +62,7 @@ fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
     println!("You're in Search");
     let filename = get_filename(io::stdin());
     let op_filesize = get_filesize(io::stdin());
-    let look_message = look(filename, op_filesize);
+    let look_message = lookf(filename, op_filesize);
     trace!("Prepared message: {}", look_message);
     let mut present_files: Answer = Answer::List(Vec::new());
     let mut ret: Answer = Answer::List(Vec::new());
@@ -87,10 +89,10 @@ fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
         Answer::List(metafiles) => {
             for file in metafiles {
                 let buffmap: Vec<u8> = vec![0; get_buffer_size(&file)];
-                let conf: PeerConfig = PeerConfig::from_config();
+                let conf: PeerConfig = PeerConfig::new();
                 set_peer_to_file(conf, file, buffmap);
             }
-        },
+        }
         _ => error!("Could not add filelist to db"),
     }
 
@@ -110,7 +112,7 @@ fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
 /// * `tracker_port` - The port number of the tracker.
 /// * `tracker_address` - The address of the tracker.
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
-    let peer_config = PeerConfig::from_config();
+    let peer_config = PeerConfig::new();
     println!("You're in upload");
     let seeded_files = get_file_names(io::stdin()); // take the files the user wish to seed
     let seeded_files: Vec<MetaFile> = seeded_files
@@ -123,11 +125,17 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         add_seed_file_to_db(seed);
     }
 
-    let seeded_files = seed(seeded_files, peer_config.port.to_string(), "".to_string()); // create the message
+    let seeded_files = seedf(seeded_files, peer_config.port.to_string(), "".to_string()); // create the message
     trace!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         // connect to the tracker
-        send(&mut stream, seeded_files); // send the message
+        send(&mut stream, seeded_files.clone()); // send the message
+        info!(
+            "Sending to {}:{} : {}",
+            stream.peer_addr().unwrap().ip(),
+            stream.peer_addr().unwrap().port(),
+            seeded_files.clone()
+        );
         trace!("Message sent waiting for answer");
         let response = receive(&mut stream); // receive the answer
         trace!("Received: {}", response);
@@ -154,11 +162,8 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
 /// * `tracker_port` - The port number of the tracker.
 /// * `tracker_address` - The address of the tracker.
 /// * `pool` - A Pool object for managing tasks.
-fn download_section(
-    tracker_port: u16,
-    tracker_adress: &str,
-    mut pool: Pool,
-){// -> Result<(), Box<dyn std::error::Error>> {
+fn download_section(tracker_port: u16, tracker_adress: &str, mut pool: Pool) {
+    // -> Result<(), Box<dyn std::error::Error>> {
     // The list of downloadable files should be the result of search section
     // todo!();
     println!("You're in download");
@@ -174,7 +179,7 @@ fn download_section(
 
     match result {
         Ok(task_list) => {
-            for task in task_list{
+            for task in task_list {
                 pool.add_task(task);
             }
         }
