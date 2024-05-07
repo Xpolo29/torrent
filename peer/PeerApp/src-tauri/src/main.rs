@@ -26,120 +26,118 @@ use num_traits::ToPrimitive;
 use regex::Regex;
 use simplelog::*;
 use std::fs::File;
+use std::{env, thread};
 use threads::Pool;
-use std::thread;
 
 fn main() {
-    let tauri_thread = thread::spawn(|| {
+    let interface = "tauri" // "terminal" or "tauri" or string (-> tauri by default)
+
+    if interface == "terminal"{
+        let log_file = File::create("client.log").unwrap();
+
+        CombinedLogger::init(vec![
+            TermLogger::new(
+                LevelFilter::Trace,
+                Config::default(),
+                TerminalMode::Mixed,
+                ColorChoice::Auto,
+            ),
+            WriteLogger::new(LevelFilter::Trace, Config::default(), log_file),
+        ])
+        .unwrap();
+        let args = Args::parse();
+        let program_const = handle_program_const(args);
+        // config vars
+        let num_threads = program_const.num_threads;
+        let update_period_secs = program_const.update_period_secs;
+
+        // multi thread part
+        // create pool
+        let mut pool: Pool = Pool::new(num_threads.to_i32().unwrap());
+
+        let tracker_config = program_const.tracker_config;
+
+        //start update thread
+        pool.start_update(tracker_config.clone(), update_period_secs.to_i32().unwrap());
+
+        //start have thread
+        pool.start_have(update_period_secs.to_i32().unwrap());
+
+        //start listening thread
+        let peer_config = program_const.peer_config;
+        pool.start_listening(peer_config);
+
+        let pool_clone = pool.clone();
+
+        display_menu(tracker_config, pool_clone);
+
+        // auto download section for profiling
+        /*
+            {
+        use crate::com::{connect, lookf, receive, seedf, send};
+        use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
+
+        use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
+
+        use crate::data::{get_buffer_size};
+        use crate::db::{set_peer_to_file};
+
+
+                let filename = "".to_string();
+                let op_filesize = "".to_string();
+                let look_message = lookf(filename, op_filesize);
+                let mut present_files: Answer = Answer::List(Vec::new());
+                let mut ret: Answer = Answer::List(Vec::new());
+                if let Some(mut stream) = connect(12345, &"jibelibeju.fr") {
+                    send(&mut stream, look_message);
+                    let response = receive(&mut stream);
+                    match ExpectList.check_answer(&response) {
+                        Ok(valeur) => {
+                            present_files = ExpectList.retrieve_data(response.clone());
+                            ret = ExpectList.retrieve_data(response);
+                        }
+                        Err(valeur) => {
+                            error!("{}", valeur);
+                        }
+                    }
+                }
+
+                match present_files {
+                Answer::List(metafiles) => {
+                    for file in metafiles {
+                        let buffmap: Vec<u8> = vec![0; get_buffer_size(&file)];
+                        let conf: PeerConfig = PeerConfig::new();
+                        set_peer_to_file(conf, file, buffmap);
+                    }
+                },
+                _ => error!("Could not add filelist to db"),
+            }
+
+
+                let result = start_download("30b3f671a7ba2dede25c0e44721da703".to_string(), 12345, "jibelibeju.fr", pool_clone);
+
+                match result {
+                    Ok(task_list) => {
+                        for task in task_list{
+                            pool.add_task(task);
+                        }
+                    }
+                    Err(errors) => {
+                        error!("Could not start download : {}", errors);
+                    }
+                }
+                sleep(Duration::from_secs(20));
+            }
+            */
+
+        //delete pool
+        pool.drop();
+    } else {
         tauri::Builder::default()
             .invoke_handler(tauri::generate_handler![])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
-    });
-
-
-    let log_file = File::create("client.log").unwrap();
-
-    CombinedLogger::init(vec![
-        TermLogger::new(
-            LevelFilter::Trace,
-            Config::default(),
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
-        WriteLogger::new(LevelFilter::Trace, Config::default(), log_file),
-    ])
-    .unwrap();
-    let args = Args::parse();
-    let program_const = handle_program_const(args);
-    // config vars
-    let num_threads = program_const.num_threads;
-    let update_period_secs = program_const.update_period_secs;
-
-    // multi thread part
-    // create pool
-    let mut pool: Pool = Pool::new(num_threads.to_i32().unwrap());
-
-    let tracker_config = program_const.tracker_config;
-
-    //start update thread
-    pool.start_update(tracker_config.clone(), update_period_secs.to_i32().unwrap());
-
-    //start have thread
-    pool.start_have(update_period_secs.to_i32().unwrap());
-
-    //start listening thread
-    let peer_config = program_const.peer_config;
-    pool.start_listening(peer_config);
-
-    let pool_clone = pool.clone();
-
-    display_menu(tracker_config, pool_clone);
-
-    // auto download section for profiling
-    /*
-        {
-    use crate::com::{connect, lookf, receive, seedf, send};
-    use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
-
-    use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
-
-    use crate::data::{get_buffer_size};
-    use crate::db::{set_peer_to_file};
-
-
-            let filename = "".to_string();
-            let op_filesize = "".to_string();
-            let look_message = lookf(filename, op_filesize);
-            let mut present_files: Answer = Answer::List(Vec::new());
-            let mut ret: Answer = Answer::List(Vec::new());
-            if let Some(mut stream) = connect(12345, &"jibelibeju.fr") {
-                send(&mut stream, look_message);
-                let response = receive(&mut stream);
-                match ExpectList.check_answer(&response) {
-                    Ok(valeur) => {
-                        present_files = ExpectList.retrieve_data(response.clone());
-                        ret = ExpectList.retrieve_data(response);
-                    }
-                    Err(valeur) => {
-                        error!("{}", valeur);
-                    }
-                }
-            }
-
-            match present_files {
-            Answer::List(metafiles) => {
-                for file in metafiles {
-                    let buffmap: Vec<u8> = vec![0; get_buffer_size(&file)];
-                    let conf: PeerConfig = PeerConfig::new();
-                    set_peer_to_file(conf, file, buffmap);
-                }
-            },
-            _ => error!("Could not add filelist to db"),
-        }
-
-
-            let result = start_download("30b3f671a7ba2dede25c0e44721da703".to_string(), 12345, "jibelibeju.fr", pool_clone);
-
-            match result {
-                Ok(task_list) => {
-                    for task in task_list{
-                        pool.add_task(task);
-                    }
-                }
-                Err(errors) => {
-                    error!("Could not start download : {}", errors);
-                }
-            }
-            sleep(Duration::from_secs(20));
-        }
-        */
-
-    // Wait for the Tauri thread to finish
-    tauri_thread.join().unwrap();
-
-    //delete pool
-    pool.drop();
+    }
 }
 
 #[derive(Parser, Debug)]
