@@ -1,5 +1,5 @@
 //https://tauri.app/v1/guides/features/command/
-//import { invoke } from '@tauri-apps/api/tauri'
+// import { invoke } from '@tauri-apps/api/tauri'
 const { invoke } = window.__TAURI__.tauri;
 
 // #####################
@@ -19,7 +19,7 @@ function addMessage(message, divName, setTimeoutTime = 0, id = message) {
 }
 
 
- // Call the Rust function getFiles
+// Call the Rust function getFiles
 // ######################
 // ##### BEGIN HERE #####
 
@@ -64,97 +64,155 @@ document.getElementById('searchButton').addEventListener('click', function () {
 
 // #######################
 // ##### SEARCH FORM #####
-document.getElementById('submitSearchForm').addEventListener('click', function (event) {
-  // Prevent the form from submitting normally
-  event.preventDefault();
+document.getElementById('submitSearchForm').addEventListener('click', async function (event) {
+    // Prevent the form from submitting normally
+    event.preventDefault();
 
-  console.log('Search form submitted');
+    console.log('Search form submitted');
 
-  // Get the input values
-  var fileNameSubmitted = document.getElementById('fileNameSearchForm').value;
-  var fileSizeSubmitted = document.getElementById('fileSizeSearchForm').value;
+    // Get the input values
+    var fileNameSubmitted = document.getElementById('fileNameSearchForm').value;
+    var fileSizeSubmitted = document.getElementById('fileSizeSearchForm').value;
 
-  console.log('File name submitted: ' + fileNameSubmitted);
-  console.log('File size submitted: ' + fileSizeSubmitted);
+    console.log('File name submitted: ' + fileNameSubmitted);
+    console.log('File size submitted: ' + fileSizeSubmitted);
 
-  // Hide the form
-  document.getElementById('searchForm').style.display = 'none';
+    // Hide the form
+    document.getElementById('searchForm').style.display = 'none';
 
-  // Display a message
-  let tmpStr = 'Search form submitted, File Name: ' + fileNameSubmitted + ', File Size: ' + fileSizeSubmitted;
-  addMessage(tmpStr, document.getElementById('actions'), 5000);
+    // Display a message
+    let tmpStr = 'Search form submitted, File Name: ' + fileNameSubmitted + ', File Size: ' + fileSizeSubmitted;
+    addMessage(tmpStr, document.getElementById('actions'), 5000);
 
-  // Remove existing search results
-  var existingResultsTable = document.getElementById('resultsTableDiv');
-  if (existingResultsTable) {
-    document.getElementById('actions').removeChild(existingResultsTable);
-  }
+    // Remove existing search results
+    var existingResultsTable = document.getElementById('resultsTableDiv');
+    if (existingResultsTable) {
+      document.getElementById('actions').removeChild(existingResultsTable);
+    }
 
-  // Example results - real results should be taken from the backend
-  var results = [
-    { name: 'file1.txt', size: 100 },
-    { name: 'file2.txt', size: 200 },
-    { name: 'file3.txt', size: 300 }
-  ];
+    // code factorying can be done for this function
+    function parseDataString(inputString) {
+      const data = [];
+      if (inputString == "") {
+        return [];
+      }
+      const items = inputString.split('|');
+      for (const item of items) {
+        const values = item.split('#');
+        const obj = {
+          name: values[0],
+          size: values[1],
+          hash: values[2]
+        };
+        data.push(obj);
+      }
+      return data;
+    }
 
-  
+    async function getData() {
+      var results = [];
+      await invoke('searchFunction', { filename: fileNameSubmitted, filesize: fileSizeSubmitted }).then(result => {
+        results = parseDataString(result);
+        console.log(results);
+        return results;
+      });
+      return results;
+    }
+    var results = await getData();
 
-  
-  // Create a table
-  var tableDiv = document.createElement('div');
-  tableDiv.id = 'resultsTableDiv';
-  tableDiv.classList.add('clickable');
-  addMessage('Files found - Click on file to download', tableDiv, 0, 'tableTitle');
-  var table = document.createElement('table');
+    // Call the Rust function searchFunction
+    // Example results - real results should be taken from the backend
+    // var results = [
+    //   { name: 'file1.txt', size: 100 },
+    //   { name: 'file2.txt', size: 200 },
+    //   { name: 'file3.txt', size: 300 }
+    // ];
 
-  // Add table header
-  var thead = document.createElement('thead');
-  var headerRow = document.createElement('tr');
-  ['File Name', 'File Size'].forEach(function (header) {
-    var th = document.createElement('th');
-    th.textContent = header;
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
+    // Create a table
+    var tableDiv = document.createElement('div');
+    tableDiv.id = 'resultsTableDiv';
+    tableDiv.classList.add('clickable');
+    addMessage('Files found - Click on file to download', tableDiv, 0, 'tableTitle');
+    var table = document.createElement('table');
 
-  // Add table body
-  var tbody = document.createElement('tbody');
-  results.forEach(function (file) {
-    var row = document.createElement('tr');
-    [file.name, file.size].forEach(function (cell) {
-      var td = document.createElement('td');
-      td.textContent = cell;
-      row.appendChild(td);
+    // Add table header
+    var thead = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    ['File Name', 'File Size', 'File Hash'].forEach(function (header) {
+      var th = document.createElement('th');
+      th.textContent = header;
+      headerRow.appendChild(th);
     });
-    tbody.appendChild(row);
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
 
-    // Add an event listener to the row
-    row.addEventListener('click', function () {
-      console.log('File clicked:', file.name);
-      addMessage('Started downloading file: ' + file.name, document.getElementById('actions'), 5000);
+    // Add table body
+    var tbody = document.createElement('tbody');
+    results.forEach(function (file) {
+      var row = document.createElement('tr');
+      [file.name, file.size, file.hash].forEach(function (cell) {
+        var td = document.createElement('td');
+        td.textContent = cell;
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+
+      // Add an event listener to the row
+      row.addEventListener('click', function () {
+        console.log('File clicked:', file.name);
+        addMessage('Started downloading file: ' + file.name, document.getElementById('actions'), 5000);
+      });
     });
+    table.appendChild(tbody);
+    tableDiv.appendChild(table);
+
+    document.getElementById('actions').appendChild(tableDiv);
+
+    let messageElement = document.getElementById('tableTitle');
+    messageElement.style.marginTop = '0';
   });
-  table.appendChild(tbody);
-  tableDiv.appendChild(table);
-
-  document.getElementById('actions').appendChild(tableDiv);
-
-  let messageElement = document.getElementById('tableTitle');
-  messageElement.style.marginTop = '0';
-});
 
 
 // #####################
 // ##### DASHBOARD #####
 var refreshRate = 1;  // Refresh rate in seconds
-function populateDashboard() {
+async function populateDashboard() {
+
+  function parseDataString(inputString) {
+    const data = [];
+    if (inputString == "") {
+      return [];
+    }
+    const items = inputString.split('|');
+    for (const item of items) {
+      const values = item.split('#');
+      const obj = {
+        name: values[0],
+        downloadPercentage: `Downloading... ${values[1]}%`,
+        status: values[2] === '1' ? 'Leeching...' : 'Seeding...'
+      };
+      data.push(obj);
+    }
+    return data;
+  }
+
+  async function getData() {
+    var data = [];
+    await invoke("get_files_data").then(result => {
+      data = parseDataString(result);
+      //console.log(data);
+      return data;
+    });
+    return data;
+  }
+  var data = await getData();
+
   // Example data - real data should be taken from the backend
-  var data = [
-    { name: 'file1.txt', downloadPercentage: 'Downloading... 50%', numberOfPeers: '13', leechingStatus: 'Leeching...' },
-    { name: 'file2.txt', downloadPercentage: 'Downloading... 75%', numberOfPeers: '5', leechingStatus: 'Leeching...' },
-    { name: 'file3.txt', downloadPercentage: 'Downloading... 15%', numberOfPeers: '8', leechingStatus: 'Not Leeching' }
-  ];
+  // var data = [
+  //   { name: 'file1.txt', downloadPercentage: 'Downloading... 50%',  leechingStatus: 'Leeching...' },
+  //   { name: 'file2.txt', downloadPercentage: 'Downloading... 75%', leechingStatus: 'Leeching...' },
+  //   { name: 'file3.txt', downloadPercentage: 'Downloading... 15%', leechingStatus: 'Not Leeching' }
+  // ];
 
   // Create a table
   var table = document.createElement('table');
@@ -162,7 +220,7 @@ function populateDashboard() {
   // Add table header
   var thead = document.createElement('thead');
   var headerRow = document.createElement('tr');
-  ['File Name', 'Download Percentage', 'Number of Peers', 'Leeching Status'].forEach(function (header) {
+  ['File Name', 'Download Percentage', 'Status'].forEach(function (header) {
     var th = document.createElement('th');
     th.textContent = header;
     headerRow.appendChild(th);
@@ -174,7 +232,7 @@ function populateDashboard() {
   var tbody = document.createElement('tbody');
   data.forEach(function (file) {
     var row = document.createElement('tr');
-    [file.name, file.downloadPercentage, file.numberOfPeers, file.leechingStatus].forEach(function (cell) {
+    [file.name, file.downloadPercentage, file.status].forEach(function (cell) {
       var td = document.createElement('td');
       td.textContent = cell;
       row.appendChild(td);

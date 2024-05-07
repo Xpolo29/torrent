@@ -8,6 +8,7 @@ mod back;
 mod com;
 mod data;
 mod db;
+mod for_frontend;
 mod menu;
 mod parser;
 mod process;
@@ -20,6 +21,7 @@ use data::{
     set_config_path, set_peer_port, set_tracker_address, set_tracker_port, PeerConfig,
     TrackerConfig,
 };
+use for_frontend::*;
 use log::{error, info};
 use menu::display_menu;
 use num_traits::ToPrimitive;
@@ -32,7 +34,7 @@ use threads::Pool;
 fn main() {
     let interface = "tauri"; // "terminal" or "tauri" or string (-> tauri by default)
 
-    if interface == "terminal"{
+    if interface == "terminal" {
         let log_file = File::create("client.log").unwrap();
 
         CombinedLogger::init(vec![
@@ -133,10 +135,31 @@ fn main() {
         //delete pool
         pool.drop();
     } else {
+        // config vars
+        let num_threads = 1;
+        let update_period_secs = 30;
+
+        // multi thread part
+        // create pool
+        let mut pool: Pool = Pool::new(num_threads.to_i32().unwrap());
+
+        let tracker_config = TrackerConfig::new();
+
+        //start update thread
+        pool.start_update(tracker_config.clone(), update_period_secs.to_i32().unwrap());
+
+        //start have thread
+        pool.start_have(update_period_secs.to_i32().unwrap());
+
+        //start listening thread
+        let peer_config = PeerConfig::new();
+        pool.start_listening(peer_config);
+
         tauri::Builder::default()
-            .invoke_handler(tauri::generate_handler![])
+            .invoke_handler(tauri::generate_handler![get_files_data, searchFunction])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
+        pool.drop();
     }
 }
 
