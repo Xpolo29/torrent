@@ -4,19 +4,39 @@
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 // add #[tauri::command] before every function you want to call from the frontend (js file)
 
+mod back;
+mod com;
+mod data;
+mod db;
+mod menu;
+mod parser;
+mod process;
+mod respons_handler;
+mod tasks;
+mod threads;
+mod userinput;
+use data::{PeerConfig, TrackerConfig};
+use menu::display_menu;
+use simplelog::*;
+use std::fs::File;
+use threads::Pool;
  
  fn main() {
      tauri::Builder::default()
          .invoke_handler(tauri::generate_handler![])
          .run(tauri::generate_context!())
          .expect("error while running tauri application");
+
+    
  }
  
 
 
 
-/*
- mod back;
+
+ 
+ /*
+  mod back;
  mod com;
  mod data;
  mod db;
@@ -32,7 +52,6 @@
  use simplelog::*;
  use std::fs::File;
  use threads::Pool;
- 
  
  fn main() {
      //multi thread part

@@ -58,6 +58,7 @@ button {
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
+  margin-bottom: 15px;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
@@ -110,8 +111,8 @@ button {
   }
 }
 
-
-#torrentDashboard {
+.dashboard,
+.clickable {
   border-radius: 8px;
   border: 1px solid transparent;
   width: 80%;
@@ -121,19 +122,32 @@ button {
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
 }
 
-#torrentDashboard table {
+.dashboard table,
+.clickable table {
   width: 100%;
   border-collapse: collapse;
 }
 
-#torrentDashboard th,
-#torrentDashboard td {
+.dashboard th,
+.dashboard td,
+.clickable th,
+.clickable td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: center;
 }
 
-#torrentDashboard p {
-  font-size: 0.8em;
-  margin-bottom: 0;
+.clickable tbody tr {
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+
+.clickable tbody tr:hover {
+  border-color: #396cd8;
+  border-width: 2px;
+  border-style: solid;
+}
+
+.clickable tbody tr:active {
+  background-color: #0f0f0f69;
 }

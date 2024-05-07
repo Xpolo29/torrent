@@ -18,22 +18,21 @@
   <div class="container">
     <h1>Peer2Peer File Sharing Application</h1>
 
-    <div id="torrentDashboard"></div>
+    <!-- Dashboard -->
+    <div id="appDashboard" class="dashboard" style="margin-bottom: 15px;"></div>
 
-    <div id="actions" style="margin-top: 15px; margin-bottom: 15px;">
+    <div id="actions">
       <!-- Upload File Button -->
       <button id="uploadButton">Upload Files</button>
-      
+
       <!-- Search File Button and Form -->
       <button id="searchButton">Search File to Download</button>
-      
-      <div id="searchForm" style="display: none; margin-top: 15px; margin-bottom: 15px;">
+
+      <div id="searchForm" style="display: none;">
         <input type="text" id="fileNameSearchForm" placeholder="Enter file name">
         <input type="text" id="fileSizeSearchForm" placeholder="Enter file size">
         <button id="submitSearchForm">Submit</button>
       </div>
-
-
     </div>
 
   </div>

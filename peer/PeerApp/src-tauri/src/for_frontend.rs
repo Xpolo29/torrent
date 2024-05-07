@@ -18,4 +18,8 @@ use threads::Pool;
 use std::mem;
 
 
-#[tauri::command]
+// add #[tauri::command] before every function to be used in javascript
+// functions to be defined
+// get data for dashboard (files, download percentage, peers, leeching status )
+// backend for upload files
+// backend for download (search) files
