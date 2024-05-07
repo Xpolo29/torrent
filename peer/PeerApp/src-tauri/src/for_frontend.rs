@@ -2,7 +2,7 @@ use crate::db::*;
 use std::fmt::Write;
 use crate::back::start_download;
 use crate::com::{connect, lookf, receive, seedf, send};
-use crate::data::{get_buffer_size, MetaFile, PeerConfig, TrackerConfig};
+use crate::data::{get_file_key, get_buffer_size, MetaFile, PeerConfig, TrackerConfig};
 use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
 use crate::tasks::EmptyTask;
 use crate::threads::Pool;
@@ -106,7 +106,7 @@ pub fn get_all_files_name() -> Vec<String> {
 
 pub fn get_file_status(file: MetaFile) -> Status {
     let per = get_percentage(file);
-    if per == 1 {
+    if per == 100 {
         Status::SEEDING
     } else {
         Status::LEECHING
@@ -120,6 +120,11 @@ pub fn get_percentage(file: MetaFile) -> usize {
     ones / buffermap.len() * 100
 }
 
+fn get_peers_number(file: MetaFile) -> usize {
+    let peers = get_peers_from_file(file.hash);
+    peers.len()
+}
+
 #[tauri::command]
 pub fn get_files_data() -> String {
     let mut data = String::new();
@@ -128,6 +133,7 @@ pub fn get_files_data() -> String {
         // Convert the percentage to a string and append it to `data`.
         write!(data, "{}#", file.file_name).unwrap();
         write!(data, "{}#", get_percentage(file.clone())).unwrap();
+        write!(data, "{}#", get_peers_number(file.clone())).unwrap();
 
         // Convert the file status to a string and append it to `data`.
         let status = match get_file_status(file) {
