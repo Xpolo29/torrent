@@ -161,6 +161,9 @@ document.getElementById('submitSearchForm').addEventListener('click', async func
       row.addEventListener('click', function () {
         console.log('File clicked:', file.name);
         addMessage('Started downloading file: ' + file.name, document.getElementById('actions'), 5000);
+        invoke("handle_download", {filekey: file.hash}).then(result => {
+          console.log(response);
+        });
       });
     });
     table.appendChild(tbody);
