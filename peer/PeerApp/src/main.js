@@ -43,11 +43,11 @@ document.getElementById('uploadButton').addEventListener('click', function () {
     let files = fileInput.files; // This is a FileList object
 
     // Convert the FileList to an array of file names
-    let filesNames = Array.from(files).map(file => file.name);
+    let filesNames = Array.from(files).map(file => file.name).join(" ");
 
     console.log('filesNames:', filesNames);
 
-    invoke('uploadFiles', { filesNames }).then((response) => { // Call the Rust function uploadFiles
+    invoke('uploadFiles', { filenames : filesNames }).then((response) => { // Call the Rust function uploadFiles
       console.log(response);
     });
   });

@@ -1,15 +1,17 @@
-use crate::db::*;
-use std::fmt::Write;
 use crate::back::start_download;
 use crate::com::{connect, lookf, receive, seedf, send};
-use crate::data::{get_file_key, get_buffer_size, MetaFile, PeerConfig, TrackerConfig};
+use crate::data::{get_buffer_size, get_file_key, MetaFile, PeerConfig, TrackerConfig};
+use crate::db::*;
 use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
 use crate::tasks::EmptyTask;
 use crate::threads::Pool;
 use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
-use log::{error, info, trace};
+use log::{error, info, trace, warn};
+use std::fmt::Write;
 use std::io;
-
+use std::path::Path;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 enum Status {
     LEECHING = 0,
@@ -71,7 +73,6 @@ pub fn searchFunction(filename: String, filesize: String) -> String {
     let files = file_strings.join(" | ");
     files
 }
-
 
 fn count(vec: &Vec<u8>) -> (usize, usize) {
     let mut count_zero = 0;
@@ -143,4 +144,100 @@ pub fn get_files_data() -> String {
         write!(data, "{}|", status).unwrap();
     }
     data
+}
+
+fn front_get_file_names(input: String) -> Vec<String> {
+    let mut valid_files = Vec::new();
+
+    let file_names = input.trim().split_whitespace();
+
+    for file_name in file_names {
+        if Path::new(file_name).exists() {
+            println!("File {} exists", file_name);
+            valid_files.push(file_name.to_string());
+        } else {
+            println!("File {} does not exist. Skipping.", file_name);
+        }
+    }
+    valid_files
+}
+
+#[tauri::command]
+pub fn uploadFiles(filenames: String) {
+    let peer_config = PeerConfig::new();
+    let tracker = TrackerConfig::new();
+    let tracker_port = tracker.port;
+    let tracker_adress = tracker.address;
+    println!("You're in upload");
+    let seeded_files = front_get_file_names(filenames); // take the files the user wish to seed
+    let seeded_files: Vec<MetaFile> = seeded_files
+        .into_iter()
+        .map(|file| MetaFile::new(file.to_string()))
+        .collect(); // Create vector of Metafiles out of the files name
+
+    let seeded_files2 = seeded_files.clone();
+    for seed in seeded_files2 {
+        add_seed_file_to_db(seed);
+    }
+    let seeded_files = seedf(seeded_files, peer_config.port.to_string(), "".to_string()); // create the message
+    println!("Prepared message: {}", seeded_files);
+    if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
+        // connect to the tracker
+        send(&mut stream, seeded_files.clone()); // send the message
+        println!(
+            "Sending to {}:{} : {}",
+            stream.peer_addr().unwrap().ip(),
+            stream.peer_addr().unwrap().port(),
+            seeded_files.clone()
+        );
+        println!("Message sent waiting for answer");
+        let response = receive(&mut stream); // receive the answer
+        println!("Received: {}", response);
+        match ExpectOk.check_answer(&response) {
+            Ok(valeur) => {
+                info!("{}", valeur);
+            }
+            Err(valeur) => {
+                info!("{}", valeur);
+            }
+        }
+        ExpectOk.shutdown(&mut stream);
+    }
+}
+
+pub struct DownloadParams {
+    pub pool: Mutex<Pool>,
+}
+
+#[tauri::command]
+pub fn handle_download(state: tauri::State<'_, DownloadParams>, key: String) {
+    let params = state.inner();
+    let mut pool: MutexGuard<Pool> = params.pool.lock().unwrap();
+    download_file(key, &mut pool);
+}
+
+pub fn download_file(filekey: String, pool: &mut Pool) {
+    // -> Result<(), Box<dyn std::error::Error>> {
+    // The list of downloadable files should be the result of search section
+    // todo!();
+    println!("You're in download");
+    // display files along with their size
+    // if two files are name the same user should be able to choose which one to download
+    println!("You chose to download: {}", filekey);
+    let pool_clone: Pool = pool.clone();
+    let tracker = TrackerConfig::new();
+    let tracker_adress = tracker.address;
+    let tracker_port = tracker.port;
+    let result = start_download(filekey, tracker_port, &tracker_adress, pool_clone);
+
+    match result {
+        Ok(task_list) => {
+            for task in task_list {
+                pool.add_task(task);
+            }
+        }
+        Err(errors) => {
+            error!("Could not start download : {}", errors);
+        }
+    }
 }

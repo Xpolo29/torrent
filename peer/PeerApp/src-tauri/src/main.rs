@@ -16,6 +16,7 @@ mod respons_handler;
 mod tasks;
 mod threads;
 mod userinput;
+use back::start_download;
 use clap::Parser;
 use data::{
     set_config_path, set_peer_port, set_tracker_address, set_tracker_port, MetaFile, PeerConfig,
@@ -29,6 +30,8 @@ use num_traits::ToPrimitive;
 use regex::Regex;
 use simplelog::*;
 use std::fs::File;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 use std::{env, thread};
 use threads::Pool;
 
@@ -155,9 +158,18 @@ fn main() {
         //start listening thread
         let peer_config = PeerConfig::new();
         pool.start_listening(peer_config);
+        let download_params = DownloadParams {
+            pool: Mutex::new(pool.clone()),
+        };
 
         tauri::Builder::default()
-            .invoke_handler(tauri::generate_handler![get_files_data, searchFunction])
+            .manage(download_params)
+            .invoke_handler(tauri::generate_handler![
+                get_files_data,
+                searchFunction,
+                uploadFiles,
+                handle_download,
+            ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
         pool.drop();
