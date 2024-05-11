@@ -3,20 +3,20 @@ use crate::back::{
     get_chunks_from_file, get_wanted_piece_from_peer, is_stream_open, store_have_to_db,
     FileAssembler,
 };
-use crate::com::{connect, dataf, getpiecesf, havef, interestedf, receive, send};
+use crate::com::{connect, dataf, getpiecesf, havef, interestedf, seedf, receive, send};
 use crate::data::{b64_enc, MetaFile, PeerConfig};
-use crate::db::{get_buffermap, get_file, get_peer_key, log_db, set_buffermap, set_peer_to_file};
+use crate::db::{get_buffermap, get_file, get_peer_key, log_db, set_buffermap, set_peer_to_file, get_seeding_files, get_leeching_files};
 use crate::parser::{parse_have_from_have, parse_request};
-use crate::respons_handler::{Answer, ExpectData, ExpectedAnswer};
+use crate::respons_handler::{Answer, ExpectData, ExpectedAnswer, ExpectOk};
 use crate::tasks::{
     Data, DataWrite, EmptyTask, Getpieces, Have, Interested, Peer, Task, ToBeProcessed,
 };
 use crate::threads::{handle_client, Pool};
-use log::{debug, error, trace};
+use log::{debug, error, trace, info};
 use rayon::prelude::*;
 use std::cmp::min;
 use std::fs::OpenOptions;
-use std::io::{Seek, SeekFrom, Write, ErrorKind, Error};
+use std::io::{Error, ErrorKind, Seek, SeekFrom, Write};
 use std::mem;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::Mutex;
@@ -55,43 +55,63 @@ impl Task for Getpieces {
     fn process(&mut self) {
         trace!("Processing getpiece task");
 
+        if self.retry > 20 {
+            return;
+        }
+
         let stream = &mut self.stream;
-        let chunk_size: usize = 1024;
         match stream {
             Some(stream) => {
-                // get key from getpieces
-                let key = &self.key;
-                // get the indexes of each piece
-                let piece_indexes = &self.pieces;
-                trace!("Begin to read theses chunk {:?}", piece_indexes);
-                let data: Vec<(usize, Vec<u8>)> =
-                    get_chunks_from_file(key.to_string(), chunk_size, piece_indexes);
-
-                let pieces: Vec<String> = data
-                    .par_iter()
-                    .map(|piece| {
-                        let cur_index: usize = piece.0;
-                        let cur_data: Vec<u8> = piece.1.clone();
-                        let cur_data_str: String = b64_enc(cur_data);
-                        format!("{}:{}", cur_index, cur_data_str)
-                    })
-                    .collect();
-
-                let message: String = dataf(key, pieces);
-
-                send(stream, message);
-
-                let next_pieces: String = receive(&mut self.stream.as_mut().unwrap());
-                if next_pieces.len() == 0 {
+                if !is_stream_open(stream) {
                     return;
                 }
+                let piece_indexes = &self.pieces;
+                if self.retry == 0 && piece_indexes.len() > 0 {
+                    // get key from getpieces
+                    let key = &self.key;
+                    // get the indexes of each piece
 
-                let next = parse_request(next_pieces, self.stream.take(), self.pool.clone());
+                    trace!("Begin to read theses chunk {:?}", piece_indexes);
+                    let data: Vec<(usize, Vec<u8>)> =
+                        get_chunks_from_file(key.to_string(), self.chunk_size, piece_indexes);
+
+                    let pieces: Vec<String> = data
+                        .par_iter()
+                        .map(|piece| {
+                            let cur_index: usize = piece.0;
+                            let cur_data: Vec<u8> = piece.1.clone();
+                            let cur_data_str: String = b64_enc(cur_data);
+                            format!("{}:{}", cur_index, cur_data_str)
+                        })
+                        .collect();
+
+                    let message: String = dataf(key, pieces);
+
+                    send(stream, message);
+                }
+
+                // add a new task
+                let next_pieces: String = receive(&mut self.stream.as_mut().unwrap(), 250);
+
+                let next: Box<dyn Task + Send>;
+                if next_pieces.len() == 0 {
+                    next = Box::new(Getpieces {
+                        key: self.key.clone(),
+                        chunk_size: self.chunk_size,
+                        pieces: Vec::new(),
+                        stream: self.stream.take(),
+                        pool: self.pool.clone(),
+                        retry: self.retry + 1,
+                    });
+                } else {
+                    next = parse_request(next_pieces, self.stream.take(), self.pool.clone());
+                }
 
                 self.pool.add_task(next);
             }
             None => {
-                error!("No stream found");
+                //error!("No stream found");
+                debug!("No stream found for getpiece");
             }
         }
     }
@@ -273,10 +293,12 @@ impl Task for Peer {
         match stream {
             Some(stream) => {
                 let key: String = self.hash.clone();
+
+                // send interested to download
                 let message = interestedf(key);
                 debug!("Sending {} to {}", message, self.config.address.clone());
                 send(stream, message);
-                let response: String = receive(stream);
+                let response: String = receive(stream, 3000);
                 let cut: String = response.chars().take(128).collect::<String>();
                 debug!("Received {} from {}", cut, self.config.address.clone());
                 // update db
@@ -289,21 +311,31 @@ impl Task for Peer {
                     // get the pieces that the peer wants relativly to the other buffermap but included into the peers buffermap
                     //let pieces = get_wanted_piece_from_peer(&peer_key, &file_key);
                 }
+                let chunk_size: usize;
+                let file_option: Option<MetaFile> = get_file(&self.hash);
+                match file_option {
+                    Some(file) => chunk_size = file.piece_size,
+                    None => chunk_size = 1024, 
+                }
+
+                let nb_pieces: usize = self.length_tcp / chunk_size;
+
                 // create the DataWrite task
                 let peer: PeerConfig = self.config.clone();
                 let file_key: String = self.hash.clone();
                 let pool: Pool = self.pool.clone();
                 let stream = None;
-
+                
                 let ret: DataWrite = DataWrite {
                     peer,
                     file_key,
+                    nb_pieces,
                     pool,
                     stream,
                 };
-                //try to add multiple downloading tasks hardcoded
-                //for _ in 0..min(self.pool.len(), 5) {
-                for _ in 0..2 {
+
+                // Arbitrary number of task,
+                for _ in 0..3 {
                     let ret_clone = ret.clone();
                     self.pool.add_task(Box::new(ret_clone));
                 }
@@ -323,15 +355,12 @@ impl Task for DataWrite {
         trace!("Processing DataWrite task");
         let peer: PeerConfig = self.peer.clone();
         let hash: String = self.file_key.clone();
-        let pieces: Vec<usize> = get_wanted_piece_from_peer(&get_peer_key(peer), &hash);
+        let pieces: Vec<usize> = get_wanted_piece_from_peer(&get_peer_key(peer), &hash, self.nb_pieces);
 
         // if there is nothing left to download, exit
         if pieces.len() == 0 {
             return;
         }
-
-        // get ownership of stream back to transmit it
-        //let stream: Option<TcpStream> = mem::replace(&mut self.stream, None);
 
         match self.stream.as_ref() {
             Some(_) => (),
@@ -347,7 +376,7 @@ impl Task for DataWrite {
         match self.stream.as_mut() {
             Some(mut stream) => {
                 send(&mut stream, msg);
-                answer = receive(&mut stream)
+                answer = receive(&mut stream, 3000)
             }
             None => {
                 error!("Downloading stream closed prematurarily");
@@ -379,58 +408,58 @@ impl Task for DataWrite {
         );
 
         // Parse answer
-        match ExpectData.check_answer(&answer){
+        match ExpectData.check_answer(&answer) {
             Ok(answer) => {
-            let answer: Answer = ExpectData.retrieve_data(answer);
-            match answer {
-                Answer::Data(data) => {
-                    //data is Vec<(usize, String)>
+                let answer: Answer = ExpectData.retrieve_data(answer);
+                match answer {
+                    Answer::Data(data) => {
+                        //data is Vec<(usize, String)>
 
-                    // open file only once
-                    let writer: MetaFile;
-                    match get_file(&self.file_key.clone()) {
-                        Some(value) => writer = value,
-                        None => {
-                            error!("Could not find file metadata in db");
-                            return;
-                        }
-                    }
-                    let filename: String = writer.file_name.clone();
-                    let mut file = OpenOptions::new()
-                        .write(true)
-                        .create(true)
-                        .open(&filename)
-                        .expect("Unable to open file");
-
-                    for entry in data {
-                        let index: usize = entry.0;
-                        let chunk: Vec<u8> = entry.clone().1;
-                        //received_pieces.retain(|&x| x != index);
-                        received_pieces = received_pieces
-                            .into_iter()
-                            .filter(|&x| x != index)
-                            .collect();
-
-                        // Calculate the offset based on the index and piece_size
-                        let offset = index * writer.piece_size;
-
-                        // Seek to the desired position in the file
-                        file.seek(SeekFrom::Start(offset as u64))
-                            .expect("Unable to seek");
-
-                        // Write the chunk to the file
-                        let ok = file.write_all(&chunk);
-                        match ok {
-                            Ok(_) => {}
-                            Err(e) => {
-                                error!("Error writing to disk : {}", e);
+                        // open file only once
+                        let writer: MetaFile;
+                        match get_file(&self.file_key.clone()) {
+                            Some(value) => writer = value,
+                            None => {
+                                error!("Could not find file {} metadata in db", self.file_key);
                                 return;
                             }
                         }
+                        let filename: String = writer.file_name.clone();
+                        let mut file = OpenOptions::new()
+                            .write(true)
+                            .create(true)
+                            .open(&filename)
+                            .expect("Unable to open file");
+
+                        for entry in data {
+                            let index: usize = entry.0;
+                            let chunk: Vec<u8> = entry.clone().1;
+                            //received_pieces.retain(|&x| x != index);
+                            received_pieces = received_pieces
+                                .into_iter()
+                                .filter(|&x| x != index)
+                                .collect();
+
+                            // Calculate the offset based on the index and piece_size
+                            let offset = index * writer.piece_size;
+
+                            // Seek to the desired position in the file
+                            file.seek(SeekFrom::Start(offset as u64))
+                                .expect("Unable to seek");
+
+                            // Write the chunk to the file
+                            let ok = file.write_all(&chunk);
+                            match ok {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    error!("Error writing to disk : {}", e);
+                                    return;
+                                }
+                            }
+                        }
                     }
+                    _ => error!("couldn't retrieve data from peer"),
                 }
-                _ => error!("couldn't retrieve data from peer"),
-            }
             }
             Err(e) => {
                 if let Some(io_err) = e.downcast_ref::<Error>() {
@@ -467,11 +496,13 @@ impl Task for DataWrite {
         // re adding oneself to continue downloading
         let peer: PeerConfig = self.peer.clone();
         let file_key: String = self.file_key.clone();
+        let nb_pieces: usize = self.nb_pieces;
         let pool: Pool = self.pool.clone();
 
         let next: DataWrite = DataWrite {
             peer,
             file_key,
+            nb_pieces,
             pool,
             stream: self.stream.take(),
         };
@@ -515,6 +546,7 @@ mod tests {
         // Create a Getpieces instance
         let mut getpieces = Getpieces {
             key: file_key.clone(),
+            chunk_size: 1024,
             pieces: vec![0, 1, 2],
             stream: Some(stream),
             pool: Pool::new(0),

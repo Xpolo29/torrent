@@ -1,5 +1,5 @@
 use crate::respons_handler::Answer;
-use log::{info, warn};
+use log::{info, warn, error};
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::path::Path;
 
@@ -50,7 +50,7 @@ pub fn choose_file<R: Read>(reader: R, response: &Answer) -> Option<&str> {
     match response {
         Answer::List(files) => {
             for (i, file) in files.iter().enumerate() {
-                println!("{}: {}", i, file.file_name);
+                println!("{}: {} ({})", i, file.file_name, file.hash);
             }
             let mut reader = BufReader::new(reader);
             let mut input = String::new();
@@ -58,13 +58,23 @@ pub fn choose_file<R: Read>(reader: R, response: &Answer) -> Option<&str> {
             io::stdout().flush().unwrap();
             reader.read_line(&mut input).unwrap();
 
-            let choice: usize = input
-                .trim()
-                .parse()
-                .expect("ERROR MATCHING NOT IMPLEMENTED"); // the ithest file
-                                                           // TODO verify choice before going after this line
-            return Some(&files[choice].hash);
-        }
+            let choice = input.trim().parse::<usize>();
+            match choice {
+                Ok(n) => {
+                    if n >= files.len() {
+                        println!("Please choose a correct index");
+                        return None;
+                    }
+                    return Some(&files[n].hash);
+
+                }
+                Err(_) => {
+                    println!("Please choose a correct index");
+                    return None;
+                }
+            }
+            
+                    }
         _ => println!("No files found"),
     }
 

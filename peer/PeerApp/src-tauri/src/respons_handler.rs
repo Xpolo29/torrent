@@ -79,7 +79,7 @@ impl ExpectedAnswer for ExpectList {
         let re_file =
             Regex::new(r"(?P<file_name>\S+) (?P<length>\d+) (?P<piece_size>\d+) (?P<hash>\w+)")
                 .unwrap();
-        let mut files = Vec::new();
+        let mut files: Vec<MetaFile> = Vec::new();
         for caps in re_file.captures_iter(answer) {
             let file = MetaFile {
                 file_name: caps["file_name"].to_string(),
@@ -87,7 +87,16 @@ impl ExpectedAnswer for ExpectList {
                 piece_size: caps["piece_size"].parse().unwrap(),
                 hash: caps["hash"].to_string(),
             };
-            files.push(file);
+            let mut already_in: bool = false;
+            for e in &files {
+                if (*e).hash == file.hash {
+                    already_in = true;
+                    break;
+                }
+            }
+            if !already_in {
+                files.push(file);
+            }
         }
         Answer::List(files)
     }
@@ -109,28 +118,31 @@ impl ExpectedAnswer for ExpectPeers {
         // get hash
         let key: String = String::from(&answer[6..38]);
         // Remove "peers %hash% [" and "]"
-        let answer = &answer[39..answer.len()];
-        let mut peers: Vec<Peer> = Vec::new();
+        let answer = &answer[40..answer.len() - 1];
+        let mut ret: Vec<Peer> = Vec::new();
 
-        // fill the peers array
-        let reg = Regex::new(r"\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)\]").unwrap();
+        let peers = answer.split(" ");
 
-        for peer in reg.captures_iter(answer) {
-            let myself = PeerConfig::new();
-            let address = peer[1].to_string();
-            let port = peer[2].parse::<u16>().unwrap();
-            // trace!("Succefully captured peer : {}:{}", address, port);
-            let config: PeerConfig = PeerConfig { address, port };
+        let myself = PeerConfig::new();
+        for peer in peers {
+            let splitted: Vec<&str> = peer.split(":").collect();
+            let address: &str = splitted[0];
+            let port: &str = splitted[1];
+            let port: u16 = port.parse().unwrap();
+
+            trace!("Succefully captured peer : {}:{}", address, port);
+            let config: PeerConfig = PeerConfig { address: address.to_string(), port };
             if myself.address == config.address && myself.port == config.port {
                 continue;
             }
             let hash: String = key.clone();
             // trying to init with an empty pool
             let pool: Pool = Pool::new(0);
-            peers.push(Peer { hash, config, pool });
+            ret.push(Peer { hash, length_tcp: 0, config, pool });
         }
 
-        Answer::Peers(peers)
+
+        Answer::Peers(ret)
     }
     fn shutdown(&self, stream: &mut TcpStream) {
         todo!()
@@ -141,12 +153,11 @@ impl ExpectedAnswer for ExpectData {
     fn check_answer(&self, answer: &str) -> Result<String, Box<dyn Error>> {
         // TODO Correct chech instead of always true
         let res: String = String::from(answer);
-        if res.len() > 0{
+        if answer.to_string().starts_with("data ") {
             return Ok(res);
         }
         let error = io::Error::new(io::ErrorKind::InvalidInput, "The input string is empty");
         return Err(Box::new(error));
-
     }
     fn retrieve_data(&self, answer: String) -> Answer {
         let mut map: Vec<(usize, Vec<u8>)> = Vec::new();

@@ -56,7 +56,10 @@ impl Pool {
 
         (0..size).into_par_iter().for_each(|i| {
             let clone = Arc::clone(&tasklist);
-            let handle = thread::spawn(move || {
+            let handle = thread::Builder::new()
+            //let handle = thread::spawn(move || {
+            .name(i.to_string())
+            .spawn(move || {
                 let res: i32 = 0;
                 let id: i32 = i;
 
@@ -89,7 +92,7 @@ impl Pool {
                 }
 
                 res
-            });
+            }).unwrap();
             {
                 thread_pool.lock().unwrap().push_front(handle);
             }
@@ -181,13 +184,18 @@ impl Pool {
                             match stream_option {
                                 Some(mut stream) => {
                                     let msg: String = havef(file.hash.clone(), buffmap.clone());
+                                    info!("Sending have to {}:{}", ip, port);
                                     send(&mut stream, msg);
-                                    let answer: String = receive(&mut stream);
+                                    let answer: String = receive(&mut stream, 3000);
 
-                                    let have: Have = parse_have_from_have(answer).unwrap();
+                                    let have_option: Option<Have> = parse_have_from_have(answer);
 
                                     // and update their buffermap
-                                    store_have_to_db(peer, have);
+                                    match have_option {
+                                        Some(have) => store_have_to_db(peer, have),
+                                        None => warn!("Received wrong have answer"),
+                                    }
+
                                 }
                                 None => warn!("Could not send have to {}:{}", ip, port),
                             }
@@ -210,8 +218,9 @@ impl Pool {
                 while RUNNING {
                     let msg: String = updatef();
                     if let Some(mut stream) = connect(tc.port, tc.address.as_str()) {
+                        info!("Sending update to tracker");
                         send(&mut stream, msg);
-                    }
+                    } 
                     thread::sleep(Duration::from_secs(period as u64));
                 }
             }
@@ -279,8 +288,12 @@ pub fn handle_client(mut pool: Pool, mut stream: TcpStream) {
     if bytes_read > 0 {
     */
     //let msg: String = String::from_utf8_lossy(&buff).into_owned();
-    let msg: String = receive(&mut stream);
-    info!("Received msg {}", msg.chars().take(128).collect::<String>());
+    let peer = stream.peer_addr().unwrap();
+    let ip = peer.ip();
+    let port = peer.port();
+    info!("Incoming connection from {}:{}", ip, port);
+    let msg: String = receive(&mut stream, 3000);
+    debug!("Received msg {}", msg.chars().take(128).collect::<String>());
     let task: Box<(dyn Task + Send + 'static)> = parse_request(msg, Some(stream), pool.clone());
     pool.add_task(task);
     /*} else {

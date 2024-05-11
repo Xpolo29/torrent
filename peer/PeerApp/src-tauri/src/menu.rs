@@ -6,8 +6,9 @@ use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
 use crate::tasks::EmptyTask;
 use crate::threads::Pool;
 use crate::userinput::{choose_file, get_file_names, get_filename, get_filesize};
-use log::{error, info, trace};
+use log::{error, info, trace, debug};
 use std::io;
+use crate::ProgramConst;
 
 /// Displays a menu to the user and performs actions based on the user's input.
 ///
@@ -18,7 +19,7 @@ use std::io;
 /// # Arguments
 /// * `tracker_config` - A TrackerConfig object containing the tracker's configuration.
 /// * `pool` - A Pool object for managing tasks.
-pub fn display_menu(tracker_config: TrackerConfig, pool: Pool) {
+pub fn display_menu(ProgramConst: ProgramConst, tracker_config: TrackerConfig, pool: Pool) {
     loop {
         println!("Main Menu");
         println!("1. Upload");
@@ -39,7 +40,7 @@ pub fn display_menu(tracker_config: TrackerConfig, pool: Pool) {
             1 => upload_section(tracker_config.port, &tracker_config.address),
             2 => {
                 let pool_clone: Pool = pool.clone();
-                download_section(tracker_config.port, &tracker_config.address, pool_clone)
+                download_section(tracker_config.port, &tracker_config.address, pool_clone, ProgramConst.length_tcp as usize)
             }
             _ => println!("Invalid input, please enter 1 or 2"),
         }
@@ -69,12 +70,12 @@ fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         send(&mut stream, look_message);
         trace!("Message sent waiting for answer");
-        let response = receive(&mut stream);
+        let response = receive(&mut stream, 3000);
         trace!("Received {}", response);
 
         match ExpectList.check_answer(&response) {
-            Ok(valeur) => {
-                info!("{}", valeur);
+            Ok(_) => {
+                //info!("{}", valeur);
                 present_files = ExpectList.retrieve_data(response.clone());
                 ret = ExpectList.retrieve_data(response);
             }
@@ -83,7 +84,7 @@ fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
             }
         }
     }
-    info!("files retrieved {:?}", present_files);
+    debug!("files retrieved {:?}", present_files);
 
     match present_files {
         Answer::List(metafiles) => {
@@ -125,26 +126,28 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
         add_seed_file_to_db(seed);
     }
 
-    let seeded_files = seedf(seeded_files, peer_config.port.to_string(), "".to_string()); // create the message
+    // TODO set the right leeching string
+    let seeded_files = seedf(seeded_files, peer_config.port.to_string(), vec!["".to_string()]); // create the message
     trace!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         // connect to the tracker
         send(&mut stream, seeded_files.clone()); // send the message
+        /*
         info!(
             "Sending to {}:{} : {}",
             stream.peer_addr().unwrap().ip(),
             stream.peer_addr().unwrap().port(),
             seeded_files.clone()
         );
+        */
         trace!("Message sent waiting for answer");
-        let response = receive(&mut stream); // receive the answer
+        let response = receive(&mut stream, 3000); // receive the answer
         trace!("Received: {}", response);
         match ExpectOk.check_answer(&response) {
-            Ok(valeur) => {
-                info!("{}", valeur);
+            Ok(_) => {
             }
             Err(valeur) => {
-                info!("{}", valeur);
+                error!("{}", valeur);
             }
         }
         ExpectOk.shutdown(&mut stream);
@@ -162,7 +165,7 @@ fn upload_section(tracker_port: u16, tracker_adress: &str) {
 /// * `tracker_port` - The port number of the tracker.
 /// * `tracker_address` - The address of the tracker.
 /// * `pool` - A Pool object for managing tasks.
-fn download_section(tracker_port: u16, tracker_adress: &str, mut pool: Pool) {
+fn download_section(tracker_port: u16, tracker_adress: &str, mut pool: Pool, length_tcp: usize) {
     // -> Result<(), Box<dyn std::error::Error>> {
     // The list of downloadable files should be the result of search section
     // todo!();
@@ -170,12 +173,12 @@ fn download_section(tracker_port: u16, tracker_adress: &str, mut pool: Pool) {
     // display files along with their size
     // if two files are name the same user should be able to choose which one to download
     let file_key = match choose_file(io::stdin(), &search_section(tracker_port, tracker_adress)) {
-        Some(hash) => hash.to_string(),
-        None => String::new(),
+        Some(hash) => hash.trim().to_string(),
+        None => return,
     };
     println!("You chose to download: {}", file_key);
     let pool_clone: Pool = pool.clone();
-    let result = start_download(file_key, tracker_port, tracker_adress, pool_clone);
+    let result = start_download(file_key, tracker_port, tracker_adress, pool_clone, length_tcp);
 
     match result {
         Ok(task_list) => {

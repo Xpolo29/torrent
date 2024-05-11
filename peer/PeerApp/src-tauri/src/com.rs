@@ -1,16 +1,15 @@
 //! communication between the peer and the tracker
 use crate::data::MetaFile;
 use crate::db::{get_leeching_files, get_seeding_files};
-use log::{debug, error, info, warn};
-use std::io::{BufReader, Write, BufRead, ErrorKind};
-use std::net::TcpStream;
 use core::cmp::min;
+use log::{debug, error, info, warn};
+use std::io::{BufRead, BufReader, ErrorKind, Write};
+use std::net::TcpStream;
 use std::time::Duration;
-
+use crate::back::is_stream_open;
 
 // format the data message
-pub fn dataf(key: &String, pieces: Vec<String>) -> String{
-
+pub fn dataf(key: &String, pieces: Vec<String>) -> String {
     format!("data {} [{}]\n", key, pieces.join(" "))
 }
 
@@ -26,25 +25,20 @@ pub fn getpiecesf(key: String, pieces: Vec<usize>) -> String {
 }
 
 // format the interested message
-pub fn interestedf(key: String) -> String{
+pub fn interestedf(key: String) -> String {
     format!("interested {}\n", key)
 }
 
 // format the have msg
-pub fn havef(key: String, buffermap: Vec<u8>) -> String{
-     // convert [0, 0, 1, 0] to 0010
+pub fn havef(key: String, buffermap: Vec<u8>) -> String {
+    // convert [0, 0, 1, 0] to 0010
     let buffermap = buffermap
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>()
-                .join("");
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>()
+        .join("");
 
-    
-    let message: String= format!(
-        "have {} {}\n",
-        key,
-        buffermap
-    );
+    let message: String = format!("have {} {}\n", key, buffermap);
 
     message
 }
@@ -92,13 +86,14 @@ pub fn havef(key: String, buffermap: Vec<u8>) -> String{
 /// # Returns
 /// * `String` - The formatted seeding announcement message.
 // format the seed message
-pub fn seedf(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> String {
-    // why is seeded different from leached (type) ?
+pub fn seedf(seeded: Vec<MetaFile>, peer_port: String, leeched: Vec<String>) -> String {
+    // why is seeded different from leached (type) ? Because of sujet
     /*
     into_iter() : transform the vector into an iterator
     map() : apply a function to each element of the iterator
     collect() : transform the iterator into a vector
     join() : concatenate the elements of the vector into a single string
+    d
      */
     let seeded_string: Vec<String> = seeded
         .into_iter()
@@ -114,7 +109,7 @@ pub fn seedf(seeded: Vec<MetaFile>, peer_port: String, leeched: String) -> Strin
         "announce listen {} seed [{}] leech [{}]\r\n",
         peer_port,
         seeded_string.join(" "),
-        leeched
+        leeched.join(" "),
     );
     msg
 }
@@ -183,7 +178,7 @@ pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
             Some(stream)
         }
         Err(e) => {
-            error!("Could not connect to tracker: {}", e);
+            error!("{} Could not connect to {}:{}", e, adress, port);
             None
         }
     }
@@ -199,8 +194,17 @@ pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
 /// * `stream` - A mutable reference to a `TcpStream`.
 /// * `message` - A string representing the message to be sent.
 pub fn send(stream: &mut TcpStream, message: String) {
-    debug!("Sending to {} : {}", stream.peer_addr().unwrap(), message.chars().take(128).collect::<String>());
+
+    if !is_stream_open(stream) {
+        warn!("Trying to send to closed stream");
+        return;
+    }
     stream.write(message.as_bytes()).unwrap();
+    debug!(
+        "Sending to {} : {}",
+        stream.peer_addr().unwrap(),
+        message.chars().take(128).collect::<String>()
+    );
 }
 
 /// Receives a message from a given address and port.
@@ -215,58 +219,69 @@ pub fn send(stream: &mut TcpStream, message: String) {
 ///
 /// # Returns
 /// * `String` - The message received from the `TcpStream`, or an empty string if the message could not be read.
-pub fn receive(stream: &mut TcpStream) -> String {
+pub fn receive(stream: &mut TcpStream, timeout_ms: u64) -> String {
+    if !is_stream_open(stream) {
+        warn!("Trying to receive from closed stream");
+        return "".to_string();
+    }
+
     let mut buffer: Vec<u8> = Vec::new();
     let port = stream.peer_addr().unwrap().port();
     let ip = stream.peer_addr().unwrap().ip();
     let mut reader = BufReader::new(stream);
     debug!("About to read from {}:{}", ip, port);
-
     // implement timeout so that this method doesnt block, 1s timeout
-    reader.get_ref().set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+    reader
+        .get_ref()
+        .set_read_timeout(Some(Duration::from_millis(timeout_ms)))
+        .unwrap();
 
     loop {
-    match reader.read_until(b'\n', &mut buffer) {
-        Ok(0) => {
-            // Timeout occurred, check if any data was read
-            if buffer.is_empty() {
-                // No data was read, continue with an empty buffer
-                debug!("Timeout occurred, continuing with empty buffer");
-                return "".to_string();
-            } else {
-                // Data was read, continue processing the buffer
-                debug!("Msg partially read, will continue reading");
-            }
-        }
-        Ok(_) => {
-            debug!(
-                "Received from {}:{} {}",
-                ip,
-                port,
-                String::from_utf8_lossy(&buffer[0..min(128, buffer.len())]) // only shows the first 128 chars
-            );
-            return buffer
-                    .iter()
-                    .map(|&c| char::from_u32(c as u32).unwrap())
-                    .collect::<String>();
-        }        
-        Err(e) => {
-            if e.kind() == ErrorKind::WouldBlock {
+        match reader.read_until(b'\n', &mut buffer) {
+            Ok(0) => {
                 // Timeout occurred, check if any data was read
                 if buffer.is_empty() {
                     // No data was read, continue with an empty buffer
-                    warn!("Didn't receive any data from {}:{}", ip, port);
+                    if timeout_ms > 2000 {
+                        warn!("Didn't receive any data from {}:{}", ip, port);
+                    }
                     return "".to_string();
                 } else {
                     // Data was read, continue processing the buffer
                     debug!("Msg partially read, will continue reading");
                 }
-            } else {
-                error!("Could not receive from {}:{} because of {}", ip, port, e);
-                return "".to_string();
+            }
+            Ok(_) => {
+                debug!(
+                    "Received from {}:{} {}",
+                    ip,
+                    port,
+                    String::from_utf8_lossy(&buffer[0..min(128, buffer.len())]) // only shows the first 128 chars
+                );
+                return buffer
+                    .iter()
+                    .map(|&c| char::from_u32(c as u32).unwrap())
+                    .collect::<String>();
+            }
+            Err(e) => {
+                if e.kind() == ErrorKind::WouldBlock {
+                    // Timeout occurred, check if any data was read
+                    if buffer.is_empty() {
+                        // No data was read, continue with an empty buffer
+                        if timeout_ms > 2000 {
+                            warn!("Didn't receive any data from {}:{}", ip, port);
+                        }
+                        return "".to_string();
+                    } else {
+                        // Data was read, continue processing the buffer
+                        debug!("Msg partially read, will continue reading");
+                    }
+                } else {
+                    error!("Could not receive from {}:{} because of {}", ip, port, e);
+                    return "".to_string();
+                }
             }
         }
-    }
     }
 }
 

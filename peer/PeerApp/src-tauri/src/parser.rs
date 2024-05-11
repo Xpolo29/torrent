@@ -1,9 +1,12 @@
 use crate::tasks::*;
 use hashbrown::HashMap;
-use log::{error, trace};
+use log::{error, trace, info};
 use regex::Regex;
 use std::net::TcpStream;
 use crate::threads::Pool;
+use crate::data::MetaFile;
+use crate::db::get_file;
+use std::cmp::min;
 
 //Enum for request types
 
@@ -58,6 +61,7 @@ fn organize_request(
 
 /// This function takes a data request and returns a Task object that handles the request.
 fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
+    info!("Received data request");
     trace!("Regex data matched");
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
@@ -98,6 +102,7 @@ fn data_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
 
 /// This function takes a data request and returns a Task object that handles the request.
 fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dyn Task + Send> {
+    info!("Received have request");
     trace!("Regex have matched");
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
@@ -117,6 +122,7 @@ fn have_request(re: Regex, request: String, stream: Option<TcpStream>) -> Box<dy
 }
 
 pub fn parse_data(request: String) -> Option<HashMap<u32, Vec<u8>>> {
+    info!("Received data request");
     let regex_data = r"^(data) ([[:alnum:]]*) \\[((?:[[:digit:]]*:[01]* ?)*)\\]$";
     match Regex::new(regex_data) {
         Ok(re) => {
@@ -139,7 +145,7 @@ pub fn parse_data(request: String) -> Option<HashMap<u32, Vec<u8>>> {
                     .collect();
                 Some(map)
             } else {
-                error!("Not a Have request");
+                error!("Could not parse request as data: {}", &request[..min(128, request.len())]);
                 None
             }
         }
@@ -152,6 +158,10 @@ pub fn parse_data(request: String) -> Option<HashMap<u32, Vec<u8>>> {
 
 
 pub fn parse_have_from_have(request: String) -> Option<Have> {
+    info!("Received have request");
+    if request.len() == 0{
+        return None;
+    }
     let regex_have = r"^(have) ([[:alnum:]]*) ([01]*)$";
     match Regex::new(regex_have) {
         Ok(re) => {
@@ -174,7 +184,7 @@ pub fn parse_have_from_have(request: String) -> Option<Have> {
                 };
                 Some(ret)
             } else {
-                error!("Not a Have request");
+                error!("Could not parse request as have: {}", &request[..min(128, request.len())]);
                 None
             }
         }
@@ -193,6 +203,7 @@ fn getpieces_request(
     pool: Pool,
 ) -> Box<dyn Task + Send> {
     trace!("Regex getpiece matched");
+    //info!("Received getpieces request");
     //let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \\[((?:[[:digit:]]* ?)*)\\]$";
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
@@ -203,11 +214,19 @@ fn getpieces_request(
         .map(|s| s.parse::<usize>().unwrap())
         .collect();
     // trace!("Getpiece parser caught these : {:?}", numbers);
+    let chunk_size: usize;
+    let file_option: Option<MetaFile> = get_file(hash.as_str());
+    match file_option {
+        Some(file) => chunk_size = file.piece_size,
+        None => chunk_size = 1024, 
+    }
     let ret = Getpieces {
         key: hash.as_str().to_string(),
+        chunk_size: chunk_size,
         pieces: numbers,
         stream: stream,
         pool: pool,
+        retry: 0,
     };
     Box::new(ret)
 }
@@ -219,6 +238,7 @@ fn interested_request(
     stream: Option<TcpStream>,
 ) -> Box<dyn Task + Send> {
     trace!("Regex interest matched");
+    info!("Received interested request");
     let capture = re.captures(&request).unwrap();
     let hash = capture.get(2).unwrap();
     let ret = Interested {
@@ -239,6 +259,7 @@ pub fn parse_request(request: String, stream: Option<TcpStream>, pool: Pool) -> 
     let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \[((?:[[:digit:]]* ?)*)\]$";
     // let regex_getpieces = r"^(getpieces) ([[:alnum:]]*) \[\s*(\d+\s*)*\s*\]$";
     let regex_interested = r"^(interested) ([[:alnum:]]*)$";
+    //let regex_have = r"^(have) ([[:alnum:]]*) \[((?:[[:digit:]]*)*)\]$";
     let regex_have = r"^(have) ([[:alnum:]]*) ([01]*)$";
     let regex_data = r"^(data) ([[:alnum:]]*) \[((?:[[:digit:]]*:[01]* ?)*)\]$";
     let regex = [regex_data, regex_have, regex_getpieces, regex_interested];
@@ -268,7 +289,7 @@ pub fn parse_request(request: String, stream: Option<TcpStream>, pool: Pool) -> 
         }
 
     }
-    error!("Request error, could not match: {}", request);
+    error!("Request error, could not match incoming request: {}", &request[..128]);
     let empty = EmptyTask { stream: stream };
     Box::new(empty)
 }

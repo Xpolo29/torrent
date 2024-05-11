@@ -10,9 +10,9 @@ use log::{error, info, trace, warn};
 use std::fmt::Write;
 use std::io;
 use std::path::Path;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
-
 enum Status {
     LEECHING = 0,
     SEEDING = 1,
@@ -37,7 +37,7 @@ pub fn searchFunction(filename: String, filesize: String) -> String {
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         send(&mut stream, look_message);
         trace!("Message sent waiting for answer");
-        let response = receive(&mut stream);
+        let response = receive(&mut stream, 3000);
         trace!("Received {}", response);
 
         match ExpectList.check_answer(&response) {
@@ -179,7 +179,11 @@ pub fn uploadFiles(filenames: String) {
     for seed in seeded_files2 {
         add_seed_file_to_db(seed);
     }
-    let seeded_files = seedf(seeded_files, peer_config.port.to_string(), "".to_string()); // create the message
+    let seeded_files = seedf(
+        seeded_files,
+        peer_config.port.to_string(),
+        vec!["".to_string()],
+    ); // create the message
     println!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         // connect to the tracker
@@ -191,7 +195,7 @@ pub fn uploadFiles(filenames: String) {
             seeded_files.clone()
         );
         println!("Message sent waiting for answer");
-        let response = receive(&mut stream); // receive the answer
+        let response = receive(&mut stream, 3000); // receive the answer
         println!("Received: {}", response);
         match ExpectOk.check_answer(&response) {
             Ok(valeur) => {
@@ -206,17 +210,19 @@ pub fn uploadFiles(filenames: String) {
 }
 
 pub struct DownloadParams {
-    pub pool: Mutex<Pool>,
+    pub tcp_size: u32,
+    pub pool: Arc<Mutex<Pool>>,
 }
 
 #[tauri::command]
 pub fn handle_download(state: tauri::State<'_, DownloadParams>, key: String) {
     let params = state.inner();
-    let mut pool: MutexGuard<Pool> = params.pool.lock().unwrap();
-    download_file(key, &mut pool);
+    let size: u32 = params.tcp_size;
+    let mut pool = params.pool.lock().expect("Failed to acquire lock on Pool");
+    download_file(key, &mut pool, size);
 }
 
-pub fn download_file(filekey: String, pool: &mut Pool) {
+pub fn download_file(filekey: String, pool: &mut Pool, tcp_size: u32) {
     // -> Result<(), Box<dyn std::error::Error>> {
     // The list of downloadable files should be the result of search section
     // todo!();
@@ -228,7 +234,13 @@ pub fn download_file(filekey: String, pool: &mut Pool) {
     let tracker = TrackerConfig::new();
     let tracker_adress = tracker.address;
     let tracker_port = tracker.port;
-    let result = start_download(filekey, tracker_port, &tracker_adress, pool_clone);
+    let result = start_download(
+        filekey,
+        tracker_port,
+        &tracker_adress,
+        pool_clone,
+        tcp_size as usize,
+    );
 
     match result {
         Ok(task_list) => {

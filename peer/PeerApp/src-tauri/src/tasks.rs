@@ -24,9 +24,11 @@ pub struct ToBeProcessed {
 /// Receieved via TCP getpieces and return a data request to be send
 pub struct Getpieces {
     pub key: String,
+    pub chunk_size: usize,
     pub pieces: Vec<usize>,
     pub stream: Option<TcpStream>,
     pub pool: Pool,
+    pub retry: usize,
 }
 
 /// Receieved via TCP interested and return a have request to be send
@@ -61,6 +63,7 @@ pub struct Data {
 pub struct DataWrite {
     pub peer: PeerConfig,
     pub file_key: String,
+    pub nb_pieces: usize,
     pub pool: Pool, 
     pub stream: Option<TcpStream>,
 }
@@ -70,6 +73,7 @@ impl Clone for DataWrite {
         DataWrite {
             peer: self.peer.clone(),
             file_key: self.file_key.clone(),
+            nb_pieces: self.nb_pieces,
             pool: self.pool.clone(),
             stream: None,
         }
@@ -80,6 +84,7 @@ impl Clone for DataWrite {
 #[derive(Debug)]
 pub struct Peer {
     pub hash: String,
+    pub length_tcp: usize,
     pub config: PeerConfig,
     pub pool: Pool,
 }

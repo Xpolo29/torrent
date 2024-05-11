@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose, Engine as _};
 use ini::Ini;
 use lazy_static::lazy_static;
-use log::info;
+use log::{info, debug};
 use md5::{Digest, Md5};
 use std::fs::File;
 use std::io::BufReader;
@@ -34,7 +34,7 @@ pub struct PeerConfig {
     pub port: u16,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TrackerConfig {
     pub address: String,
     pub port: u16,
@@ -77,8 +77,8 @@ impl TrackerConfig {
             }
         };
 
-        info!(
-            "REGARDE ICI : tracker_adress: {} tracker_port: {} ",
+        debug!(
+            "CONSTRUCTEUR: tracker_adress: {} tracker_port: {} ",
             tracker_address, tracker_port
         );
         TrackerConfig {
