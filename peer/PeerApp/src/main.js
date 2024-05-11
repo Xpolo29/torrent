@@ -203,8 +203,9 @@ async function populateDashboard() {
   async function getData() {
     var data = [];
     await invoke("get_files_data").then(result => {
+      console.log(result)
       data = parseDataString(result);
-      //console.log(data);
+      // console.log(data);
       return data;
     });
     return data;

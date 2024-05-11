@@ -3,16 +3,19 @@ use crate::back::{
     get_chunks_from_file, get_wanted_piece_from_peer, is_stream_open, store_have_to_db,
     FileAssembler,
 };
-use crate::com::{connect, dataf, getpiecesf, havef, interestedf, seedf, receive, send};
+use crate::com::{connect, dataf, getpiecesf, havef, interestedf, receive, seedf, send};
 use crate::data::{b64_enc, MetaFile, PeerConfig};
-use crate::db::{get_buffermap, get_file, get_peer_key, log_db, set_buffermap, set_peer_to_file, get_seeding_files, get_leeching_files};
+use crate::db::{
+    get_buffermap, get_file, get_leeching_files, get_peer_key, get_seeding_files, log_db,
+    set_buffermap, set_peer_to_file,
+};
 use crate::parser::{parse_have_from_have, parse_request};
-use crate::respons_handler::{Answer, ExpectData, ExpectedAnswer, ExpectOk};
+use crate::respons_handler::{Answer, ExpectData, ExpectOk, ExpectedAnswer};
 use crate::tasks::{
     Data, DataWrite, EmptyTask, Getpieces, Have, Interested, Peer, Task, ToBeProcessed,
 };
 use crate::threads::{handle_client, Pool};
-use log::{debug, error, trace, info};
+use log::{debug, error, info, trace};
 use rayon::prelude::*;
 use std::cmp::min;
 use std::fs::OpenOptions;
@@ -315,7 +318,7 @@ impl Task for Peer {
                 let file_option: Option<MetaFile> = get_file(&self.hash);
                 match file_option {
                     Some(file) => chunk_size = file.piece_size,
-                    None => chunk_size = 1024, 
+                    None => chunk_size = 1024,
                 }
 
                 let nb_pieces: usize = self.length_tcp / chunk_size;
@@ -325,7 +328,7 @@ impl Task for Peer {
                 let file_key: String = self.hash.clone();
                 let pool: Pool = self.pool.clone();
                 let stream = None;
-                
+
                 let ret: DataWrite = DataWrite {
                     peer,
                     file_key,
@@ -355,7 +358,8 @@ impl Task for DataWrite {
         trace!("Processing DataWrite task");
         let peer: PeerConfig = self.peer.clone();
         let hash: String = self.file_key.clone();
-        let pieces: Vec<usize> = get_wanted_piece_from_peer(&get_peer_key(peer), &hash, self.nb_pieces);
+        let pieces: Vec<usize> =
+            get_wanted_piece_from_peer(&get_peer_key(peer), &hash, self.nb_pieces);
 
         // if there is nothing left to download, exit
         if pieces.len() == 0 {
@@ -428,7 +432,7 @@ impl Task for DataWrite {
                         let mut file = OpenOptions::new()
                             .write(true)
                             .create(true)
-                            .open(&filename)
+                            .open("../".to_string() + &filename)
                             .expect("Unable to open file");
 
                         for entry in data {

@@ -118,7 +118,10 @@ pub fn get_percentage(file: MetaFile) -> usize {
     let myself = PeerConfig::new();
     let buffermap = get_buffermap(myself, &file.hash).unwrap();
     let (_, ones) = count(&buffermap);
-    ones / buffermap.len() * 100
+    let total = buffermap.len() as f32;
+    let result = (ones as f32 / total) * 100.0;
+    println!("{}", result);
+    result as usize
 }
 
 fn get_peers_number(file: MetaFile) -> usize {
