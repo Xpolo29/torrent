@@ -1,33 +1,35 @@
 CC = cargo
 TARGET = peer
 
-SRCS = $(wildcard src/*.rs)
+SRCS = $(wildcard src-tauri/src/*.rs)
 
-all: $(TARGET)
+# all: $(TARGET)
 
-
-$(TARGET): $(SRCS)
-	echo $^ > /dev/null
-	$(CC) build
-	cp target/debug/client ./$(TARGET)
-
-run: $(TARGET)
-	RUST_LOG=trace ./$(TARGET)
+#
+# $(TARGET): $(SRCS)
+# 	echo $^ > /dev/null
+# 	$(CC) build
+# 	cp target/debug/client ./$(TARGET)
+#
+run: 
+	# RUST_LOG=trace ./$(TARGET)
+	npm run tauri dev
 
 test: 
+	cd src-tauri
 	RUST_TEST_THREADS=1 cargo test
 
 check: test
 	./test
 
 clean:
-	rm -f $(TARGET)
+	cd src-tauri
 	cargo clean
 
 help:
 	grep '^[a-zA-Z0-9_\-]*:' Makefile | sed 's/://'
 
-release: $(SRCS)
-	echo $^ > /dev/null
-	$(CC) build --release
-	cp target/release/client ./$(TARGET)
+release: 
+	npm run tauri build
+	mv ./src-tauri/target/release/peerapp ./build/
+	cp ./src-tauri/config.ini ./build

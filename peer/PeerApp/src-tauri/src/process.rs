@@ -432,7 +432,7 @@ impl Task for DataWrite {
                         let mut file = OpenOptions::new()
                             .write(true)
                             .create(true)
-                            .open("../".to_string() + &filename)
+                            .open(&filename)
                             .expect("Unable to open file");
 
                         for entry in data {

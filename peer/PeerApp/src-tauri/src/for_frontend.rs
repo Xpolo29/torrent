@@ -120,7 +120,6 @@ pub fn get_percentage(file: MetaFile) -> usize {
     let (_, ones) = count(&buffermap);
     let total = buffermap.len() as f32;
     let result = (ones as f32 / total) * 100.0;
-    println!("{}", result);
     result as usize
 }
 
