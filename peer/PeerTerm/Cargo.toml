@@ -1,0 +1,31 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+default-run = "client"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+base64 = "0.22.1"
+clap = { version = "4.5.4", features = ["derive"] }
+easy-upnp = "0.2.0"
+env_logger = "0.11.3"
+hashbrown = "0.14.3"
+hex = "0.4.3"
+lazy_static = "1.4.0"
+log = { version = "0.4.21", features = ["max_level_trace"] }
+md-5 = "0.10.6"
+num-traits = "0.2.18"
+rayon = "1.10.0"
+regex = "1.10.4"
+rust-ini = "0.21.0"
+simplelog = "0.12.2"
+
+[[bin]]
+name = "client"
+path = "src/main.rs"
+#
+#[[bin]]
+#name = "testo"
+#path = "src/testo.rs"
+
