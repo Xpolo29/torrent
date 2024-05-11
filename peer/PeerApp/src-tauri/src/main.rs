@@ -36,13 +36,14 @@ use std::fs::File;
 use threads::Pool;
 
 fn main() {
-    let interface = "tauri"; // "terminal" or "tauri" or string (-> tauri by default)
+    // let interface = "tauri"; // "terminal" or "tauri" or string (-> tauri by default)
     let args = Args::parse();
     let program_const = handle_program_const(args);
     //let mut global_prorgam_const = PROGRAM_CONST.lock().unwrap();
     //*global_prorgam_const = Some(program_const.clone());
     let log_level = program_const.log_level;
     let log_file = File::create("client.log").unwrap();
+    let interface = program_const.interface.clone();
     CombinedLogger::init(vec![
         TermLogger::new(
             log_level,
@@ -144,6 +145,8 @@ struct Args {
     length_tcp: Option<u32>,
     #[clap(short, long)]
     update_period_secs: Option<u32>,
+    #[clap(short, long)]
+    interface: Option<String>,
 }
 #[derive(Debug, Clone)]
 struct ProgramConst {
@@ -153,6 +156,7 @@ struct ProgramConst {
     update_period_secs: u32,
     length_tcp: u32,
     log_level: LevelFilter,
+    interface: String,
 }
 
 fn handle_program_const(args: Args) -> ProgramConst {
@@ -233,6 +237,10 @@ fn handle_program_const(args: Args) -> ProgramConst {
             _ => LevelFilter::Info,
         },
     };
+
+    let interface = args
+        .interface
+        .unwrap_or(peer_section.get("interface").unwrap().to_string());
     let ret = ProgramConst {
         peer_config,
         tracker_config,
@@ -240,6 +248,7 @@ fn handle_program_const(args: Args) -> ProgramConst {
         update_period_secs,
         log_level,
         length_tcp,
+        interface,
     };
     debug!("ProgramConst : {:?}", ret);
     ret
