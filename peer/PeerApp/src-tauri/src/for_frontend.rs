@@ -125,7 +125,7 @@ pub fn get_percentage(file: MetaFile) -> usize {
 
 fn get_peers_number(file: MetaFile) -> usize {
     let peers = get_peers_from_file(file.hash);
-    peers.len()
+    peers.len() - 1
 }
 
 #[tauri::command]
