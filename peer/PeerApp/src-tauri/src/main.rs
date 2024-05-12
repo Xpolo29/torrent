@@ -54,54 +54,31 @@ fn main() {
         WriteLogger::new(log_level, Config::default(), log_file),
     ])
     .unwrap();
+    // config vars
+    let num_threads = program_const.num_threads;
+    let update_period_secs = program_const.update_period_secs;
+
+    // multi thread part
+    // create pool
+    let mut pool: Pool = Pool::new(num_threads.to_i32().unwrap());
+
+    let tracker_config = program_const.tracker_config.clone();
+    debug!("MAIN: tracker_config : {:?}", tracker_config);
+    //start update thread
+    pool.start_update(tracker_config.clone(), update_period_secs.to_i32().unwrap());
+
+    //start have thread
+    pool.start_have(update_period_secs.to_i32().unwrap());
+
+    //start listening thread
+    let peer_config = program_const.peer_config.clone();
+    pool.start_listening(peer_config);
+
+    let pool_clone = pool.clone();
 
     if interface == "terminal" {
-        // config vars
-        let num_threads = program_const.num_threads;
-        let update_period_secs = program_const.update_period_secs;
-
-        // multi thread part
-        // create pool
-        let mut pool: Pool = Pool::new(num_threads.to_i32().unwrap());
-
-        let tracker_config = program_const.tracker_config.clone();
-        debug!("MAIN: tracker_config : {:?}", tracker_config);
-        //start update thread
-        pool.start_update(tracker_config.clone(), update_period_secs.to_i32().unwrap());
-
-        //start have thread
-        pool.start_have(update_period_secs.to_i32().unwrap());
-
-        //start listening thread
-        let peer_config = program_const.peer_config.clone();
-        pool.start_listening(peer_config);
-
-        let pool_clone = pool.clone();
-
         display_menu(program_const, tracker_config, pool_clone);
-
-        //delete pool
-        pool.drop();
     } else {
-        // config vars
-        let num_threads = 1;
-        let update_period_secs = 30;
-
-        // multi thread part
-        // create pool
-        let mut pool: Pool = Pool::new(num_threads.to_i32().unwrap());
-
-        let tracker_config = program_const.tracker_config;
-
-        //start update thread
-        pool.start_update(tracker_config.clone(), update_period_secs.to_i32().unwrap());
-
-        //start have thread
-        pool.start_have(update_period_secs.to_i32().unwrap());
-
-        //start listening thread
-        let peer_config = PeerConfig::new();
-        pool.start_listening(peer_config);
         let pool_mutex = Mutex::new(pool.clone());
         let pool_arc = Arc::new(pool_mutex);
         let download_params = DownloadParams {
@@ -119,8 +96,8 @@ fn main() {
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
-        pool.drop();
     }
+    pool.drop();
 }
 
 #[derive(Parser, Debug)]
