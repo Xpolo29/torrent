@@ -36,9 +36,9 @@ rayon = "1.10.0"
 name = "client"
 path = "src/main.rs"
 
-[[bin]]
-name = "testo"
-path = "src/testo.rs"
+#[[bin]]
+#name = "testo"
+#path = "src/testo.rs"
 
 # Build dependencies
 [build-dependencies]
