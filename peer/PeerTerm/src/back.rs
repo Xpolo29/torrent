@@ -1,12 +1,13 @@
-use crate::com::{connect, getfilef, receive, send, seedf};
-use crate::data::{PeerConfig, MetaFile};
+use crate::com::{connect, getfilef, receive, seedf, send};
+use crate::data::{MetaFile, PeerConfig};
 use crate::db::{
-    get_buffermap, get_file, get_peer, get_peer_key, get_peers_from_file, set_buffermap, get_seeding_files, get_leeching_files
+    get_buffermap, get_file, get_leeching_files, get_peer, get_peer_key, get_peers_from_file,
+    get_seeding_files, set_buffermap,
 };
-use crate::respons_handler::{Answer, ExpectPeers, ExpectedAnswer, ExpectOk};
+use crate::respons_handler::{Answer, ExpectOk, ExpectPeers, ExpectedAnswer};
 use crate::tasks::{Have, Peer};
 use crate::threads::Pool;
-use log::{error, info, trace};
+use log::{debug, error, info, trace};
 use md5::digest::block_buffer::Error;
 use rayon::prelude::*;
 use std::cmp::min;
@@ -21,13 +22,9 @@ use std::sync::Mutex;
 pub fn is_stream_open(stream: &TcpStream) -> bool {
     trace!("checking if stream is open");
     match stream.take_error() {
-        Ok(Some(err)) => {
-            false
-        }
+        Ok(Some(err)) => false,
         Ok(None) => true,
-        Err(err) => {
-            false
-        }
+        Err(err) => false,
     }
 }
 
@@ -82,25 +79,24 @@ pub fn start_download(
                     leeching_files_strings.push(leech.hash);
                 }
                 let mut stream: TcpStream = connect(tracker_port, &tracker_adress).unwrap();
-                let message = seedf(seeded_files, PeerConfig::new().port.to_string(), leeching_files_strings); // create the message
+                let message = seedf(
+                    seeded_files,
+                    PeerConfig::new().port.to_string(),
+                    leeching_files_strings,
+                ); // create the message
+                debug!("Sending: {}", message);
                 send(&mut stream, message);
                 let response = receive(&mut stream, 3000); // receive the answer
                 trace!("Received: {}", response);
                 match ExpectOk.check_answer(&response) {
-                    Ok(_) => {
-                        
-                    }
+                    Ok(_) => {}
                     Err(valeur) => {
                         error!("{}", valeur);
                     }
                 }
 
-
-
-
                 match peers {
                     Answer::Peers(peers) => {
-
                         let mut tasks = Vec::new();
                         for mut peer in peers {
                             // retrieve data init pool with an empty one
@@ -206,7 +202,6 @@ pub fn get_wanted_piece_from_peer(peer_key: &str, file_key: &str, nb_pieces: usi
     // to allow only one thread at a time here
     let _guard = LOCK.lock().unwrap();
 
-
     let file_key_clone = String::from(file_key);
     let peers: Vec<PeerConfig> = get_peers_from_file(file_key_clone);
     let me: PeerConfig = PeerConfig::new();
@@ -243,7 +238,6 @@ pub fn get_wanted_piece_from_peer(peer_key: &str, file_key: &str, nb_pieces: usi
 
     // now we need to calculate the rarest parts scores
     //let buffmaps_clone = buffmaps.clone();
-
 
     let mut main_buffmap: Vec<u8>;
     match get_buffermap(PeerConfig::new(), file_key) {
@@ -309,7 +303,6 @@ pub fn get_wanted_piece_from_peer(peer_key: &str, file_key: &str, nb_pieces: usi
     }
 
     set_buffermap(file_key.to_string(), get_peer_key(me_clone), main_buffmap);
-
 
     ret
 }

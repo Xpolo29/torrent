@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose, Engine as _};
 use ini::Ini;
 use lazy_static::lazy_static;
-use log::{info, debug};
+use log::{debug, info};
 use md5::{Digest, Md5};
 use std::fs::File;
 use std::io::BufReader;
@@ -122,12 +122,20 @@ impl PeerConfig {
         let peer_section = conf.section(Some("Peer")).unwrap();
 
         let peer_address = peer_section.get("peer-address").unwrap().to_string();
-        let peer_port = peer_section
-            .get("peer-port")
-            .unwrap()
-            .parse::<u16>()
-            .unwrap();
 
+        let peer_port = {
+            let lock = PEER_PORT.lock().unwrap();
+            if let Some(port) = lock.clone() {
+                port
+            } else {
+                drop(lock); // Release the lock before reading the config file
+                peer_section
+                    .get("peer-port")
+                    .unwrap()
+                    .parse::<u16>()
+                    .unwrap()
+            }
+        };
         PeerConfig {
             address: peer_address,
             port: peer_port,
