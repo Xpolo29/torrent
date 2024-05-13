@@ -11,18 +11,16 @@ TAURI_RSCS = $(HTML_FILE) $(JS_FILE) $(CSS_FILE)
 
 SRCS += $(RS_SRCS) $(TAURI_RSCS) 
 
-
-
 all: $(TARGET)
 
 $(TARGET): $(RS_SRCS)
 	echo $^ > /dev/null
-	cd src-tauri && $(CC) build
+	cd src-tauri && $(CC) build -j 16
 
 run-terminal: release $(TAURI_RSCS) 
 	echo $^ > /dev/null
-	npm run tauri build
-	cp ./src-tauri/target/debug/peerapp ./build/
+	npm run tauri build -j
+	cp ./src-tauri/target/release/peerapp ./build/
 	cp ./src-tauri/config.ini ./build
 	./build/peerapp -c ./build/config.ini -i terminal
 
@@ -34,7 +32,7 @@ run: $(TARGET) $(TAURI_RSCS)
 
 run-release: release $(TAURI_RSCS)
 	echo $^ > /dev/null
-	npm run tauri build
+	npm run tauri build -j
 	cp ./src-tauri/target/release/peerapp ./build/
 	cp ./src-tauri/config.ini ./build
 	./build/peerapp -c ./build/config.ini
@@ -55,4 +53,4 @@ help:
 
 release: $(RS_SRCS) 
 	echo $^ > /dev/null
-	cd src-tauri && $(CC) build --release
+	cd src-tauri && $(CC) build --release -j 16
