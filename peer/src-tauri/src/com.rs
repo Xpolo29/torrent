@@ -154,7 +154,7 @@ pub fn lookf(filename: String, filesize: String) -> String {
 /// * `String` - The formatted "getfile" request message.
 // format the getfile message
 pub fn getfilef(key: String) -> String {
-    format!("getfile {}\n", key)
+    format!("getfile {}\n", key.trim())
 }
 
 /// Establishes a TCP connection to a given address and port.
