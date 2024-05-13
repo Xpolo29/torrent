@@ -134,7 +134,8 @@ pub fn get_files_data() -> String {
     let files = get_all_files();
     for file in files {
         let numberpeers = get_peers_number(file.clone());
-        if numberpeers == 0 {
+        let status = get_file_status(file.clone());
+        if numberpeers == 0 && status as u8 == Status::LEECHING as u8 {
             continue;
         }
         // Convert the percentage to a string and append it to `data`.
