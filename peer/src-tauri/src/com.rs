@@ -1,4 +1,5 @@
 //! communication between the peer and the tracker
+use crate::back::is_stream_open;
 use crate::data::MetaFile;
 use crate::db::{get_leeching_files, get_seeding_files};
 use core::cmp::min;
@@ -6,7 +7,6 @@ use log::{debug, error, info, warn};
 use std::io::{BufRead, BufReader, ErrorKind, Write};
 use std::net::TcpStream;
 use std::time::Duration;
-use crate::back::is_stream_open;
 
 // format the data message
 pub fn dataf(key: &String, pieces: Vec<String>) -> String {
@@ -194,7 +194,6 @@ pub fn connect(port: u16, adress: &str) -> Option<TcpStream> {
 /// * `stream` - A mutable reference to a `TcpStream`.
 /// * `message` - A string representing the message to be sent.
 pub fn send(stream: &mut TcpStream, message: String) {
-
     if !is_stream_open(stream) {
         warn!("Trying to send to closed stream");
         return;
@@ -305,10 +304,10 @@ pub fn updatef() -> String {
 
     for seed in seeds {
         let hash = seed.hash;
-        formated_seeds += &hash;
         if i {
             formated_seeds += " ";
         }
+        formated_seeds += &hash;
         i = true;
     }
 
@@ -316,10 +315,10 @@ pub fn updatef() -> String {
 
     for leech in leeches {
         let hash = leech.hash;
-        formated_leeches += &hash;
         if i {
             formated_leeches += " ";
         }
+        formated_leeches += &hash;
         i = true;
     }
 

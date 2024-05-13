@@ -133,6 +133,10 @@ pub fn get_files_data() -> String {
     let mut data = String::new();
     let files = get_all_files();
     for file in files {
+        let numberpeers = get_peers_number(file.clone());
+        if numberpeers == 0 {
+            continue;
+        }
         // Convert the percentage to a string and append it to `data`.
         write!(data, "{}#", file.file_name).unwrap();
         write!(data, "{}#", get_percentage(file.clone())).unwrap();
