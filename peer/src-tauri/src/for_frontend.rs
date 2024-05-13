@@ -160,10 +160,10 @@ fn front_get_file_names(input: String) -> Vec<String> {
 
     for file_name in file_names {
         if Path::new(file_name).exists() {
-            println!("File {} exists", file_name);
+            info!("File {} exists", file_name);
             valid_files.push(file_name.to_string());
         } else {
-            println!("File {} does not exist. Skipping.", file_name);
+            error!("File {} does not exist. Skipping.", file_name);
         }
     }
     valid_files
@@ -182,28 +182,35 @@ pub fn uploadFiles(filenames: String) {
         .map(|file| MetaFile::new(file.to_string()))
         .collect(); // Create vector of Metafiles out of the files name
 
-    let seeded_files2 = seeded_files.clone();
-    for seed in seeded_files2 {
+    for seed in seeded_files {
         add_seed_file_to_db(seed);
     }
-    let seeded_files = seedf(
-        seeded_files,
-        peer_config.port.to_string(),
-        vec!["".to_string()],
-    ); // create the message
-    println!("Prepared message: {}", seeded_files);
+
+    let seeding_files: Vec<MetaFile> = get_seeding_files();
+    let leeching_files: Vec<MetaFile> = get_leeching_files();
+
+    let mut leeching_files_strings: Vec<String> = Vec::new();
+    for leech in leeching_files {
+        leeching_files_strings.push(leech.hash);
+    }
+
+    let seeded_files = seedf(seeding_files, peer_config.port.to_string(), leeching_files_strings); // create the message
+
+    trace!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         // connect to the tracker
         send(&mut stream, seeded_files.clone()); // send the message
+        /*
         println!(
             "Sending to {}:{} : {}",
             stream.peer_addr().unwrap().ip(),
             stream.peer_addr().unwrap().port(),
             seeded_files.clone()
         );
-        println!("Message sent waiting for answer");
+        */
+        trace!("Message sent waiting for answer");
         let response = receive(&mut stream, 3000); // receive the answer
-        println!("Received: {}", response);
+        trace!("Received: {}", response);
         match ExpectOk.check_answer(&response) {
             Ok(valeur) => {
                 info!("{}", valeur);
