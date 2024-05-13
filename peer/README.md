@@ -1,7 +1,6 @@
-# Tauri + Vanilla
+Dependencies :
 
-This template should help get you started developing with Tauri in vanilla HTML, CSS and Javascript.
+sudo npm install tauri on ./peer/
 
-## Recommended IDE Setup
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+Packages :
+sudo apt install libsoup-2.4-dev libpango1.0-dev  libgdk-pixbuf-2.0-dev libgtk-3-dev libjavascriptcoregtk-4.0-dev libwebkit2gtk-4.0-dev
