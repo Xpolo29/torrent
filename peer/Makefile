@@ -19,7 +19,12 @@ $(TARGET): $(RS_SRCS)
 	echo $^ > /dev/null
 	cd src-tauri && $(CC) build
 
-
+run-terminal: release $(TAURI_RSCS) 
+	echo $^ > /dev/null
+	npm run tauri build
+	cp ./src-tauri/target/debug/peerapp ./build/
+	cp ./src-tauri/config.ini ./build
+	./build/peerapp -c ./build/config.ini -i terminal
 
 run: $(TARGET) $(TAURI_RSCS) 
 	echo $^ > /dev/null
@@ -32,6 +37,7 @@ run-release: release $(TAURI_RSCS)
 	npm run tauri build
 	cp ./src-tauri/target/release/peerapp ./build/
 	cp ./src-tauri/config.ini ./build
+	./build/peerapp -c ./build/config.ini
 
 test: 
 	cd src-tauri
