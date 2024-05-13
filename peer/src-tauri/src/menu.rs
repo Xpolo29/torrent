@@ -1,7 +1,7 @@
 use crate::back::start_download;
 use crate::com::{connect, lookf, receive, seedf, send};
 use crate::data::{get_buffer_size, MetaFile, PeerConfig, TrackerConfig};
-use crate::db::{add_seed_file_to_db, log_db, set_peer_to_file};
+use crate::db::{add_seed_file_to_db, log_db, set_peer_to_file, get_seeding_files, get_leeching_files};
 use crate::respons_handler::{Answer, ExpectList, ExpectOk, ExpectedAnswer};
 use crate::tasks::EmptyTask;
 use crate::threads::Pool;
@@ -115,19 +115,26 @@ fn search_section(tracker_port: u16, tracker_adress: &str) -> Answer {
 fn upload_section(tracker_port: u16, tracker_adress: &str) {
     let peer_config = PeerConfig::new();
     println!("You're in upload");
-    let seeded_files = get_file_names(io::stdin()); // take the files the user wish to seed
+    let seeded_files: Vec<String> = get_file_names(io::stdin()); // take the files the user wish to seed
     let seeded_files: Vec<MetaFile> = seeded_files
         .into_iter()
         .map(|file| MetaFile::new(file.to_string()))
         .collect(); // Create vector of Metafiles out of the files name
 
-    let seeded_files2 = seeded_files.clone();
-    for seed in seeded_files2 {
+    for seed in seeded_files {
         add_seed_file_to_db(seed);
     }
 
-    // TODO set the right leeching string
-    let seeded_files = seedf(seeded_files, peer_config.port.to_string(), vec!["".to_string()]); // create the message
+    let seeding_files: Vec<MetaFile> = get_seeding_files();
+    let leeching_files: Vec<MetaFile> = get_leeching_files();
+
+    let mut leeching_files_strings: Vec<String> = Vec::new();
+    for leech in leeching_files {
+        leeching_files_strings.push(leech.hash);
+    }
+
+
+    let seeded_files = seedf(seeding_files, peer_config.port.to_string(), leeching_files_strings); // create the message
     trace!("Prepared message: {}", seeded_files);
     if let Some(mut stream) = connect(tracker_port, &tracker_adress.to_string()) {
         // connect to the tracker
