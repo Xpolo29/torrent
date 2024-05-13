@@ -34,6 +34,7 @@ enum op_t char_to_op(char *request) {
   }
 }
 
+
 void process_getfile(char *buf, char *hash, struct host h) {
 	struct data d[BDD_SIZE];
 	load_hash(d, hash);
@@ -46,11 +47,12 @@ void process_getfile(char *buf, char *hash, struct host h) {
 		if (i > 0)strcat(buf, " ");
 
 		char relative_ip[INET_ADDRSTRLEN];
-		memcpy(relative_ip, d[i].host.ip, strlen(d[i].host.ip));
+		//memcpy(relative_ip, d[i].host.ip, strlen(d[i].host.ip) + 1);
+		strcpy(relative_ip, d[i].host.ip);
 
 		if(is_local_ip(relative_ip) && !is_local_trafic){
-			memcpy(relative_ip, public_ip, strlen(public_ip) + 1);
-
+			//memcpy(relative_ip, public_ip, strlen(public_ip) + 1);
+			strcpy(relative_ip, public_ip);
 			logging(WARNING, "Getfile request is from local to public network, converting ip to public\n");
 		}
 
