@@ -63,7 +63,7 @@ void process_getfile(char *buf, char *hash, struct host h) {
 	strcat(buf, "]\n");
 }
 
-void process_look(char *buf, char *filename, enum op_t op, long filesize) {
+void process_look(char *buf, char *filename, enum op_t op, long filesize, struct host h) {
   struct data d[BDD_SIZE];
   // printf("look : %s, %d, %ld\n", filename, op, filesize);
   int len = filter(d, filename, filesize, op);
@@ -74,8 +74,14 @@ void process_look(char *buf, char *filename, enum op_t op, long filesize) {
   for (int i = 0; i < len; i++) {
     // printf("f:%s s:%ld cs:%d h:%s\n", d[i].filename, d[i].size,
     // d[i].chunk_size, d[i].hash);
+    // pass empty
     if (d[i].size == 0)
-      continue; // pass empty
+      continue; 
+
+    // pass if the one asking is the one seeding
+    if (strcmp(d[i].host.ip, h.ip) == 0)
+	    continue;
+	
     if (i > 0)
       strcat(buf, " ");
 
@@ -225,7 +231,7 @@ void parse_getfile(char *buf, int index[MATCH_SIZE][2], char *request, struct ho
   process_getfile(buf, hash, h);
 }
 
-void parse_look(char *buf, int index[MATCH_SIZE][2], char *request) {
+void parse_look(char *buf, int index[MATCH_SIZE][2], char *request, struct host h) {
   logging(DEBUG, "Parser : Look request\n");
 
   int filename_match;
@@ -257,7 +263,7 @@ void parse_look(char *buf, int index[MATCH_SIZE][2], char *request) {
   int filesize = atoi(filesize_c);
   // printf("filesize : %d\n", filesize);
 
-  process_look(buf, filename, char_to_op(op), filesize);
+  process_look(buf, filename, char_to_op(op), filesize, h);
   // printf("look filename: %s filesize%s%d\n", filename, op, filesize);
 }
 
@@ -432,7 +438,7 @@ int parse_request(char *buf, char *request, struct host h) {
     break;
   }
   case look: {
-    parse_look(buf, index, request);
+    parse_look(buf, index, request, h);
     break;
   }
   case update: {
