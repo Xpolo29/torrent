@@ -1,0 +1,17 @@
+Pour compiler le projet  (L'éxécutable est créer à la racine) :
+
+$ make
+
+Pour compiler et executer le projet :
+
+$ make run
+
+Pour lancer les tests :
+
+$ make check
+
+Pour voir les différents paramètre modifiable :
+
+$ make help
+
+

@@ -1,0 +1,31 @@
+### TODO ###
+
+-add thing where database hosts are deleted when no update request as been sent in 5 min
+
+### DONE ###
+
+-database.h / .c -> api de stockage
+
+-config.ini use format as following :
+[section1]
+key1 = value1
+
+-parse des args:
+	-p --port : listen port
+	-c --config : path to config file, default to ./config.ini
+	-v --verbose [log = 3/warning = 2(default)/error = 1/none = 0]
+
+-logging to .log file based on verbose level
+log files use .log extension
+
+-Parser :
+	- Fonction pour gerer les requêtes après le passage du parser
+	- Liason avec tracker (Modification Makefile)
+	  |-> Ajout des log (propres)
+	  |-> Gestion des erreurs (propres)
+
+-mono threaded
+
+-mock_peer.py needs to send custom request to tracker to test it
+
+
