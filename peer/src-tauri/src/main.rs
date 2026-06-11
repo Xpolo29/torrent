@@ -31,6 +31,7 @@ use regex::Regex;
 use simplelog::*;
 use std::sync::Arc;
 use std::sync::Mutex;
+use tauri::Manager;
 
 use std::fs::File;
 use threads::Pool;
@@ -88,6 +89,7 @@ fn main() {
 
         tauri::Builder::default()
             .manage(download_params)
+            .plugin(tauri_plugin_shell::init())
             .invoke_handler(tauri::generate_handler![
                 get_files_data,
                 searchFunction,
@@ -96,6 +98,7 @@ fn main() {
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
+
     }
     pool.drop();
 }
